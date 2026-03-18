@@ -1,36 +1,98 @@
-"use client";
-type FilmCardProps = {
-  title: string;
-  creator: string;
-  genre: string;
-  likes: string;
-  views: string;
-  emoji: string;
-  gradient: string;
-};
+'use client'
+// src/components/FilmCard.tsx
+
+import { useState }   from 'react'
+import { useRouter }  from 'next/navigation'
+
+type Props = {
+  id:           string
+  title:        string
+  titleTe?:     string
+  genre:        string
+  likes:        number
+  views:        string
+  emoji:        string
+  gradient:     string
+  duration?:    string
+  isTop?:       boolean
+  isTrending?:  boolean
+  stateSlug?:   string
+  districtSlug?: string
+}
 
 export default function FilmCard({
-  title,
-  creator,
-  genre,
-  likes,
-  views,
-  emoji,
-  gradient,
-}: FilmCardProps) {
+  id, title, titleTe, genre, likes, views,
+  emoji, gradient, duration = '—',
+  isTop = false, isTrending = false,
+  stateSlug = 'telangana', districtSlug = 'hyderabad',
+}: Props) {
+  const router = useRouter()
+  const [liked,     setLiked]     = useState(false)
+  const [likeCount, setLikeCount] = useState(likes)
+
+  function goToFilm() {
+    router.push(`/${stateSlug}/${districtSlug}/film/${id}`)
+  }
+
+  function handleLike(e: React.MouseEvent) {
+    e.stopPropagation()
+    setLiked(v => !v)
+    setLikeCount(c => liked ? c - 1 : c + 1)
+  }
+
   return (
-    <div className="bg-[#1A1208] rounded-xl overflow-hidden border border-[#2E2010] hover:scale-105 transition cursor-pointer">
-      <div className={`h-40 ${gradient} flex items-center justify-center text-4xl`}>
+    <div
+      onClick={goToFilm}
+      className="bg-[#1A1208] rounded-xl overflow-hidden border border-[#2E2010] hover:-translate-y-1 hover:border-[#D4A017]/40 hover:shadow-xl hover:shadow-black/40 transition-all duration-300 cursor-pointer group"
+    >
+      {/* Thumbnail */}
+      <div className={`relative h-44 ${gradient} flex items-center justify-center text-5xl`}>
         {emoji}
+
+        {isTop && (
+          <div className="absolute top-2 left-2 bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded">
+            🏆 Top Film
+          </div>
+        )}
+        {isTrending && (
+          <div className="absolute top-2 right-2 bg-[#8B1A1A]/90 text-red-300 text-[10px] font-semibold px-2 py-0.5 rounded">
+            🔥 Trending
+          </div>
+        )}
+        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm">
+          {duration}
+        </div>
+
+        {/* Play overlay on hover */}
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="w-14 h-14 bg-[#FF6B1A] rounded-full flex items-center justify-center text-xl shadow-lg">
+            ▶
+          </div>
+        </div>
       </div>
+
+      {/* Info */}
       <div className="p-4">
-        <h3 className="font-semibold text-lg">{title}</h3>
-        <p className="text-sm text-gray-400">{creator} · {genre}</p>
-        <div className="flex gap-4 text-sm text-gray-500 mt-2">
-          <span>♥ {likes}</span>
-          <span>👁 {views}</span>
+        <h3 className="font-bold text-base text-[#FDF6E3] leading-snug mb-0.5 line-clamp-1">
+          {title}
+        </h3>
+        {titleTe && (
+          <p className="text-[11px] text-[#7A6040] mb-2">{titleTe}</p>
+        )}
+        <p className="text-sm text-[#7A6040] mb-3">{genre}</p>
+
+        <div className="flex items-center gap-4 text-sm">
+          <button
+            onClick={handleLike}
+            className={`flex items-center gap-1 transition-colors ${
+              liked ? 'text-[#FF6B1A]' : 'text-[#7A6040] hover:text-[#FF6B1A]'
+            }`}
+          >
+            {liked ? '♥' : '♡'} {likeCount}
+          </button>
+          <span className="text-[#7A6040]">👁 {views}</span>
         </div>
       </div>
     </div>
-  );
+  )
 }
