@@ -1,17 +1,39 @@
 'use client'
 // src/components/Navbar.tsx
 
-import { useState } from 'react'
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import Link                    from 'next/link'
+import { useRouter }           from 'next/navigation'
+import { supabase }            from '@/lib/supabase'
+import type { User }           from '@supabase/supabase-js'
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false)
+  const router = useRouter()
+  const [open, setOpen]   = useState(false)
+  const [user, setUser]   = useState<User | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/')
+    router.refresh()
+  }
+
+  const initial = user?.user_metadata?.name?.[0]?.toUpperCase()
+             ?? user?.email?.[0]?.toUpperCase()
+             ?? '?'
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 h-16 bg-[#0D0A06]/90 backdrop-blur-md border-b border-[#2E2010]">
 
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-3 cursor-pointer">
+      <Link href="/" className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-base">
           🎬
         </div>
@@ -21,42 +43,53 @@ export default function Navbar() {
         </div>
       </Link>
 
-      {/* Desktop links */}
       <ul className="hidden md:flex items-center gap-1 list-none">
         {[
-          { href: '/',                     label: 'Home'            },
-          { href: '/telangana/hyderabad',  label: 'Hyderabad Films' },
-          { href: '/upload',               label: 'Upload'          },
+          { href: '/',                    label: 'Home'            },
+          { href: '/telangana/hyderabad', label: 'Hyderabad Films' },
+          { href: '/upload',              label: 'Upload'          },
         ].map(l => (
           <li key={l.href}>
-            <Link
-              href={l.href}
-              className="text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition"
-            >
+            <Link href={l.href}
+              className="text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition">
               {l.label}
             </Link>
           </li>
         ))}
       </ul>
 
-      {/* Auth buttons */}
       <div className="hidden md:flex items-center gap-2">
-        <Link href="/auth"
-          className="border border-[#D4A017]/40 text-[#D4A017] px-4 py-1.5 rounded text-sm font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition">
-          Login
-        </Link>
-        <Link href="/auth"
-          className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-4 py-1.5 rounded text-sm font-bold uppercase tracking-wide hover:opacity-90 transition">
-          Join Free
-        </Link>
+        {user ? (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-sm">
+              {initial}
+            </div>
+            <span className="text-sm text-[#7A6040]">
+              {user.user_metadata?.name ?? user.email}
+            </span>
+            <button onClick={handleLogout}
+              className="border border-[#2E2010] text-[#7A6040] px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide hover:text-[#FF6B1A] hover:border-[#FF6B1A]/30 transition">
+              Logout
+            </button>
+          </div>
+        ) : (
+          <>
+            <Link href="/auth"
+              className="border border-[#D4A017]/40 text-[#D4A017] px-4 py-1.5 rounded text-sm font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition">
+              Login
+            </Link>
+            <Link href="/auth"
+              className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-4 py-1.5 rounded text-sm font-bold uppercase tracking-wide hover:opacity-90 transition">
+              Join Free
+            </Link>
+          </>
+        )}
       </div>
 
-      {/* Mobile hamburger */}
       <button className="md:hidden text-[#D4A017] text-2xl" onClick={() => setOpen(o => !o)}>
         {open ? '✕' : '☰'}
       </button>
 
-      {/* Mobile menu */}
       {open && (
         <div className="absolute top-16 left-0 right-0 bg-[#0D0A06] border-b border-[#2E2010] flex flex-col p-4 gap-3 md:hidden">
           {[
@@ -64,15 +97,23 @@ export default function Navbar() {
             { href: '/telangana/hyderabad', label: 'Hyderabad Films' },
             { href: '/upload',              label: 'Upload'          },
           ].map(l => (
-            <Link key={l.href} href={l.href}
-              onClick={() => setOpen(false)}
+            <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
               className="text-[#7A6040] hover:text-[#D4A017] text-sm uppercase tracking-wide font-semibold transition">
               {l.label}
             </Link>
           ))}
           <div className="flex gap-2 mt-2">
-            <Link href="/auth" className="flex-1 border border-[#D4A017]/40 text-[#D4A017] py-2 rounded text-sm font-bold uppercase text-center">Login</Link>
-            <Link href="/auth" className="flex-1 bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black py-2 rounded text-sm font-bold uppercase text-center">Join Free</Link>
+            {user ? (
+              <button onClick={handleLogout}
+                className="flex-1 border border-[#2E2010] text-[#7A6040] py-2 rounded text-sm font-bold uppercase">
+                Logout
+              </button>
+            ) : (
+              <>
+                <Link href="/auth" className="flex-1 border border-[#D4A017]/40 text-[#D4A017] py-2 rounded text-sm font-bold uppercase text-center">Login</Link>
+                <Link href="/auth" className="flex-1 bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black py-2 rounded text-sm font-bold uppercase text-center">Join Free</Link>
+              </>
+            )}
           </div>
         </div>
       )}
