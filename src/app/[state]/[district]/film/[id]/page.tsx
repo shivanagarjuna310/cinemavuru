@@ -25,11 +25,16 @@ async function getFilm(id: string) {
 async function getComments(filmId: string) {
   const { data } = await supabase
     .from('comments')
-    .select('*, profiles(name, avatar_url)')
+    .select('*, profiles(name)')
     .eq('film_id', filmId)
     .order('created_at', { ascending: false })
     .limit(50)
   return data ?? []
+}
+
+// Increment view count every page load
+async function incrementView(filmId: string) {
+  await supabase.rpc('increment_view', { film_id: filmId })
 }
 
 function formatDuration(sec: number) {
@@ -44,8 +49,7 @@ function timeAgo(dateStr: string) {
   if (days === 0) return 'Today'
   if (days === 1) return 'Yesterday'
   if (days < 30)  return `${days} days ago`
-  if (days < 365) return `${Math.floor(days / 30)} months ago`
-  return `${Math.floor(days / 365)} years ago`
+  return `${Math.floor(days / 30)} months ago`
 }
 
 const GENRE_STYLE: Record<string, { emoji: string; gradient: string }> = {
@@ -64,9 +68,11 @@ export default async function FilmPage({
 }) {
   const { state: stateSlug, district: districtSlug, id } = await params
 
+  // Fetch film + comments + increment view in parallel
   const [film, comments] = await Promise.all([
     getFilm(id),
     getComments(id),
+    incrementView(id),      // fire and forget — view count goes up
   ])
 
   if (!film) notFound()
@@ -83,14 +89,15 @@ export default async function FilmPage({
           <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-6">
             <Link href="/" className="hover:text-[#D4A017] transition">Home</Link>
             <span>›</span>
-            <Link href={`/${stateSlug}/${districtSlug}`} className="hover:text-[#D4A017] transition capitalize">
+            <Link href={`/${stateSlug}/${districtSlug}`}
+              className="hover:text-[#D4A017] transition capitalize">
               {districtSlug}
             </Link>
             <span>›</span>
             <span className="text-[#D4A017] line-clamp-1">{film.title_en}</span>
           </div>
 
-          {/* Video Player */}
+          {/* Video player */}
           <div className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br ${style.gradient} mb-6 border border-[#2E2010]`}>
             {film.video_url ? (
               <iframe
@@ -102,18 +109,12 @@ export default async function FilmPage({
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center gap-4">
                 <div className="text-8xl">{style.emoji}</div>
-                <div className="text-center">
-                  <p className="text-[#FDF6E3]/80 font-semibold text-lg">{film.title_en}</p>
-                  <p className="text-[#FDF6E3]/50 text-sm mt-1">Video coming soon</p>
-                </div>
-                <div className="w-16 h-16 bg-[#FF6B1A]/20 border-2 border-[#FF6B1A]/50 rounded-full flex items-center justify-center text-2xl">
-                  ▶
-                </div>
+                <p className="text-[#FDF6E3]/60 text-sm">Video coming soon</p>
               </div>
             )}
           </div>
 
-          {/* Film Info */}
+          {/* Film info */}
           <div className="mb-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
@@ -144,7 +145,7 @@ export default async function FilmPage({
             </div>
           </div>
 
-          {/* Like / Share */}
+          {/* Like + Share */}
           <FilmActions
             filmId={film.id}
             initialLikes={film.like_count ?? 0}
@@ -155,7 +156,9 @@ export default async function FilmPage({
           {/* Description */}
           {film.description && (
             <div className="my-6 p-4 bg-[#1A1208] border border-[#2E2010] rounded-xl">
-              <h3 className="text-sm font-bold text-[#D4A017] uppercase tracking-wide mb-2">About this film</h3>
+              <h3 className="text-sm font-bold text-[#D4A017] uppercase tracking-wide mb-2">
+                About this film
+              </h3>
               <p className="text-[#7A6040] leading-relaxed text-sm">{film.description}</p>
             </div>
           )}

@@ -1,13 +1,15 @@
 'use client'
 // src/components/CommentSection.tsx
+// Comments now save to Supabase and load in real time.
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { supabase }                     from '@/lib/supabase'
 
 type Comment = {
   id:         string
   text:       string
   created_at: string
-  profiles:   { name: string | null; avatar_url: string | null } | null
+  profiles:   { name: string | null } | null
 }
 
 type Props = {
@@ -16,7 +18,7 @@ type Props = {
 }
 
 function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
+  const diff  = Date.now() - new Date(dateStr).getTime()
   const mins  = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days  = Math.floor(diff / 86400000)
@@ -27,37 +29,93 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(days / 30)}mo ago`
 }
 
+function getInitial(name: string | null | undefined) {
+  return (name ?? 'A')[0].toUpperCase()
+}
+
 export default function CommentSection({ filmId, initialComments }: Props) {
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [text,     setText]     = useState('')
   const [posting,  setPosting]  = useState(false)
+  const [userId,   setUserId]   = useState<string | null>(null)
+  const [userName, setUserName] = useState<string>('You')
+  const [error,    setError]    = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Get current user on mount
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return
+      setUserId(data.user.id)
+      setUserName(
+        data.user.user_metadata?.name ?? data.user.email ?? 'You'
+      )
+    })
+  }, [])
+
+  // Real-time: subscribe to new comments on this film
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-${filmId}`)
+      .on(
+        'postgres_changes',
+        {
+          event:  'INSERT',
+          schema: 'public',
+          table:  'comments',
+          filter: `film_id=eq.${filmId}`,
+        },
+        async (payload) => {
+          // Fetch the profile for the new comment
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', payload.new.user_id)
+            .single()
+
+          const newComment: Comment = {
+            id:         payload.new.id,
+            text:       payload.new.text,
+            created_at: payload.new.created_at,
+            profiles:   profile ?? { name: 'Anonymous' },
+          }
+
+          setComments(prev => [newComment, ...prev])
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [filmId])
 
   async function handlePost() {
     const trimmed = text.trim()
     if (!trimmed || posting) return
 
-    setPosting(true)
-
-    // For now: add comment locally so user sees immediate feedback
-    // After auth is built, this will save to Supabase comments table
-    const newComment: Comment = {
-      id:         Date.now().toString(),
-      text:       trimmed,
-      created_at: new Date().toISOString(),
-      profiles:   { name: 'You', avatar_url: null },
+    if (!userId) {
+      window.location.href = '/auth'
+      return
     }
-    setComments(prev => [newComment, ...prev])
+
+    setPosting(true)
+    setError('')
+
+    const { error: err } = await supabase.from('comments').insert({
+      film_id: filmId,
+      user_id: userId,
+      text:    trimmed,
+    })
+
+    if (err) {
+      setError('Could not post comment. Please try again.')
+      setPosting(false)
+      return
+    }
+
+    // Clear input — real-time subscription adds comment to list
     setText('')
     setPosting(false)
-
-    // TODO after auth: save to supabase
-    // const { error } = await supabase.from('comments').insert({
-    //   film_id: filmId, user_id: session.user.id, text: trimmed
-    // })
-  }
-
-  function getInitial(name: string | null | undefined) {
-    return (name ?? 'A')[0].toUpperCase()
+    textareaRef.current?.focus()
   }
 
   return (
@@ -67,13 +125,14 @@ export default function CommentSection({ filmId, initialComments }: Props) {
         💬 Comments ({comments.length})
       </h3>
 
-      {/* Input box */}
+      {/* Input */}
       <div className="flex gap-3 mb-8">
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-sm flex-shrink-0">
-          Y
+          {getInitial(userName)}
         </div>
         <div className="flex-1">
           <textarea
+            ref={textareaRef}
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => {
@@ -82,20 +141,40 @@ export default function CommentSection({ filmId, initialComments }: Props) {
                 handlePost()
               }
             }}
-            placeholder="Write a comment in Telugu or English..."
+            placeholder={
+              userId
+                ? 'Write a comment in Telugu or English...'
+                : 'Login to comment...'
+            }
+            disabled={!userId}
             rows={2}
-            className="w-full bg-[#1A1208] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] resize-none focus:outline-none focus:border-[#D4A017]/40 transition"
+            maxLength={1000}
+            className="w-full bg-[#1A1208] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] resize-none focus:outline-none focus:border-[#D4A017]/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
           />
+
+          {error && (
+            <p className="text-red-400 text-xs mt-1">{error}</p>
+          )}
+
           <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-[#4A3020]">
-              Press Enter to post · Login required to save
-            </p>
+            {userId ? (
+              <p className="text-xs text-[#4A3020]">
+                Enter to post · Shift+Enter for new line
+              </p>
+            ) : (
+              <p className="text-xs text-[#4A3020]">
+                <a href="/auth" className="text-[#D4A017] hover:underline">
+                  Login
+                </a>{' '}
+                to join the conversation
+              </p>
+            )}
             <button
               onClick={handlePost}
-              disabled={!text.trim() || posting}
+              disabled={!text.trim() || posting || !userId}
               className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-4 py-1.5 rounded-lg text-sm font-bold uppercase tracking-wide disabled:opacity-40 hover:opacity-90 transition"
             >
-              {posting ? 'Posting...' : 'Post'}
+              {posting ? '...' : 'Post'}
             </button>
           </div>
         </div>
@@ -119,15 +198,18 @@ export default function CommentSection({ filmId, initialComments }: Props) {
                   <span className="text-sm font-bold text-[#D4A017]">
                     {c.profiles?.name ?? 'Anonymous'}
                   </span>
-                  <span className="text-xs text-[#4A3020]">{timeAgo(c.created_at)}</span>
+                  <span className="text-xs text-[#4A3020]">
+                    {timeAgo(c.created_at)}
+                  </span>
                 </div>
-                <p className="text-sm text-[#FDF6E3]/80 leading-relaxed">{c.text}</p>
+                <p className="text-sm text-[#FDF6E3]/80 leading-relaxed">
+                  {c.text}
+                </p>
               </div>
             </div>
           ))}
         </div>
       )}
-
     </div>
   )
 }
