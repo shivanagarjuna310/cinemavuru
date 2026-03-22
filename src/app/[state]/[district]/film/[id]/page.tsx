@@ -44,9 +44,9 @@ async function incrementView(filmId: string) {
     const viewerKey = `${ip}-${today}`
 
     await supabase.rpc('increment_view', {
-      film_id:    filmId,
-      viewer_key: viewerKey,
-    })
+  p_film_id:    filmId,
+  p_viewer_key: viewerKey,
+})
   } catch {
     // Don't let view tracking break the page
   }
