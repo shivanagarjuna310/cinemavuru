@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound }     from 'next/navigation'
 import Link             from 'next/link'
+import { headers }      from 'next/headers'
 import Navbar           from '@/components/Navbar'
 import FilmActions      from '@/components/FilmActions'
 import CommentSection   from '@/components/CommentSection'
@@ -32,9 +33,23 @@ async function getComments(filmId: string) {
   return data ?? []
 }
 
-// Increment view count every page load
+// Unique view per IP per day — not per refresh
 async function incrementView(filmId: string) {
-  await supabase.rpc('increment_view', { film_id: filmId })
+  try {
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+           ?? headersList.get('x-real-ip')
+           ?? 'unknown'
+    const today = new Date().toISOString().split('T')[0]
+    const viewerKey = `${ip}-${today}`
+
+    await supabase.rpc('increment_view', {
+      film_id:    filmId,
+      viewer_key: viewerKey,
+    })
+  } catch {
+    // Don't let view tracking break the page
+  }
 }
 
 function formatDuration(sec: number) {
@@ -68,11 +83,10 @@ export default async function FilmPage({
 }) {
   const { state: stateSlug, district: districtSlug, id } = await params
 
-  // Fetch film + comments + increment view in parallel
   const [film, comments] = await Promise.all([
     getFilm(id),
     getComments(id),
-    incrementView(id),      // fire and forget — view count goes up
+    incrementView(id),  // unique per IP per day
   ])
 
   if (!film) notFound()
@@ -101,7 +115,7 @@ export default async function FilmPage({
           <div className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br ${style.gradient} mb-6 border border-[#2E2010]`}>
             {film.video_url ? (
               <iframe
-                src={film.video_url}
+                src={`${film.video_url}?rel=0`}
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
