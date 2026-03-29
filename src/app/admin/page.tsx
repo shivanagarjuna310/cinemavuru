@@ -1,5 +1,5 @@
 'use client'
-// src/app/admin/page.tsx — v3 with error logs tab
+// src/app/admin/page.tsx — with permanent delete option
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase }        from '@/lib/supabase'
@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [logs,       setLogs]       = useState<Log[]>([])
   const [loading,    setLoading]    = useState(false)
   const [stats,      setStats]      = useState({ pending: 0, active: 0, users: 0, views: 0, errors: 0 })
+  const [deleting,   setDeleting]   = useState<string | null>(null)
 
   useEffect(() => {
     async function checkAccess() {
@@ -102,6 +103,36 @@ export default function AdminPage() {
     loadStats()
   }
 
+  // Permanently delete a film and all its likes/comments
+  async function deleteFilm(film: Film) {
+    const confirmed = window.confirm(
+      `⚠️ PERMANENTLY DELETE "${film.title_en}"?\n\nThis will also delete all likes and comments on this film. This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    setDeleting(film.id)
+
+    // Delete related data first (likes, comments, contest entries)
+    await Promise.all([
+      supabase.from('likes').delete().eq('film_id', film.id),
+      supabase.from('comments').delete().eq('film_id', film.id),
+      supabase.from('contest_entries').delete().eq('film_id', film.id),
+      supabase.from('film_views').delete().eq('film_id', film.id),
+    ])
+
+    // Now delete the film itself
+    const { error } = await supabase.from('films').delete().eq('id', film.id)
+
+    if (error) {
+      alert(`Delete failed: ${error.message}`)
+    } else {
+      setFilms(prev => prev.filter(f => f.id !== film.id))
+      loadStats()
+    }
+
+    setDeleting(null)
+  }
+
   if (access === 'checking') return (
     <div className="min-h-screen bg-[#0D0A06] flex items-center justify-center text-[#7A6040]">Checking...</div>
   )
@@ -149,7 +180,7 @@ export default function AdminPage() {
           {([
             { key: 'films',    label: '🎬 Films'        },
             { key: 'activity', label: '📋 Activity'     },
-            { key: 'errors',   label: `🐛 Error Logs${stats.errors > 0 ? ` (${stats.errors})` : ''}` },
+            { key: 'errors',   label: `🐛 Errors${stats.errors > 0 ? ` (${stats.errors})` : ''}` },
           ] as { key: MainTab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setMainTab(t.key)}
               className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[#D4A017] border border-[#D4A017]/40' : 'bg-[#1A1208] text-[#7A6040] border border-[#2E2010]'}`}>
@@ -195,6 +226,8 @@ export default function AdminPage() {
                             className="text-[#D4A017] text-xs hover:underline">▶ Preview →</a>
                         )}
                       </div>
+
+                      {/* Action buttons */}
                       <div className="flex flex-col gap-2">
                         {filmFilter === 'pending' && <>
                           <button onClick={() => updateFilmStatus(film.id,'active')} className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">✅ Approve</button>
@@ -204,8 +237,16 @@ export default function AdminPage() {
                           <button onClick={() => updateFilmStatus(film.id,'active')} className="border border-green-700/40 text-green-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-green-700/20 transition">↩ Approve</button>
                         )}
                         {filmFilter === 'active' && (
-                          <button onClick={() => updateFilmStatus(film.id,'rejected')} className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">Remove</button>
+                          <button onClick={() => updateFilmStatus(film.id,'rejected')} className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">Hide</button>
                         )}
+                        {/* Permanent delete — available on ALL statuses */}
+                        <button
+                          onClick={() => deleteFilm(film)}
+                          disabled={deleting === film.id}
+                          className="border border-red-900/60 text-red-600 hover:bg-red-900/30 hover:text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase transition disabled:opacity-40"
+                        >
+                          {deleting === film.id ? '⏳ Deleting...' : '🗑 Delete'}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -218,7 +259,7 @@ export default function AdminPage() {
         {/* ACTIVITY TAB */}
         {mainTab === 'activity' && (
           <>
-            <p className="text-xs text-[#7A6040] mb-4">Last 100 business events — uploads, approvals, registrations</p>
+            <p className="text-xs text-[#7A6040] mb-4">Last 100 business events</p>
             {loading ? <div className="text-center py-16 text-[#7A6040]">Loading...</div>
             : logs.length === 0 ? <div className="text-center py-16 text-[#7A6040]"><p className="text-3xl mb-2">📋</p><p className="text-sm">No activity yet</p></div>
             : (
@@ -242,7 +283,7 @@ export default function AdminPage() {
         {/* ERROR LOGS TAB */}
         {mainTab === 'errors' && (
           <>
-            <p className="text-xs text-[#7A6040] mb-4">Technical debug logs — function calls, errors, timing. Auto-purged after 7 days.</p>
+            <p className="text-xs text-[#7A6040] mb-4">Technical debug logs — auto-purged after 7 days.</p>
             <ErrorLogViewer />
           </>
         )}
