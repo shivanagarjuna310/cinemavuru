@@ -106,31 +106,39 @@ export default function AdminPage() {
   // Permanently delete a film and all its likes/comments
   async function deleteFilm(film: Film) {
     const confirmed = window.confirm(
-      `⚠️ PERMANENTLY DELETE "${film.title_en}"?\n\nThis will also delete all likes and comments on this film. This cannot be undone.`
+      `⚠️ PERMANENTLY DELETE "${film.title_en}"?\n\nThis will also delete all likes, comments and views. Cannot be undone.`
     )
     if (!confirmed) return
 
     setDeleting(film.id)
 
-    // Delete related data first (likes, comments, contest entries)
-    await Promise.all([
-      supabase.from('likes').delete().eq('film_id', film.id),
-      supabase.from('comments').delete().eq('film_id', film.id),
-      supabase.from('contest_entries').delete().eq('film_id', film.id),
-      supabase.from('film_views').delete().eq('film_id', film.id),
-    ])
+    // Delete related data one by one so we can see which fails
+    const { error: likesErr } = await supabase.from('likes').delete().eq('film_id', film.id)
+    if (likesErr) console.error('likes delete failed:', likesErr.message)
 
-    // Now delete the film itself
-    const { error } = await supabase.from('films').delete().eq('id', film.id)
+    const { error: commentsErr } = await supabase.from('comments').delete().eq('film_id', film.id)
+    if (commentsErr) console.error('comments delete failed:', commentsErr.message)
 
-    if (error) {
-      alert(`Delete failed: ${error.message}`)
-    } else {
-      setFilms(prev => prev.filter(f => f.id !== film.id))
-      loadStats()
+    const { error: viewsErr } = await supabase.from('film_views').delete().eq('film_id', film.id)
+    if (viewsErr) console.error('film_views delete failed:', viewsErr.message)
+
+    const { error: contestErr } = await supabase.from('contest_entries').delete().eq('film_id', film.id)
+    if (contestErr) console.error('contest_entries delete failed:', contestErr.message)
+
+    // Finally delete the film itself
+    const { error: filmErr } = await supabase.from('films').delete().eq('id', film.id)
+
+    if (filmErr) {
+      alert(`❌ Delete failed: ${filmErr.message}\n\nCheck browser console for details.`)
+      setDeleting(null)
+      return
     }
 
+    // Success — remove from local list immediately
+    setFilms(prev => prev.filter(f => f.id !== film.id))
+    loadStats()
     setDeleting(null)
+    alert(`✅ "${film.title_en}" deleted successfully.`)
   }
 
   if (access === 'checking') return (
