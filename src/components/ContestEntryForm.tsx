@@ -133,7 +133,7 @@ export default function ContestEntryForm() {
           video_url:   embedUrl,
           creator_id:  userInfo.id,
           district_id: district?.id,
-          status:      'active',
+          status:      'pending',
           view_count:  0,
           like_count:  0,
         })
