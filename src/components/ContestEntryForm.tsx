@@ -1,11 +1,12 @@
 'use client'
-// src/components/ContestEntryForm.tsx — fixed type errors
+// src/components/ContestEntryForm.tsx — with Razorpay payment integrated
 
 import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
+import RazorpayButton          from '@/components/RazorpayButton'
 
-// ── Explicit Contest type to avoid missing property errors ────
+// ── Types ─────────────────────────────────────────────────────
 type Contest = {
   id:                   string
   title:                string
@@ -21,25 +22,47 @@ type Film = {
   title_en: string
 }
 
+// ── New type to hold logged-in user info ──────────────────────
+type UserInfo = {
+  id:    string
+  email: string
+  name:  string
+}
+
 export default function ContestEntryForm() {
   const router = useRouter()
 
-  const [userId,         setUserId]         = useState<string | null>(null)
+  const [userInfo,       setUserInfo]       = useState<UserInfo | null>(null)
   const [contest,        setContest]        = useState<Contest | null>(null)
   const [myFilms,        setMyFilms]        = useState<Film[]>([])
   const [filmId,         setFilmId]         = useState('')
   const [newTitle,       setNewTitle]       = useState('')
   const [newGenre,       setNewGenre]       = useState('Drama')
   const [youtubeUrl,     setYoutubeUrl]     = useState('')
-  const [status,         setStatus]         = useState<'idle'|'loading'|'success'|'error'>('idle')
+  const [status,         setStatus]         = useState<'idle'|'loading'|'submitted'|'paid'|'error'>('idle')
   const [message,        setMessage]        = useState('')
   const [alreadyEntered, setAlreadyEntered] = useState(false)
+  // After form submit succeeds, we store the final film ID here
+  // so the RazorpayButton knows which film to attach payment to
+  const [submittedFilmId, setSubmittedFilmId] = useState('')
 
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      setUserId(user.id)
+
+      // Get profile name from profiles table
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      setUserInfo({
+        id:    user.id,
+        email: user.email ?? '',
+        name:  profile?.full_name ?? 'Filmmaker',
+      })
 
       const { data: c } = await supabase
         .from('contests')
@@ -84,7 +107,7 @@ export default function ContestEntryForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!userId || !contest) return
+    if (!userInfo || !contest) return
 
     setStatus('loading')
     setMessage('')
@@ -108,7 +131,7 @@ export default function ContestEntryForm() {
           title_en:    newTitle || 'Contest Film',
           genre:       newGenre,
           video_url:   embedUrl,
-          creator_id:  userId,
+          creator_id:  userInfo.id,
           district_id: district?.id,
           status:      'active',
           view_count:  0,
@@ -119,7 +142,7 @@ export default function ContestEntryForm() {
 
       if (filmError || !newFilm) {
         setStatus('error')
-        setMessage('Could not create film. Please upload your film first, then come back.')
+        setMessage('Could not create film. Please upload your film first.')
         return
       }
       targetFilmId = newFilm.id
@@ -134,7 +157,7 @@ export default function ContestEntryForm() {
     const { error } = await supabase.from('contest_entries').insert({
       contest_id:     contest.id,
       film_id:        targetFilmId,
-      creator_id:     userId,
+      creator_id:     userInfo.id,
       payment_status: 'pending',
       is_approved:    false,
     })
@@ -147,11 +170,14 @@ export default function ContestEntryForm() {
       return
     }
 
-    setStatus('success')
-    setMessage('🎉 Film submitted! Complete payment below to confirm your entry.')
+    // Film submitted! Now store the film ID and show payment button
+    setSubmittedFilmId(targetFilmId)
+    setStatus('submitted')
+    setMessage('Film submitted! Complete payment to confirm your entry.')
   }
 
-  if (!userId) return (
+  // ── SCREEN: Not logged in ─────────────────────────────────
+  if (!userInfo) return (
     <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8 text-center">
       <div className="text-4xl mb-4">🔐</div>
       <p className="text-[#FDF6E3] font-semibold mb-2">Login Required</p>
@@ -163,6 +189,7 @@ export default function ContestEntryForm() {
     </div>
   )
 
+  // ── SCREEN: No active contest ─────────────────────────────
   if (!contest) return (
     <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8 text-center">
       <div className="text-4xl mb-4">⏳</div>
@@ -171,6 +198,7 @@ export default function ContestEntryForm() {
     </div>
   )
 
+  // ── SCREEN: Already entered ───────────────────────────────
   if (alreadyEntered) return (
     <div className="bg-[#1A1208] border border-green-700/30 rounded-2xl p-8 text-center">
       <div className="text-4xl mb-4">✅</div>
@@ -183,33 +211,56 @@ export default function ContestEntryForm() {
     </div>
   )
 
-  if (status === 'success') return (
+  // ── SCREEN: Film submitted → show payment button ──────────
+  if (status === 'submitted') return (
     <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
       <div className="text-center mb-6">
         <div className="text-4xl mb-3">🎬</div>
         <p className="text-green-400 font-bold text-lg mb-2">Film Submitted!</p>
         <p className="text-[#7A6040] text-sm">{message}</p>
       </div>
+
       <div className="bg-[#0D0A06] border border-[#2E2010] rounded-xl p-5">
         <h3 className="text-sm font-bold text-[#D4A017] uppercase tracking-wide mb-3">
           Complete Payment — ₹{contest.entry_fee}
         </h3>
         <p className="text-[#7A6040] text-sm mb-4 leading-relaxed">
-          Your entry is reserved. Pay the entry fee to confirm. Without payment, your film won&apos;t appear in the contest.
+          Your entry is reserved. Pay the entry fee to confirm your spot.
+          Without payment, your film won&apos;t appear in the contest.
         </p>
-        <button
-          onClick={() => alert('Razorpay integration coming soon!\n\nFor testing: Contact the admin to manually mark your payment as complete.')}
-          className="w-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black py-3 rounded-lg font-bold uppercase tracking-wide text-sm"
-        >
-          Pay ₹{contest.entry_fee} via UPI / Card →
-        </button>
+
+        {/* ✅ REAL RAZORPAY BUTTON — replaces the old fake alert button */}
+        <RazorpayButton
+          contestId={contest.id}
+          filmId={submittedFilmId}
+          userId={userInfo.id}
+          userEmail={userInfo.email}
+          userName={userInfo.name}
+          onSuccess={() => setStatus('paid')}
+        />
+
         <p className="text-center text-xs text-[#4A3020] mt-3">
-          Razorpay · Refundable if contest is cancelled
+          Secured by Razorpay · Refundable if contest is cancelled
         </p>
       </div>
     </div>
   )
 
+  // ── SCREEN: Payment complete ──────────────────────────────
+  if (status === 'paid') return (
+    <div className="bg-[#1A1208] border border-green-700/30 rounded-2xl p-8 text-center">
+      <div className="text-5xl mb-4">🎉</div>
+      <p className="text-green-400 font-bold text-xl mb-2">Payment Successful!</p>
+      <p className="text-[#FDF6E3] text-sm mb-1">Your film has been entered into the contest.</p>
+      <p className="text-[#7A6040] text-sm mb-6">Admin will review and approve your entry shortly.</p>
+      <button onClick={() => router.push('/contest')}
+        className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3 rounded-lg font-bold uppercase text-sm">
+        View Leaderboard →
+      </button>
+    </div>
+  )
+
+  // ── SCREEN: Main entry form ───────────────────────────────
   return (
     <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
       <div className="mb-6 p-4 bg-[#D4A017]/05 border border-[#D4A017]/20 rounded-xl">
@@ -272,7 +323,7 @@ export default function ContestEntryForm() {
 
         <button type="submit" disabled={status === 'loading'}
           className="w-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black py-3.5 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition disabled:opacity-50 text-sm">
-          {status === 'loading' ? '⏳ Submitting...' : `Submit & Pay ₹${contest.entry_fee} →`}
+          {status === 'loading' ? '⏳ Submitting...' : `Submit Film →`}
         </button>
 
         <p className="text-center text-xs text-[#4A3020]">
