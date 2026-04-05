@@ -1,5 +1,5 @@
 'use client'
-// src/app/admin/page.tsx — with permanent delete option
+// src/app/admin/page.tsx — with contest entry management
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase }        from '@/lib/supabase'
@@ -17,8 +17,21 @@ type Log = {
   profiles: { name: string | null } | null
   films:    { title_en: string | null } | null
 }
+// ── NEW: Contest entry type ──────────────────────────────────
+type ContestEntry = {
+  id: string
+  creator_id: string
+  payment_status: string
+  is_approved: boolean
+  contest_score: number
+  created_at: string
+  razorpay_payment_id: string | null
+  films: { title_en: string } | null
+  profiles: { name: string | null } | null
+}
+
 type AccessState = 'checking' | 'denied' | 'granted'
-type MainTab = 'films' | 'activity' | 'errors'
+type MainTab = 'films' | 'activity' | 'errors' | 'contest' // ── NEW: contest tab
 type FilmFilter = 'pending' | 'active' | 'rejected'
 
 function timeAgo(d: string) {
@@ -47,6 +60,9 @@ export default function AdminPage() {
   const [loading,    setLoading]    = useState(false)
   const [stats,      setStats]      = useState({ pending: 0, active: 0, users: 0, views: 0, errors: 0 })
   const [deleting,   setDeleting]   = useState<string | null>(null)
+  // ── NEW: Contest state ───────────────────────────────────
+  const [contestEntries, setContestEntries] = useState<ContestEntry[]>([])
+  const [contestLoading, setContestLoading] = useState(false)
 
   useEffect(() => {
     async function checkAccess() {
@@ -89,18 +105,42 @@ export default function AdminPage() {
     setLoading(false)
   }, [])
 
+  // ── NEW: Fetch contest entries ───────────────────────────
+  const fetchContestEntries = useCallback(async () => {
+    setContestLoading(true)
+    const { data } = await supabase
+      .from('contest_entries')
+      .select('*, films(title_en), profiles(name)')
+      .order('created_at', { ascending: false })
+    setContestEntries((data as ContestEntry[]) ?? [])
+    setContestLoading(false)
+  }, [])
+
   useEffect(() => {
     if (access !== 'granted') return
     loadStats()
     if (mainTab === 'films')    fetchFilms()
     if (mainTab === 'activity') fetchLogs()
-  }, [access, mainTab, filmFilter, loadStats, fetchFilms, fetchLogs])
+    if (mainTab === 'contest')  fetchContestEntries() // ── NEW
+  }, [access, mainTab, filmFilter, loadStats, fetchFilms, fetchLogs, fetchContestEntries])
 
   async function updateFilmStatus(filmId: string, newStatus: 'active' | 'rejected') {
     const { error } = await supabase.from('films').update({ status: newStatus }).eq('id', filmId)
     if (error) { alert(`Error: ${error.message}`); return }
     setFilms(prev => prev.filter(f => f.id !== filmId))
     loadStats()
+  }
+
+  // ── NEW: Approve or revoke contest entry ─────────────────
+  async function updateContestEntry(entryId: string, isApproved: boolean) {
+    const { error } = await supabase
+      .from('contest_entries')
+      .update({ is_approved: isApproved })
+      .eq('id', entryId)
+    if (error) { alert(`Error: ${error.message}`); return }
+    setContestEntries(prev => prev.map(e =>
+      e.id === entryId ? { ...e, is_approved: isApproved } : e
+    ))
   }
 
   // Permanently delete a film and all its likes/comments
@@ -112,7 +152,6 @@ export default function AdminPage() {
 
     setDeleting(film.id)
 
-    // Delete related data one by one so we can see which fails
     const { error: likesErr } = await supabase.from('likes').delete().eq('film_id', film.id)
     if (likesErr) console.error('likes delete failed:', likesErr.message)
 
@@ -125,7 +164,6 @@ export default function AdminPage() {
     const { error: contestErr } = await supabase.from('contest_entries').delete().eq('film_id', film.id)
     if (contestErr) console.error('contest_entries delete failed:', contestErr.message)
 
-    // Finally delete the film itself
     const { error: filmErr } = await supabase.from('films').delete().eq('id', film.id)
 
     if (filmErr) {
@@ -134,7 +172,6 @@ export default function AdminPage() {
       return
     }
 
-    // Success — remove from local list immediately
     setFilms(prev => prev.filter(f => f.id !== film.id))
     loadStats()
     setDeleting(null)
@@ -186,16 +223,22 @@ export default function AdminPage() {
         {/* Tabs */}
         <div className="flex gap-2 mb-5">
           {([
-            { key: 'films',    label: '🎬 Films'        },
-            { key: 'activity', label: '📋 Activity'     },
+            { key: 'films',    label: '🎬 Films'    },
+            { key: 'activity', label: '📋 Activity' },
             { key: 'errors',   label: `🐛 Errors${stats.errors > 0 ? ` (${stats.errors})` : ''}` },
+            { key: 'contest',  label: '🏆 Contest'  }, // ── NEW
           ] as { key: MainTab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setMainTab(t.key)}
               className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[#D4A017] border border-[#D4A017]/40' : 'bg-[#1A1208] text-[#7A6040] border border-[#2E2010]'}`}>
               {t.label}
             </button>
           ))}
-          <button onClick={() => { loadStats(); if (mainTab === 'films') fetchFilms(); else if (mainTab === 'activity') fetchLogs() }}
+          <button onClick={() => {
+            loadStats()
+            if (mainTab === 'films')    fetchFilms()
+            else if (mainTab === 'activity') fetchLogs()
+            else if (mainTab === 'contest')  fetchContestEntries()
+          }}
             className="ml-auto px-4 py-2 rounded-lg text-sm border border-[#2E2010] text-[#7A6040] hover:text-[#D4A017] transition">
             ↻ Refresh
           </button>
@@ -234,8 +277,6 @@ export default function AdminPage() {
                             className="text-[#D4A017] text-xs hover:underline">▶ Preview →</a>
                         )}
                       </div>
-
-                      {/* Action buttons */}
                       <div className="flex flex-col gap-2">
                         {filmFilter === 'pending' && <>
                           <button onClick={() => updateFilmStatus(film.id,'active')} className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">✅ Approve</button>
@@ -247,12 +288,10 @@ export default function AdminPage() {
                         {filmFilter === 'active' && (
                           <button onClick={() => updateFilmStatus(film.id,'rejected')} className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">Hide</button>
                         )}
-                        {/* Permanent delete — available on ALL statuses */}
                         <button
                           onClick={() => deleteFilm(film)}
                           disabled={deleting === film.id}
-                          className="border border-red-900/60 text-red-600 hover:bg-red-900/30 hover:text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase transition disabled:opacity-40"
-                        >
+                          className="border border-red-900/60 text-red-600 hover:bg-red-900/30 hover:text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase transition disabled:opacity-40">
                           {deleting === film.id ? '⏳ Deleting...' : '🗑 Delete'}
                         </button>
                       </div>
@@ -293,6 +332,79 @@ export default function AdminPage() {
           <>
             <p className="text-xs text-[#7A6040] mb-4">Technical debug logs — auto-purged after 7 days.</p>
             <ErrorLogViewer />
+          </>
+        )}
+
+        {/* CONTEST TAB — NEW */}
+        {mainTab === 'contest' && (
+          <>
+            <p className="text-xs text-[#7A6040] mb-4">
+              Contest entries — approve after verifying payment is confirmed.
+            </p>
+            {contestLoading
+              ? <div className="text-center py-16 text-[#7A6040]">Loading...</div>
+              : contestEntries.length === 0
+              ? <div className="text-center py-16 text-[#7A6040]"><div className="text-4xl mb-2">🏆</div><p>No contest entries yet</p></div>
+              : (
+                <div className="space-y-3">
+                  {contestEntries.map(entry => (
+                    <div key={entry.id} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-[#FDF6E3] mb-1">
+                            {entry.films?.title_en ?? 'Unknown Film'}
+                          </h3>
+                          <p className="text-[#7A6040] text-xs mb-2">
+                            by {entry.profiles?.name ?? 'Unknown'}
+                          </p>
+                          <div className="flex gap-2 flex-wrap">
+                            <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
+                              entry.payment_status === 'paid'
+                                ? 'bg-green-900/40 text-green-400 border border-green-700/40'
+                                : 'bg-yellow-900/40 text-yellow-400 border border-yellow-700/40'
+                            }`}>
+                              💳 {entry.payment_status}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
+                              entry.is_approved
+                                ? 'bg-green-900/40 text-green-400 border border-green-700/40'
+                                : 'bg-red-900/40 text-red-400 border border-red-700/40'
+                            }`}>
+                              {entry.is_approved ? '✅ Approved' : '⏳ Pending Approval'}
+                            </span>
+                            {entry.razorpay_payment_id && (
+                              <span className="text-xs text-[#4A3020]">
+                                ID: {entry.razorpay_payment_id}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {!entry.is_approved && entry.payment_status === 'paid' && (
+                            <button
+                              onClick={() => updateContestEntry(entry.id, true)}
+                              className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">
+                              ✅ Approve
+                            </button>
+                          )}
+                          {entry.is_approved && (
+                            <button
+                              onClick={() => updateContestEntry(entry.id, false)}
+                              className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">
+                              ❌ Revoke
+                            </button>
+                          )}
+                          {entry.payment_status !== 'paid' && (
+                            <span className="text-xs text-yellow-600 text-center">
+                              Awaiting payment
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
           </>
         )}
 
