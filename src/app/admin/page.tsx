@@ -10,6 +10,7 @@ type Film = {
   genre: string | null; video_url: string | null
   description: string | null; status: string
   created_at: string; like_count: number; view_count: number
+  creator_id: string  // ← added for email notifications
 }
 type Log = {
   id: string; event_type: string; created_at: string
@@ -127,6 +128,43 @@ export default function AdminPage() {
   async function updateFilmStatus(filmId: string, newStatus: 'active' | 'rejected') {
     const { error } = await supabase.from('films').update({ status: newStatus }).eq('id', filmId)
     if (error) { alert(`Error: ${error.message}`); return }
+
+    // ── Notify creator by email (non-blocking) ──
+    try {
+      const film = films.find(f => f.id === filmId)
+      if (film) {
+        // Step 1: Get creator's name from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', film.creator_id)
+          .single()
+
+        // Step 2: Get creator's email securely via server route
+        const emailRes = await fetch('/api/email/creator-email', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: film.creator_id }),
+        })
+        const { email: creatorEmail } = await emailRes.json()
+
+        // Step 3: Send approval/rejection email
+        await fetch('/api/email/notify', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type:         newStatus === 'active' ? 'film_approved' : 'film_rejected',
+            filmTitle:    film.title_en,
+            creatorName:  profile?.name  ?? 'Filmmaker',
+            creatorEmail: creatorEmail   ?? '',
+          }),
+        })
+      }
+    } catch (emailErr) {
+      // Email failure must NOT block approval action
+      console.error('Creator email notify failed:', emailErr)
+    }
+
     setFilms(prev => prev.filter(f => f.id !== filmId))
     loadStats()
   }

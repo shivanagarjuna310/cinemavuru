@@ -135,6 +135,30 @@ export default function UploadForm() {
       setStatus('error')
       setMessage(`Upload failed: ${error.message}`)
     } else {
+      // ── Notify admin by email (non-blocking) ──
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        const { data: profile }  = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', userId)
+          .single()
+
+        await fetch('/api/email/notify', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type:         'film_uploaded',
+            filmTitle:    titleEn.trim(),
+            creatorName:  profile?.name ?? 'Unknown',
+            creatorEmail: user?.email   ?? '',
+          }),
+        })
+      } catch (emailErr) {
+        // Email failure must NOT block upload success
+        console.error('Admin email notify failed:', emailErr)
+      }
+
       setStatus('success')
       setMessage('🎉 Film submitted! We will review and publish it within 24 hours.')
       // Reset form
