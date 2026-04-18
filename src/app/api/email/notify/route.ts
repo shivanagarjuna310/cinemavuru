@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
               <tr><td style="padding:8px 0;color:#7A6040;">Email</td>
                   <td style="padding:8px 0;">${creatorEmail}</td></tr>
             </table>
-            <a href="https://cinemavuru.vercel.app/admin"
+            <a href="https://cinemavuru.vercel.app/cv-admin-1a25"
                style="display:inline-block;margin-top:24px;background:#FF6B1A;color:white;
                       padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">
               Review in Admin →
