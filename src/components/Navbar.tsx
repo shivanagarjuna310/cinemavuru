@@ -1,16 +1,29 @@
 'use client'
-// src/components/Navbar.tsx — with Contest tab
+// src/components/Navbar.tsx — with Contest tab + Search
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link                    from 'next/link'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
 import type { User }           from '@supabase/supabase-js'
 
+type SearchResult = {
+  id: string
+  title_en: string
+  genre: string | null
+  district_id: string
+}
+
 export default function Navbar() {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
+  const [open, setOpen]               = useState(false)
+  const [user, setUser]               = useState<User | null>(null)
+  const [searchOpen, setSearchOpen]   = useState(false)
+  const [query, setQuery]             = useState('')
+  const [results, setResults]         = useState<SearchResult[]>([])
+  const [searching, setSearching]     = useState(false)
+  const searchRef                     = useRef<HTMLDivElement>(null)
+  const inputRef                      = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -20,10 +33,54 @@ export default function Navbar() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  // Close search when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false)
+        setQuery('')
+        setResults([])
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Focus input when search opens
+  useEffect(() => {
+    if (searchOpen) inputRef.current?.focus()
+  }, [searchOpen])
+
+  // Search Supabase as user types (debounced 300ms)
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return }
+
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      const { data } = await supabase
+        .from('films')
+        .select('id, title_en, genre, district_id')
+        .eq('status', 'active')
+        .or(`title_en.ilike.%${query}%,genre.ilike.%${query}%`)
+        .limit(6)
+      setResults(data ?? [])
+      setSearching(false)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [query])
+
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
+  }
+
+  function handleResultClick(filmId: string) {
+    router.push(`/telangana/hyderabad/film/${filmId}`)
+    setSearchOpen(false)
+    setQuery('')
+    setResults([])
   }
 
   const initial = user?.user_metadata?.name?.[0]?.toUpperCase()
@@ -39,6 +96,7 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 h-16 bg-[#0D0A06]/90 backdrop-blur-md border-b border-[#2E2010]">
 
+      {/* Logo */}
       <Link href="/" className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-base">🎬</div>
         <div className="flex flex-col leading-none">
@@ -47,6 +105,7 @@ export default function Navbar() {
         </div>
       </Link>
 
+      {/* Desktop nav links */}
       <ul className="hidden md:flex items-center gap-1 list-none">
         {links.map(l => (
           <li key={l.href}>
@@ -58,7 +117,65 @@ export default function Navbar() {
         ))}
       </ul>
 
+      {/* Desktop right side */}
       <div className="hidden md:flex items-center gap-2">
+
+        {/* Search */}
+        <div ref={searchRef} className="relative">
+          {searchOpen ? (
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Search films..."
+                  className="w-48 bg-[#1A1208] border border-[#D4A017]/40 text-[#FDF6E3] placeholder-[#7A6040] px-3 py-1.5 rounded text-sm outline-none focus:border-[#D4A017] transition"
+                />
+                {/* Search results dropdown */}
+                {(results.length > 0 || searching) && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1208] border border-[#2E2010] rounded-lg overflow-hidden shadow-xl min-w-[280px]">
+                    {searching ? (
+                      <div className="px-4 py-3 text-[#7A6040] text-sm">Searching...</div>
+                    ) : (
+                      results.map(film => (
+                        <button
+                          key={film.id}
+                          onClick={() => handleResultClick(film.id)}
+                          className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0"
+                        >
+                          <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
+                          {film.genre && (
+                            <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                    {!searching && results.length === 0 && query.trim() && (
+                      <div className="px-4 py-3 text-[#7A6040] text-sm">No films found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => { setSearchOpen(false); setQuery(''); setResults([]) }}
+                className="text-[#7A6040] hover:text-[#FF6B1A] transition text-lg"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="text-[#7A6040] hover:text-[#D4A017] transition p-2 rounded hover:bg-[#D4A017]/10"
+              title="Search films"
+            >
+              🔍
+            </button>
+          )}
+        </div>
+
         {user ? (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-sm">
@@ -80,12 +197,45 @@ export default function Navbar() {
         )}
       </div>
 
+      {/* Mobile hamburger */}
       <button className="md:hidden text-[#D4A017] text-2xl" onClick={() => setOpen(o => !o)}>
         {open ? '✕' : '☰'}
       </button>
 
+      {/* Mobile menu */}
       {open && (
         <div className="absolute top-16 left-0 right-0 bg-[#0D0A06] border-b border-[#2E2010] flex flex-col p-4 gap-3 md:hidden">
+          {/* Mobile search */}
+          <div className="relative">
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="🔍  Search films..."
+              className="w-full bg-[#1A1208] border border-[#D4A017]/40 text-[#FDF6E3] placeholder-[#7A6040] px-3 py-2 rounded text-sm outline-none focus:border-[#D4A017] transition"
+            />
+            {(results.length > 0 || searching) && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1208] border border-[#2E2010] rounded-lg overflow-hidden shadow-xl z-50">
+                {searching ? (
+                  <div className="px-4 py-3 text-[#7A6040] text-sm">Searching...</div>
+                ) : (
+                  results.map(film => (
+                    <button
+                      key={film.id}
+                      onClick={() => { handleResultClick(film.id); setOpen(false) }}
+                      className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0"
+                    >
+                      <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
+                      {film.genre && (
+                        <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           {links.map(l => (
             <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
               className="text-[#7A6040] hover:text-[#D4A017] text-sm uppercase tracking-wide font-semibold transition">
