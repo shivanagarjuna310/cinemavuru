@@ -5,7 +5,7 @@ import { useState }  from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase }  from '@/lib/supabase'
 
-type Tab    = 'login' | 'register'
+type Tab    = 'login' | 'register' | 'forgot'
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
 export default function AuthForm() {
@@ -22,6 +22,21 @@ export default function AuthForm() {
     e.preventDefault()
     setStatus('loading')
     setMessage('')
+
+    // ── Forgot Password ──────────────────────────────────────
+    if (tab === 'forgot') {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset`,
+      })
+      if (error) {
+        setStatus('error')
+        setMessage(error.message)
+      } else {
+        setStatus('success')
+        setMessage('✅ Password reset link sent! Check your email inbox.')
+      }
+      return
+    }
 
     if (tab === 'register') {
 
@@ -86,22 +101,40 @@ export default function AuthForm() {
   return (
     <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
 
-      {/* Tabs */}
-      <div className="flex border-b border-[#2E2010] mb-6">
-        {(['login', 'register'] as Tab[]).map(t => (
+      {/* Tabs — only Login and Register, Forgot is a sub-state */}
+      {tab !== 'forgot' && (
+        <div className="flex border-b border-[#2E2010] mb-6">
+          {(['login', 'register'] as Tab[]).map(t => (
+            <button
+              key={t}
+              onClick={() => switchTab(t)}
+              className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wide transition border-b-2 ${
+                tab === t
+                  ? 'text-[#D4A017] border-[#D4A017]'
+                  : 'text-[#7A6040] border-transparent hover:text-[#FDF6E3]'
+              }`}
+            >
+              {t === 'login' ? 'Login' : 'Create Account'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Forgot password header */}
+      {tab === 'forgot' && (
+        <div className="mb-6">
           <button
-            key={t}
-            onClick={() => switchTab(t)}
-            className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wide transition border-b-2 ${
-              tab === t
-                ? 'text-[#D4A017] border-[#D4A017]'
-                : 'text-[#7A6040] border-transparent hover:text-[#FDF6E3]'
-            }`}
+            onClick={() => switchTab('login')}
+            className="text-[#7A6040] hover:text-[#D4A017] text-xs uppercase tracking-widest transition flex items-center gap-1 mb-4"
           >
-            {t === 'login' ? 'Login' : 'Create Account'}
+            ← Back to Login
           </button>
-        ))}
-      </div>
+          <h2 className="text-[#D4A017] font-bold text-lg">Reset Password</h2>
+          <p className="text-[#7A6040] text-sm mt-1">
+            Enter your email and we'll send you a reset link.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
@@ -135,20 +168,34 @@ export default function AuthForm() {
           />
         </div>
 
-        <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder={tab === 'register' ? 'Min 6 characters' : '••••••••'}
-            required
-            minLength={6}
-            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
-          />
-        </div>
+        {tab !== 'forgot' && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs text-[#7A6040] uppercase tracking-widest">
+                Password
+              </label>
+              {/* Forgot password link — only on login tab */}
+              {tab === 'login' && (
+                <button
+                  type="button"
+                  onClick={() => switchTab('forgot')}
+                  className="text-xs text-[#7A6040] hover:text-[#D4A017] transition"
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder={tab === 'register' ? 'Min 6 characters' : '••••••••'}
+              required
+              minLength={6}
+              className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+            />
+          </div>
+        )}
 
         {message && (
           <div className={`rounded-lg px-4 py-3 text-sm ${
@@ -167,20 +214,24 @@ export default function AuthForm() {
         >
           {status === 'loading'
             ? 'Please wait...'
-            : tab === 'login' ? 'Login →' : 'Create Account →'}
+            : tab === 'login'    ? 'Login →'
+            : tab === 'register' ? 'Create Account →'
+            : 'Send Reset Link →'}
         </button>
 
       </form>
 
-      <p className="text-center text-xs text-[#4A3020] mt-6">
-        {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
-        <button
-          onClick={() => switchTab(tab === 'login' ? 'register' : 'login')}
-          className="text-[#D4A017] hover:underline"
-        >
-          {tab === 'login' ? 'Sign up free' : 'Login here'}
-        </button>
-      </p>
+      {tab !== 'forgot' && (
+        <p className="text-center text-xs text-[#4A3020] mt-6">
+          {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <button
+            onClick={() => switchTab(tab === 'login' ? 'register' : 'login')}
+            className="text-[#D4A017] hover:underline"
+          >
+            {tab === 'login' ? 'Sign up free' : 'Login here'}
+          </button>
+        </p>
+      )}
 
     </div>
   )
