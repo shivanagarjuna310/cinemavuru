@@ -7,6 +7,7 @@ import { headers }      from 'next/headers'
 import Navbar           from '@/components/Navbar'
 import FilmActions      from '@/components/FilmActions'
 import CommentSection   from '@/components/CommentSection'
+import type { Metadata } from 'next'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,6 +50,46 @@ async function incrementView(filmId: string) {
 })
   } catch {
     // Don't let view tracking break the page
+  }
+}
+
+// ── SEO: generates meta tags for each film page ──
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ state: string; district: string; id: string }>
+}): Promise<Metadata> {
+  const { id, district } = await params
+  const film = await getFilm(id)
+
+  if (!film) {
+    return { title: 'Film Not Found — CinemaVuru' }
+  }
+
+  const description = film.description
+    ? film.description.slice(0, 150) + '...'
+    : `Watch "${film.title_en}" — a short film from ${district} on CinemaVuru.`
+
+  const url = `https://cinemavuru.vercel.app/telangana/${district}/film/${id}`
+  const image = film.thumbnail_url ?? 'https://cinemavuru.vercel.app/og-default.png'
+
+  return {
+    title: `${film.title_en} — CinemaVuru`,
+    description,
+    openGraph: {
+      title:       `${film.title_en} — CinemaVuru`,
+      description,
+      url,
+      siteName:    'CinemaVuru',
+      type:        'video.other',
+      images: [{ url: image, width: 1200, height: 630, alt: film.title_en }],
+    },
+    twitter: {
+      card:        'summary_large_image',
+      title:       `${film.title_en} — CinemaVuru`,
+      description,
+      images:      [image],
+    },
   }
 }
 
