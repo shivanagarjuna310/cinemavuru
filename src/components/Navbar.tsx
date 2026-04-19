@@ -1,5 +1,5 @@
 'use client'
-// src/components/Navbar.tsx — with Contest tab + Search
+// src/components/Navbar.tsx — with Contest tab + Search + Hall of Fame
 
 import { useState, useEffect, useRef } from 'react'
 import Link                    from 'next/link'
@@ -22,7 +22,9 @@ export default function Navbar() {
   const [query, setQuery]             = useState('')
   const [results, setResults]         = useState<SearchResult[]>([])
   const [searching, setSearching]     = useState(false)
+  const [contestOpen, setContestOpen] = useState(false)
   const searchRef                     = useRef<HTMLDivElement>(null)
+  const contestRef = useRef<HTMLLIElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -41,6 +43,9 @@ export default function Navbar() {
         setQuery('')
         setResults([])
       }
+      if (contestRef.current && !contestRef.current.contains(e.target as Node)) {
+        setContestOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -54,7 +59,6 @@ export default function Navbar() {
   // Search Supabase as user types (debounced 300ms)
   useEffect(() => {
     if (!query.trim()) { setResults([]); return }
-
     const timer = setTimeout(async () => {
       setSearching(true)
       const { data } = await supabase
@@ -66,7 +70,6 @@ export default function Navbar() {
       setResults(data ?? [])
       setSearching(false)
     }, 300)
-
     return () => clearTimeout(timer)
   }, [query])
 
@@ -86,11 +89,17 @@ export default function Navbar() {
   const initial = user?.user_metadata?.name?.[0]?.toUpperCase()
              ?? user?.email?.[0]?.toUpperCase() ?? '?'
 
-  const links = [
+  const mainLinks = [
     { href: '/',                    label: 'Home'            },
     { href: '/telangana/hyderabad', label: 'Hyderabad Films' },
-    { href: '/contest',             label: '🏆 Contest'      },
     { href: '/upload',              label: 'Upload'          },
+  ]
+
+  const contestLinks = [
+    { href: '/contest',         label: '🏆 Active Contest'  },
+    { href: '/contest/films',   label: '🎬 Contest Films'   },
+    { href: '/contest/winners', label: '🏛️ Hall of Fame'    },
+    { href: '/contest/enter',   label: '✍️ Enter Contest'   },
   ]
 
   return (
@@ -107,7 +116,7 @@ export default function Navbar() {
 
       {/* Desktop nav links */}
       <ul className="hidden md:flex items-center gap-1 list-none">
-        {links.map(l => (
+        {mainLinks.map(l => (
           <li key={l.href}>
             <Link href={l.href}
               className="text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition">
@@ -115,6 +124,28 @@ export default function Navbar() {
             </Link>
           </li>
         ))}
+
+        {/* Contest dropdown */}
+        <li ref={contestRef} className="relative">
+          <button
+            onClick={() => setContestOpen(o => !o)}
+            className="text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition flex items-center gap-1"
+          >
+            🏆 Contest
+            <span className="text-[10px] opacity-60">{contestOpen ? '▲' : '▼'}</span>
+          </button>
+          {contestOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-[#0D0A06] border border-[#2E2010] rounded-xl overflow-hidden shadow-xl min-w-[180px] z-50">
+              {contestLinks.map(l => (
+                <Link key={l.href} href={l.href}
+                  onClick={() => setContestOpen(false)}
+                  className="block px-4 py-3 text-sm text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 transition border-b border-[#2E2010] last:border-0">
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </li>
       </ul>
 
       {/* Desktop right side */}
@@ -133,22 +164,16 @@ export default function Navbar() {
                   placeholder="Search films..."
                   className="w-48 bg-[#1A1208] border border-[#D4A017]/40 text-[#FDF6E3] placeholder-[#7A6040] px-3 py-1.5 rounded text-sm outline-none focus:border-[#D4A017] transition"
                 />
-                {/* Search results dropdown */}
                 {(results.length > 0 || searching) && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1208] border border-[#2E2010] rounded-lg overflow-hidden shadow-xl min-w-[280px]">
                     {searching ? (
                       <div className="px-4 py-3 text-[#7A6040] text-sm">Searching...</div>
                     ) : (
                       results.map(film => (
-                        <button
-                          key={film.id}
-                          onClick={() => handleResultClick(film.id)}
-                          className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0"
-                        >
+                        <button key={film.id} onClick={() => handleResultClick(film.id)}
+                          className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0">
                           <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
-                          {film.genre && (
-                            <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>
-                          )}
+                          {film.genre && <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>}
                         </button>
                       ))
                     )}
@@ -158,19 +183,13 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => { setSearchOpen(false); setQuery(''); setResults([]) }}
-                className="text-[#7A6040] hover:text-[#FF6B1A] transition text-lg"
-              >
-                ✕
-              </button>
+              <button onClick={() => { setSearchOpen(false); setQuery(''); setResults([]) }}
+                className="text-[#7A6040] hover:text-[#FF6B1A] transition text-lg">✕</button>
             </div>
           ) : (
-            <button
-              onClick={() => setSearchOpen(true)}
+            <button onClick={() => setSearchOpen(true)}
               className="text-[#7A6040] hover:text-[#D4A017] transition p-2 rounded hover:bg-[#D4A017]/10"
-              title="Search films"
-            >
+              title="Search films">
               🔍
             </button>
           )}
@@ -207,10 +226,7 @@ export default function Navbar() {
         <div className="absolute top-16 left-0 right-0 bg-[#0D0A06] border-b border-[#2E2010] flex flex-col p-4 gap-3 md:hidden">
           {/* Mobile search */}
           <div className="relative">
-            <input
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
+            <input type="text" value={query} onChange={e => setQuery(e.target.value)}
               placeholder="🔍  Search films..."
               className="w-full bg-[#1A1208] border border-[#D4A017]/40 text-[#FDF6E3] placeholder-[#7A6040] px-3 py-2 rounded text-sm outline-none focus:border-[#D4A017] transition"
             />
@@ -218,31 +234,36 @@ export default function Navbar() {
               <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1208] border border-[#2E2010] rounded-lg overflow-hidden shadow-xl z-50">
                 {searching ? (
                   <div className="px-4 py-3 text-[#7A6040] text-sm">Searching...</div>
-                ) : (
-                  results.map(film => (
-                    <button
-                      key={film.id}
-                      onClick={() => { handleResultClick(film.id); setOpen(false) }}
-                      className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0"
-                    >
-                      <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
-                      {film.genre && (
-                        <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>
-                      )}
-                    </button>
-                  ))
-                )}
+                ) : results.map(film => (
+                  <button key={film.id} onClick={() => { handleResultClick(film.id); setOpen(false) }}
+                    className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0">
+                    <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
+                    {film.genre && <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>}
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
-          {links.map(l => (
+          {mainLinks.map(l => (
             <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
               className="text-[#7A6040] hover:text-[#D4A017] text-sm uppercase tracking-wide font-semibold transition">
               {l.label}
             </Link>
           ))}
-          <div className="flex gap-2 mt-2">
+
+          {/* Mobile contest links */}
+          <div className="border-t border-[#2E2010] pt-3">
+            <p className="text-xs text-[#4A3020] uppercase tracking-widest mb-2">Contest</p>
+            {contestLinks.map(l => (
+              <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
+                className="block text-[#7A6040] hover:text-[#D4A017] text-sm tracking-wide font-semibold transition py-1.5">
+                {l.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="flex gap-2 mt-2 border-t border-[#2E2010] pt-3">
             {user ? (
               <button onClick={handleLogout}
                 className="flex-1 border border-[#2E2010] text-[#7A6040] py-2 rounded text-sm font-bold uppercase">
