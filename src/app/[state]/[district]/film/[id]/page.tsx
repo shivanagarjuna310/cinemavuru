@@ -70,8 +70,8 @@ export async function generateMetadata({
     ? film.description.slice(0, 150) + '...'
     : `Watch "${film.title_en}" — a short film from ${district} on CinemaVuru.`
 
-  const url = `https://cinemavuru.vercel.app/telangana/${district}/film/${id}`
-  const image = film.thumbnail_url ?? 'https://cinemavuru.vercel.app/og-default.png'
+  const url = `https://www.cinemavuru.com/telangana/${district}/film/${id}`
+  const image = film.thumbnail_url ?? 'https://www.cinemavuru.com/og-default.png'
 
   return {
     title: `${film.title_en} — CinemaVuru`,

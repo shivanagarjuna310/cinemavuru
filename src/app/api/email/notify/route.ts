@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
               <tr><td style="padding:8px 0;color:#7A6040;">Email</td>
                   <td style="padding:8px 0;">${creatorEmail}</td></tr>
             </table>
-            <a href="https://cinemavuru.vercel.app/cv-admin-1a25"
+            <a href="https://www.cinemavuru.com/cv-admin-1a25"
                style="display:inline-block;margin-top:24px;background:#FF6B1A;color:white;
                       padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">
               Review in Admin →
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
             <p>Your film <strong style="color:#D4A017;">"${filmTitle}"</strong> has been 
                approved and is now live on CinemaVuru!</p>
             <p style="color:#7A6040;">Share it with your friends and family to get more views and votes.</p>
-            <a href="https://cinemavuru.vercel.app/telangana/hyderabad"
+            <a href="https://www.cinemavuru.com/telangana/hyderabad"
                style="display:inline-block;margin-top:24px;background:#FF6B1A;color:white;
                       padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">
               View Your Film →
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
                it doesn't meet our current guidelines.</p>
             <p style="color:#7A6040;">You're welcome to make changes and resubmit anytime. 
                Contact us at ${ADMIN_EMAIL} if you have questions.</p>
-            <a href="https://cinemavuru.vercel.app/upload"
+            <a href="https://www.cinemavuru.com/upload"
                style="display:inline-block;margin-top:24px;background:#FF6B1A;color:white;
                       padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">
               Submit Another Film →
