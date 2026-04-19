@@ -1,5 +1,5 @@
 'use client'
-// src/app/admin/page.tsx — with contest entry management
+// src/app/cv-admin-1a25/page.tsx — with contest entry management + close contest
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase }        from '@/lib/supabase'
@@ -10,7 +10,7 @@ type Film = {
   genre: string | null; video_url: string | null
   description: string | null; status: string
   created_at: string; like_count: number; view_count: number
-  creator_id: string  // ← added for email notifications
+  creator_id: string
 }
 type Log = {
   id: string; event_type: string; created_at: string
@@ -18,7 +18,6 @@ type Log = {
   profiles: { name: string | null } | null
   films:    { title_en: string | null } | null
 }
-// ── NEW: Contest entry type ──────────────────────────────────
 type ContestEntry = {
   id: string
   creator_id: string
@@ -27,12 +26,24 @@ type ContestEntry = {
   contest_score: number
   created_at: string
   razorpay_payment_id: string | null
-  films: { title_en: string } | null
+  films: { id: string; title_en: string } | null
   profiles: { name: string | null } | null
+}
+type Contest = {
+  id: string
+  title: string
+  status: string
+  season_number: number
+  prize_1st: number
+  prize_2nd: number
+  prize_3rd: number
+  winner_film_id: string | null
+  winner_2nd_film_id: string | null
+  winner_3rd_film_id: string | null
 }
 
 type AccessState = 'checking' | 'denied' | 'granted'
-type MainTab = 'films' | 'activity' | 'errors' | 'contest' // ── NEW: contest tab
+type MainTab = 'films' | 'activity' | 'errors' | 'contest'
 type FilmFilter = 'pending' | 'active' | 'rejected'
 
 function timeAgo(d: string) {
@@ -42,6 +53,10 @@ function timeAgo(d: string) {
   if (m < 60) return `${m}m ago`
   if (h < 24) return `${h}h ago`
   return `${Math.floor(h/24)}d ago`
+}
+
+function formatPrize(amount: number) {
+  return `₹${amount.toLocaleString('en-IN')}`
 }
 
 const EVENT_STYLE: Record<string, { color: string; label: string }> = {
@@ -61,9 +76,15 @@ export default function AdminPage() {
   const [loading,    setLoading]    = useState(false)
   const [stats,      setStats]      = useState({ pending: 0, active: 0, users: 0, views: 0, errors: 0 })
   const [deleting,   setDeleting]   = useState<string | null>(null)
-  // ── NEW: Contest state ───────────────────────────────────
   const [contestEntries, setContestEntries] = useState<ContestEntry[]>([])
   const [contestLoading, setContestLoading] = useState(false)
+  const [activeContest,  setActiveContest]  = useState<Contest | null>(null)
+  // ── Close contest state ──────────────────────────────────
+  const [showClosePanel, setShowClosePanel] = useState(false)
+  const [winner1, setWinner1] = useState('')
+  const [winner2, setWinner2] = useState('')
+  const [winner3, setWinner3] = useState('')
+  const [closing, setClosing] = useState(false)
 
   useEffect(() => {
     async function checkAccess() {
@@ -106,13 +127,23 @@ export default function AdminPage() {
     setLoading(false)
   }, [])
 
-  // ── NEW: Fetch contest entries ───────────────────────────
   const fetchContestEntries = useCallback(async () => {
     setContestLoading(true)
+    // Fetch active contest
+    const { data: contest } = await supabase
+      .from('contests')
+      .select('*')
+      .in('status', ['open', 'voting'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    setActiveContest(contest ?? null)
+
+    // Fetch entries
     const { data } = await supabase
       .from('contest_entries')
-      .select('*, films(title_en), profiles(name)')
-      .order('created_at', { ascending: false })
+      .select('*, films(id, title_en), profiles(name)')
+      .order('contest_score', { ascending: false })
     setContestEntries((data as ContestEntry[]) ?? [])
     setContestLoading(false)
   }, [])
@@ -122,36 +153,25 @@ export default function AdminPage() {
     loadStats()
     if (mainTab === 'films')    fetchFilms()
     if (mainTab === 'activity') fetchLogs()
-    if (mainTab === 'contest')  fetchContestEntries() // ── NEW
+    if (mainTab === 'contest')  fetchContestEntries()
   }, [access, mainTab, filmFilter, loadStats, fetchFilms, fetchLogs, fetchContestEntries])
 
   async function updateFilmStatus(filmId: string, newStatus: 'active' | 'rejected') {
     const { error } = await supabase.from('films').update({ status: newStatus }).eq('id', filmId)
     if (error) { alert(`Error: ${error.message}`); return }
 
-    // ── Notify creator by email (non-blocking) ──
     try {
       const film = films.find(f => f.id === filmId)
       if (film) {
-        // Step 1: Get creator's name from profiles
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', film.creator_id)
-          .single()
-
-        // Step 2: Get creator's email securely via server route
+          .from('profiles').select('name').eq('id', film.creator_id).single()
         const emailRes = await fetch('/api/email/creator-email', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: film.creator_id }),
         })
         const { email: creatorEmail } = await emailRes.json()
-
-        // Step 3: Send approval/rejection email
         await fetch('/api/email/notify', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type:         newStatus === 'active' ? 'film_approved' : 'film_rejected',
             filmTitle:    film.title_en,
@@ -161,7 +181,6 @@ export default function AdminPage() {
         })
       }
     } catch (emailErr) {
-      // Email failure must NOT block approval action
       console.error('Creator email notify failed:', emailErr)
     }
 
@@ -169,51 +188,66 @@ export default function AdminPage() {
     loadStats()
   }
 
-  // ── NEW: Approve or revoke contest entry ─────────────────
   async function updateContestEntry(entryId: string, isApproved: boolean) {
     const { error } = await supabase
-      .from('contest_entries')
-      .update({ is_approved: isApproved })
-      .eq('id', entryId)
+      .from('contest_entries').update({ is_approved: isApproved }).eq('id', entryId)
     if (error) { alert(`Error: ${error.message}`); return }
     setContestEntries(prev => prev.map(e =>
       e.id === entryId ? { ...e, is_approved: isApproved } : e
     ))
   }
 
-  // Permanently delete a film and all its likes/comments
+  // ── Close contest and crown winners ──────────────────────
+  async function closeContest() {
+    if (!activeContest) return
+    if (!winner1) { alert('Please select at least the 1st place winner.'); return }
+
+    const confirmed = window.confirm(
+      `⚠️ Close Season ${activeContest.season_number} — "${activeContest.title}"?\n\nThis will:\n• Mark the contest as closed\n• Save the top 3 winners to Hall of Fame\n• Cannot be undone!\n\nProceed?`
+    )
+    if (!confirmed) return
+
+    setClosing(true)
+
+    const { error } = await supabase
+      .from('contests')
+      .update({
+        status:             'closed',
+        ended_at:           new Date().toISOString(),
+        winner_film_id:     winner1 || null,
+        winner_2nd_film_id: winner2 || null,
+        winner_3rd_film_id: winner3 || null,
+      })
+      .eq('id', activeContest.id)
+
+    if (error) {
+      alert(`Error closing contest: ${error.message}`)
+      setClosing(false)
+      return
+    }
+
+    setClosing(false)
+    setShowClosePanel(false)
+    setActiveContest(null)
+    alert(`✅ Season ${activeContest.season_number} closed! Winners saved to Hall of Fame.`)
+    fetchContestEntries()
+  }
+
   async function deleteFilm(film: Film) {
     const confirmed = window.confirm(
       `⚠️ PERMANENTLY DELETE "${film.title_en}"?\n\nThis will also delete all likes, comments and views. Cannot be undone.`
     )
     if (!confirmed) return
-
     setDeleting(film.id)
-
-    const { error: likesErr } = await supabase.from('likes').delete().eq('film_id', film.id)
-    if (likesErr) console.error('likes delete failed:', likesErr.message)
-
-    const { error: commentsErr } = await supabase.from('comments').delete().eq('film_id', film.id)
-    if (commentsErr) console.error('comments delete failed:', commentsErr.message)
-
-    const { error: viewsErr } = await supabase.from('film_views').delete().eq('film_id', film.id)
-    if (viewsErr) console.error('film_views delete failed:', viewsErr.message)
-
-    const { error: contestErr } = await supabase.from('contest_entries').delete().eq('film_id', film.id)
-    if (contestErr) console.error('contest_entries delete failed:', contestErr.message)
-
+    await supabase.from('likes').delete().eq('film_id', film.id)
+    await supabase.from('comments').delete().eq('film_id', film.id)
+    await supabase.from('film_views').delete().eq('film_id', film.id)
+    await supabase.from('contest_entries').delete().eq('film_id', film.id)
     const { error: filmErr } = await supabase.from('films').delete().eq('id', film.id)
-
-    if (filmErr) {
-      alert(`❌ Delete failed: ${filmErr.message}\n\nCheck browser console for details.`)
-      setDeleting(null)
-      return
-    }
-
+    if (filmErr) { alert(`❌ Delete failed: ${filmErr.message}`); setDeleting(null); return }
     setFilms(prev => prev.filter(f => f.id !== film.id))
     loadStats()
     setDeleting(null)
-    alert(`✅ "${film.title_en}" deleted successfully.`)
   }
 
   if (access === 'checking') return (
@@ -229,6 +263,9 @@ export default function AdminPage() {
       </div>
     </div>
   )
+
+  // Approved entries sorted by score — for winner dropdowns
+  const approvedEntries = contestEntries.filter(e => e.is_approved && e.payment_status === 'paid')
 
   return (
     <div className="min-h-screen bg-[#0D0A06] text-[#FDF6E3] p-6">
@@ -259,12 +296,12 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-5">
+        <div className="flex gap-2 mb-5 flex-wrap">
           {([
             { key: 'films',    label: '🎬 Films'    },
             { key: 'activity', label: '📋 Activity' },
             { key: 'errors',   label: `🐛 Errors${stats.errors > 0 ? ` (${stats.errors})` : ''}` },
-            { key: 'contest',  label: '🏆 Contest'  }, // ── NEW
+            { key: 'contest',  label: '🏆 Contest'  },
           ] as { key: MainTab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setMainTab(t.key)}
               className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[#D4A017] border border-[#D4A017]/40' : 'bg-[#1A1208] text-[#7A6040] border border-[#2E2010]'}`}>
@@ -276,8 +313,7 @@ export default function AdminPage() {
             if (mainTab === 'films')    fetchFilms()
             else if (mainTab === 'activity') fetchLogs()
             else if (mainTab === 'contest')  fetchContestEntries()
-          }}
-            className="ml-auto px-4 py-2 rounded-lg text-sm border border-[#2E2010] text-[#7A6040] hover:text-[#D4A017] transition">
+          }} className="ml-auto px-4 py-2 rounded-lg text-sm border border-[#2E2010] text-[#7A6040] hover:text-[#D4A017] transition">
             ↻ Refresh
           </button>
         </div>
@@ -326,9 +362,7 @@ export default function AdminPage() {
                         {filmFilter === 'active' && (
                           <button onClick={() => updateFilmStatus(film.id,'rejected')} className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">Hide</button>
                         )}
-                        <button
-                          onClick={() => deleteFilm(film)}
-                          disabled={deleting === film.id}
+                        <button onClick={() => deleteFilm(film)} disabled={deleting === film.id}
                           className="border border-red-900/60 text-red-600 hover:bg-red-900/30 hover:text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase transition disabled:opacity-40">
                           {deleting === film.id ? '⏳ Deleting...' : '🗑 Delete'}
                         </button>
@@ -373,9 +407,85 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* CONTEST TAB — NEW */}
+        {/* CONTEST TAB */}
         {mainTab === 'contest' && (
           <>
+            {/* Active contest banner */}
+            {activeContest ? (
+              <div className="bg-[#1A0A00] border border-[#D4A017]/30 rounded-xl p-4 mb-5">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-xs font-bold uppercase tracking-widest text-green-400">Active — Season {activeContest.season_number}</span>
+                    </div>
+                    <h3 className="font-bold text-[#FDF6E3]">{activeContest.title}</h3>
+                    <div className="flex gap-4 mt-1 text-xs text-[#7A6040]">
+                      <span>🥇 {formatPrize(activeContest.prize_1st)}</span>
+                      <span>🥈 {formatPrize(activeContest.prize_2nd)}</span>
+                      <span>🥉 {formatPrize(activeContest.prize_3rd)}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowClosePanel(p => !p)}
+                    className="bg-[#FF6B1A]/20 border border-[#FF6B1A]/40 text-[#FF6B1A] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#FF6B1A]/30 transition">
+                    🏁 Close Contest & Pick Winners
+                  </button>
+                </div>
+
+                {/* Close contest panel */}
+                {showClosePanel && (
+                  <div className="mt-4 pt-4 border-t border-[#2E2010]">
+                    <p className="text-xs text-[#7A6040] mb-4">
+                      Select the top 3 winning films. Only approved + paid entries are shown, sorted by score.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      {[
+                        { label: '🥇 1st Place', value: winner1, setter: setWinner1 },
+                        { label: '🥈 2nd Place', value: winner2, setter: setWinner2 },
+                        { label: '🥉 3rd Place', value: winner3, setter: setWinner3 },
+                      ].map((w) => (
+                        <div key={w.label}>
+                          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+                            {w.label}
+                          </label>
+                          <select
+                            value={w.value}
+                            onChange={e => w.setter(e.target.value)}
+                            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-3 py-2 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                          >
+                            <option value="">— Select film —</option>
+                            {approvedEntries.map(e => (
+                              <option key={e.id} value={e.films?.id ?? ''}>
+                                {e.films?.title_en ?? 'Unknown'} (score: {e.contest_score})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={closeContest}
+                        disabled={closing || !winner1}
+                        className="bg-[#FF6B1A] hover:bg-[#FF6B1A]/80 text-black px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition disabled:opacity-40">
+                        {closing ? '⏳ Closing...' : '🏁 Confirm & Close Season'}
+                      </button>
+                      <button
+                        onClick={() => setShowClosePanel(false)}
+                        className="border border-[#2E2010] text-[#7A6040] px-4 py-2 rounded-lg text-sm hover:text-[#FDF6E3] transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 mb-5 text-center">
+                <p className="text-[#7A6040] text-sm">No active contest. Create one in Supabase to get started.</p>
+              </div>
+            )}
+
             <p className="text-xs text-[#7A6040] mb-4">
               Contest entries — approve after verifying payment is confirmed.
             </p>
@@ -385,15 +495,20 @@ export default function AdminPage() {
               ? <div className="text-center py-16 text-[#7A6040]"><div className="text-4xl mb-2">🏆</div><p>No contest entries yet</p></div>
               : (
                 <div className="space-y-3">
-                  {contestEntries.map(entry => (
+                  {contestEntries.map((entry, i) => (
                     <div key={entry.id} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="flex-1">
-                          <h3 className="font-bold text-[#FDF6E3] mb-1">
-                            {entry.films?.title_en ?? 'Unknown Film'}
-                          </h3>
+                          <div className="flex items-center gap-2 mb-1">
+                            {i === 0 && <span className="text-sm">🥇</span>}
+                            {i === 1 && <span className="text-sm">🥈</span>}
+                            {i === 2 && <span className="text-sm">🥉</span>}
+                            <h3 className="font-bold text-[#FDF6E3]">
+                              {entry.films?.title_en ?? 'Unknown Film'}
+                            </h3>
+                          </div>
                           <p className="text-[#7A6040] text-xs mb-2">
-                            by {entry.profiles?.name ?? 'Unknown'}
+                            by {entry.profiles?.name ?? 'Unknown'} · Score: <span className="text-[#D4A017] font-bold">{entry.contest_score}</span>
                           </p>
                           <div className="flex gap-2 flex-wrap">
                             <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
@@ -408,7 +523,7 @@ export default function AdminPage() {
                                 ? 'bg-green-900/40 text-green-400 border border-green-700/40'
                                 : 'bg-red-900/40 text-red-400 border border-red-700/40'
                             }`}>
-                              {entry.is_approved ? '✅ Approved' : '⏳ Pending Approval'}
+                              {entry.is_approved ? '✅ Approved' : '⏳ Pending'}
                             </span>
                             {entry.razorpay_payment_id && (
                               <span className="text-xs text-[#4A3020]">
@@ -419,23 +534,19 @@ export default function AdminPage() {
                         </div>
                         <div className="flex flex-col gap-2">
                           {!entry.is_approved && entry.payment_status === 'paid' && (
-                            <button
-                              onClick={() => updateContestEntry(entry.id, true)}
+                            <button onClick={() => updateContestEntry(entry.id, true)}
                               className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">
                               ✅ Approve
                             </button>
                           )}
                           {entry.is_approved && (
-                            <button
-                              onClick={() => updateContestEntry(entry.id, false)}
+                            <button onClick={() => updateContestEntry(entry.id, false)}
                               className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">
                               ❌ Revoke
                             </button>
                           )}
                           {entry.payment_status !== 'paid' && (
-                            <span className="text-xs text-yellow-600 text-center">
-                              Awaiting payment
-                            </span>
+                            <span className="text-xs text-yellow-600 text-center">Awaiting payment</span>
                           )}
                         </div>
                       </div>
