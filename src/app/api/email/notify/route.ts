@@ -7,7 +7,7 @@ import { Resend } from 'resend'
 
 const resend    = new Resend(process.env.RESEND_API_KEY)
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!
-const FROM_EMAIL  = 'CinemaVuru <onboarding@resend.dev>'
+const FROM_EMAIL  = process.env.FROM_EMAIL ?? 'CinemaVuru <noreply@cinemavuru.com>'
 
 export async function POST(request: NextRequest) {
   try {
