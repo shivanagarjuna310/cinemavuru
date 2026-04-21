@@ -1,6 +1,7 @@
 'use client'
 // src/components/ContestFilmGrid.tsx
 // Shows contest film entries with rank, score and vote button
+// Voting: 1 vote per user per contest — locked once cast, cannot be changed
 
 import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
@@ -48,10 +49,11 @@ const RANK_STYLE = [
 
 export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Props) {
   const router = useRouter()
-  const [userId,      setUserId]      = useState<string | null>(null)
-  const [votedFilmId, setVotedFilmId] = useState<string | null>(null)
-  const [voting,      setVoting]      = useState(false)
-  const [localEntries, setLocalEntries] = useState(entries)
+  const [userId,        setUserId]        = useState<string | null>(null)
+  const [votedFilmId,   setVotedFilmId]   = useState<string | null>(null)
+  const [hasVoted,      setHasVoted]      = useState(false) // ← locked once true
+  const [voting,        setVoting]        = useState(false)
+  const [localEntries,  setLocalEntries]  = useState(entries)
 
   // Get user + their existing vote
   useEffect(() => {
@@ -67,55 +69,35 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (vote) setVotedFilmId(vote.film_id)
+      if (vote) {
+        setVotedFilmId(vote.film_id)
+        setHasVoted(true) // ← already voted, lock it
+      }
     }
     init()
   }, [contestId])
 
   async function handleVote(filmId: string) {
-    if (!userId) { router.push('/auth'); return }
-    if (voting) return
+    if (!userId)  { router.push('/auth'); return }
+    if (voting)   return
+    if (hasVoted) return // ← vote is locked, do nothing
 
     setVoting(true)
 
-    if (votedFilmId === filmId) {
-      // Remove vote
-      await supabase
-        .from('contest_votes')
-        .delete()
-        .eq('contest_id', contestId)
-        .eq('user_id', userId)
+    const { error } = await supabase
+      .from('contest_votes')
+      .insert({ contest_id: contestId, user_id: userId, film_id: filmId })
 
-      setVotedFilmId(null)
-      // Decrease score locally
+    if (!error) {
+      setVotedFilmId(filmId)
+      setHasVoted(true) // ← lock the vote immediately
+
+      // Update score locally (+1 vote)
       setLocalEntries(prev => prev.map(e =>
-        e.film_id === filmId ? { ...e, contest_score: Math.max(0, e.contest_score - 3) } : e
+        e.film_id === filmId
+          ? { ...e, contest_score: e.contest_score + 1 }
+          : e
       ).sort((a, b) => b.contest_score - a.contest_score))
-
-    } else {
-      // Remove old vote if exists
-      if (votedFilmId) {
-        await supabase
-          .from('contest_votes')
-          .delete()
-          .eq('contest_id', contestId)
-          .eq('user_id', userId)
-      }
-
-      // Add new vote
-      const { error } = await supabase
-        .from('contest_votes')
-        .insert({ contest_id: contestId, user_id: userId, film_id: filmId })
-
-      if (!error) {
-        setVotedFilmId(filmId)
-        // Update scores locally
-        setLocalEntries(prev => prev.map(e => {
-          if (e.film_id === filmId)     return { ...e, contest_score: e.contest_score + 3 }
-          if (e.film_id === votedFilmId) return { ...e, contest_score: Math.max(0, e.contest_score - 3) }
-          return e
-        }).sort((a, b) => b.contest_score - a.contest_score))
-      }
     }
 
     setVoting(false)
@@ -127,12 +109,35 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
 
   return (
     <div className="space-y-4">
+
+      {/* Voting info banner */}
+      {isVotingOpen && (
+        <div className="bg-[#1A1208] border border-[#2E2010] rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-lg">🗳️</span>
+          <div className="text-sm">
+            {hasVoted ? (
+              <span className="text-[#D4A017] font-semibold">
+                You have cast your vote! ✓ — Votes are final and cannot be changed.
+              </span>
+            ) : userId ? (
+              <span className="text-[#7A6040]">
+                You have <span className="text-[#FDF6E3] font-semibold">1 vote</span> — choose wisely! Once cast, your vote is final.
+              </span>
+            ) : (
+              <span className="text-[#7A6040]">
+                <a href="/auth" className="text-[#D4A017] hover:underline">Login</a> to cast your vote. Each user gets 1 vote per contest.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {localEntries.map((entry, index) => {
         const film  = entry.films
         if (!film) return null
-        const style = GENRE_STYLE[film.genre ?? ''] ?? GENRE_STYLE.Default
+        const style    = GENRE_STYLE[film.genre ?? ''] ?? GENRE_STYLE.Default
         const isMyVote = votedFilmId === entry.film_id
-        const rank  = index + 1
+        const rank     = index + 1
 
         return (
           <div
@@ -142,7 +147,7 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
               rank === 2 ? 'border-[#C0C0C0]/20' :
               rank === 3 ? 'border-[#CD7F32]/20' :
               'border-[#2E2010]'
-            }`}
+            } ${isMyVote ? 'ring-1 ring-[#D4A017]/30' : ''}`}
           >
             <div className="flex items-center gap-4 p-4">
 
@@ -184,30 +189,33 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
                 </div>
               </div>
 
-              {/* Score */}
+              {/* Vote count */}
               <div className="text-center flex-shrink-0">
                 <div className="text-xl font-bold text-[#D4A017]">{entry.contest_score}</div>
-                <div className="text-[10px] text-[#7A6040] uppercase tracking-wide">Score</div>
+                <div className="text-[10px] text-[#7A6040] uppercase tracking-wide">Votes</div>
               </div>
 
               {/* Vote button */}
               {isVotingOpen && (
                 <button
                   onClick={() => handleVote(entry.film_id)}
-                  disabled={voting}
-                  className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-50 ${
+                  disabled={voting || hasVoted}
+                  title={hasVoted && !isMyVote ? 'You have already voted' : ''}
+                  className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${
                     isMyVote
-                      ? 'bg-[#D4A017]/20 border border-[#D4A017]/50 text-[#D4A017]'
-                      : 'bg-[#1A1208] border border-[#2E2010] text-[#7A6040] hover:border-[#D4A017]/40 hover:text-[#D4A017]'
+                      ? 'bg-[#D4A017]/20 border border-[#D4A017]/50 text-[#D4A017] cursor-default'
+                      : hasVoted
+                      ? 'bg-[#1A1208] border border-[#2E2010] text-[#4A3020] cursor-not-allowed opacity-40'
+                      : 'bg-[#1A1208] border border-[#2E2010] text-[#7A6040] hover:border-[#D4A017]/40 hover:text-[#D4A017] cursor-pointer'
                   }`}
                 >
-                  {isMyVote ? '✓ Voted' : 'Vote'}
+                  {isMyVote ? '✓ Your Vote' : 'Vote'}
                 </button>
               )}
 
             </div>
 
-            {/* Score bar — visual progress */}
+            {/* Vote bar — visual progress */}
             {isVotingOpen && localEntries[0]?.contest_score > 0 && (
               <div className="h-0.5 bg-[#2E2010]">
                 <div
@@ -220,11 +228,6 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
         )
       })}
 
-      {!userId && isVotingOpen && (
-        <div className="text-center py-4 text-sm text-[#7A6040]">
-          <a href="/auth" className="text-[#D4A017] hover:underline">Login</a> to vote for your favourite film
-        </div>
-      )}
     </div>
   )
 }

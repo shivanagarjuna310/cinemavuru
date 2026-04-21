@@ -196,11 +196,6 @@ export default async function ContestPage() {
                 <h2 className="text-xl font-bold text-[#D4A017]">
                   {isVotingPhase ? '🗳️ Vote for Your Favourite' : '🎬 Contest Films'}
                 </h2>
-                {isVotingPhase && (
-                  <div className="text-xs text-[#7A6040] border border-[#2E2010] rounded px-3 py-1.5">
-                    Score = Votes × 3 + Views
-                  </div>
-                )}
               </div>
               <ContestFilmGrid
                 entries={entries}

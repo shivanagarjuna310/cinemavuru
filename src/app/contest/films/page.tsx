@@ -124,14 +124,6 @@ export default async function ContestFilmsPage() {
                   <div className="text-2xl font-bold text-[#D4A017]">{entries.length}</div>
                   <div className="text-xs text-[#7A6040] uppercase tracking-wide">Films</div>
                 </div>
-                {isVotingPhase && (
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-[#D4A017]">
-                      Score = Votes×3 + Views
-                    </div>
-                    <div className="text-xs text-[#7A6040] uppercase tracking-wide">Scoring formula</div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -175,11 +167,6 @@ export default async function ContestFilmsPage() {
                 <h2 className="text-xl font-bold text-[#D4A017]">
                   {isVotingPhase ? '🗳️ Vote for Your Favourite' : '🎬 Entered Films'}
                 </h2>
-                {isVotingPhase && (
-                  <div className="text-xs text-[#7A6040] border border-[#2E2010] rounded px-3 py-1.5">
-                    Score = Votes × 3 + Views
-                  </div>
-                )}
               </div>
               <ContestFilmGrid
                 entries={entries}
