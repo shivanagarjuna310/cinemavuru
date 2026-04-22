@@ -3,7 +3,7 @@
 
 import { useState }   from 'react'
 import { useRouter }  from 'next/navigation'
-import Image          from 'next/image'
+
 
 type Props = {
   id:           string
@@ -80,13 +80,11 @@ export default function FilmCard({
       <div className={`relative h-44 ${showThumbnail ? '' : gradient} flex items-center justify-center text-5xl overflow-hidden`}>
 
         {showThumbnail ? (
-          <Image
+          <img
             src={thumbnail}
             alt={title}
-            fill
-            className="object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
             onError={() => setImgError(true)}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
           emoji
