@@ -143,7 +143,7 @@ export default async function DistrictPage({
 
         {/* ── Film Feed ── */}
         <FilmFeed
-          films={films}
+          films={films as any}
           currentSort={sort}
           stateSlug={stateSlug}
           districtSlug={districtSlug}
