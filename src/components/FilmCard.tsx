@@ -3,6 +3,7 @@
 
 import { useState }   from 'react'
 import { useRouter }  from 'next/navigation'
+import Image          from 'next/image'
 
 type Props = {
   id:           string
@@ -18,6 +19,31 @@ type Props = {
   isTrending?:  boolean
   stateSlug?:   string
   districtSlug?: string
+  videoUrl?:    string  // ← new
+}
+
+// Extract YouTube video ID from any YouTube URL format
+function getYouTubeThumbnail(url: string | undefined): string | null {
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    let videoId: string | null = null
+
+    if (u.hostname === 'youtu.be') {
+      videoId = u.pathname.slice(1)
+    } else if (u.hostname.includes('youtube.com')) {
+      if (u.pathname.startsWith('/embed/')) {
+        videoId = u.pathname.split('/embed/')[1]?.split('?')[0]
+      } else {
+        videoId = u.searchParams.get('v')
+      }
+    }
+
+    if (videoId) return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+    return null
+  } catch {
+    return null
+  }
 }
 
 export default function FilmCard({
@@ -25,10 +51,15 @@ export default function FilmCard({
   emoji, gradient, duration = '—',
   isTop = false, isTrending = false,
   stateSlug = 'telangana', districtSlug = 'hyderabad',
+  videoUrl,
 }: Props) {
   const router = useRouter()
-  const [liked,     setLiked]     = useState(false)
-  const [likeCount, setLikeCount] = useState(likes)
+  const [liked,      setLiked]      = useState(false)
+  const [likeCount,  setLikeCount]  = useState(likes)
+  const [imgError,   setImgError]   = useState(false)
+
+  const thumbnail = getYouTubeThumbnail(videoUrl)
+  const showThumbnail = thumbnail && !imgError
 
   function goToFilm() {
     router.push(`/${stateSlug}/${districtSlug}/film/${id}`)
@@ -46,25 +77,37 @@ export default function FilmCard({
       className="bg-[#1A1208] rounded-xl overflow-hidden border border-[#2E2010] hover:-translate-y-1 hover:border-[#D4A017]/40 hover:shadow-xl hover:shadow-black/40 transition-all duration-300 cursor-pointer group"
     >
       {/* Thumbnail */}
-      <div className={`relative h-44 ${gradient} flex items-center justify-center text-5xl`}>
-        {emoji}
+      <div className={`relative h-44 ${showThumbnail ? '' : gradient} flex items-center justify-center text-5xl overflow-hidden`}>
+
+        {showThumbnail ? (
+          <Image
+            src={thumbnail}
+            alt={title}
+            fill
+            className="object-cover"
+            onError={() => setImgError(true)}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          />
+        ) : (
+          emoji
+        )}
 
         {isTop && (
-          <div className="absolute top-2 left-2 bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded">
+          <div className="absolute top-2 left-2 bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded z-10">
             🏆 Top Film
           </div>
         )}
         {isTrending && (
-          <div className="absolute top-2 right-2 bg-[#8B1A1A]/90 text-red-300 text-[10px] font-semibold px-2 py-0.5 rounded">
+          <div className="absolute top-2 right-2 bg-[#8B1A1A]/90 text-red-300 text-[10px] font-semibold px-2 py-0.5 rounded z-10">
             🔥 Trending
           </div>
         )}
-        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm">
+        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm z-10">
           {duration}
         </div>
 
         {/* Play overlay on hover */}
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
           <div className="w-14 h-14 bg-[#FF6B1A] rounded-full flex items-center justify-center text-xl shadow-lg">
             ▶
           </div>
