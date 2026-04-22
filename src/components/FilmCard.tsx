@@ -59,6 +59,7 @@ export default function FilmCard({
   const [imgError,   setImgError]   = useState(false)
 
   const thumbnail = getYouTubeThumbnail(videoUrl)
+  if (typeof window !== 'undefined') console.log('FilmCard:', title, 'videoUrl:', videoUrl, 'thumbnail:', thumbnail)
   const showThumbnail = thumbnail
 
   function goToFilm() {
