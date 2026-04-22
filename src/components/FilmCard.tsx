@@ -59,7 +59,7 @@ export default function FilmCard({
   const [imgError,   setImgError]   = useState(false)
 
   const thumbnail = getYouTubeThumbnail(videoUrl)
-  const showThumbnail = thumbnail && !imgError
+  const showThumbnail = thumbnail
 
   function goToFilm() {
     router.push(`/${stateSlug}/${districtSlug}/film/${id}`)
@@ -79,12 +79,15 @@ export default function FilmCard({
       {/* Thumbnail */}
       <div className={`relative h-44 ${showThumbnail ? '' : gradient} flex items-center justify-center text-5xl overflow-hidden`}>
 
-        {showThumbnail ? (
-          <img
-            src={thumbnail}
-            alt={title}
-            className="absolute inset-0 w-full h-full object-cover"
-            onError={() => setImgError(true)}
+       {showThumbnail ? (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${thumbnail})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
           />
         ) : (
           emoji
