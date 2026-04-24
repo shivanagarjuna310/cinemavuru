@@ -1,47 +1,36 @@
 'use client'
 // src/components/FilmCard.tsx
 
-import { useState }   from 'react'
-import { useRouter }  from 'next/navigation'
-
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 type Props = {
-  id:           string
-  title:        string
-  titleTe?:     string
-  genre:        string
-  likes:        number
-  views:        string
-  emoji:        string
-  gradient:     string
-  duration?:    string
-  isTop?:       boolean
-  isTrending?:  boolean
-  stateSlug?:   string
+  id:            string
+  title:         string
+  titleTe?:      string
+  genre:         string
+  likes:         number
+  views:         string
+  emoji:         string
+  gradient:      string
+  duration?:     string
+  isTop?:        boolean
+  isTrending?:   boolean
+  stateSlug?:    string
   districtSlug?: string
-  videoUrl?:    string  // ← new
+  videoUrl?:     string
 }
 
-// Extract YouTube video ID from any YouTube URL format
 function getYouTubeThumbnail(url: string | undefined): string | null {
   if (!url) return null
-  try {
-    // Handle embed URLs: https://www.youtube.com/embed/VIDEO_ID
-    const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/)
-    if (embedMatch) return `https://img.youtube.com/vi/${embedMatch[1]}/hqdefault.jpg`
-
-    // Handle watch URLs: https://www.youtube.com/watch?v=VIDEO_ID
-    const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/)
-    if (watchMatch) return `https://img.youtube.com/vi/${watchMatch[1]}/hqdefault.jpg`
-
-    // Handle short URLs: https://youtu.be/VIDEO_ID
-    const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)
-    if (shortMatch) return `https://img.youtube.com/vi/${shortMatch[1]}/hqdefault.jpg`
-
-    return null
-  } catch {
-    return null
-  }
+  const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/)
+  if (embedMatch) return `https://img.youtube.com/vi/${embedMatch[1]}/hqdefault.jpg`
+  const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/)
+  if (watchMatch) return `https://img.youtube.com/vi/${watchMatch[1]}/hqdefault.jpg`
+  const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)
+  if (shortMatch) return `https://img.youtube.com/vi/${shortMatch[1]}/hqdefault.jpg`
+  return null
 }
 
 export default function FilmCard({
@@ -52,13 +41,12 @@ export default function FilmCard({
   videoUrl,
 }: Props) {
   const router = useRouter()
-  const [liked,      setLiked]      = useState(false)
-  const [likeCount,  setLikeCount]  = useState(likes)
-  const [imgError,   setImgError]   = useState(false)
+  const [liked,     setLiked]     = useState(false)
+  const [likeCount, setLikeCount] = useState(likes)
+  const [imgError,  setImgError]  = useState(false)
 
-  const thumbnail = getYouTubeThumbnail(videoUrl)
-  if (typeof window !== 'undefined') console.log('FilmCard:', title, 'videoUrl:', videoUrl, 'thumbnail:', thumbnail)
-  const showThumbnail = thumbnail
+  const thumbnail   = getYouTubeThumbnail(videoUrl)
+  const showThumb   = !!thumbnail && !imgError
 
   function goToFilm() {
     router.push(`/${stateSlug}/${districtSlug}/film/${id}`)
@@ -75,21 +63,19 @@ export default function FilmCard({
       onClick={goToFilm}
       className="bg-[#1A1208] rounded-xl overflow-hidden border border-[#2E2010] hover:-translate-y-1 hover:border-[#D4A017]/40 hover:shadow-xl hover:shadow-black/40 transition-all duration-300 cursor-pointer group"
     >
-      {/* Thumbnail */}
-      <div className={`relative h-44 ${showThumbnail ? '' : gradient} flex items-center justify-center text-5xl overflow-hidden`}>
+      {/* Thumbnail area */}
+      <div className={`relative h-44 overflow-hidden ${showThumb ? '' : gradient} flex items-center justify-center text-5xl`}>
 
-       {showThumbnail ? (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url(${thumbnail})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
+        {showThumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnail!}
+            alt={title}
+            onError={() => setImgError(true)}
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          emoji
+          <span>{emoji}</span>
         )}
 
         {isTop && (
