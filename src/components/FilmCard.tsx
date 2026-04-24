@@ -26,20 +26,18 @@ type Props = {
 function getYouTubeThumbnail(url: string | undefined): string | null {
   if (!url) return null
   try {
-    const u = new URL(url)
-    let videoId: string | null = null
+    // Handle embed URLs: https://www.youtube.com/embed/VIDEO_ID
+    const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/)
+    if (embedMatch) return `https://img.youtube.com/vi/${embedMatch[1]}/hqdefault.jpg`
 
-    if (u.hostname === 'youtu.be') {
-      videoId = u.pathname.slice(1)
-    } else if (u.hostname.includes('youtube.com')) {
-      if (u.pathname.startsWith('/embed/')) {
-        videoId = u.pathname.split('/embed/')[1]?.split('?')[0]
-      } else {
-        videoId = u.searchParams.get('v')
-      }
-    }
+    // Handle watch URLs: https://www.youtube.com/watch?v=VIDEO_ID
+    const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/)
+    if (watchMatch) return `https://img.youtube.com/vi/${watchMatch[1]}/hqdefault.jpg`
 
-    if (videoId) return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+    // Handle short URLs: https://youtu.be/VIDEO_ID
+    const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/)
+    if (shortMatch) return `https://img.youtube.com/vi/${shortMatch[1]}/hqdefault.jpg`
+
     return null
   } catch {
     return null
