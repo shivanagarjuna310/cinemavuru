@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound }      from 'next/navigation'
 import Navbar            from '../../../components/Navbar'
 import FilmFeed          from '../../../components/FilmFeed'
-
+export const dynamic = 'force-dynamic'
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -83,7 +83,7 @@ export default async function DistrictPage({
   }
 
   const films = await getFilms(district.id, sort)
-  console.log('FIRST FILM video_url:', (films[0] as any)?.video_url)
+  //console.log('FIRST FILM video_url:', (films[0] as any)?.video_url)
 
   // Totals for header stats
   const totalLikes = films.reduce((s, f) => s + (f.like_count ?? 0), 0)
