@@ -83,6 +83,7 @@ export default async function DistrictPage({
   }
 
   const films = await getFilms(district.id, sort)
+  console.log('FIRST FILM video_url:', (films[0] as any)?.video_url)
 
   // Totals for header stats
   const totalLikes = films.reduce((s, f) => s + (f.like_count ?? 0), 0)
