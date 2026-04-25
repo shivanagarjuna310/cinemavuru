@@ -47,6 +47,7 @@ export default function FilmCard({
 
   const thumbnail   = getYouTubeThumbnail(videoUrl)
   const showThumb   = !!thumbnail && !imgError
+if (typeof window !== 'undefined') console.log('THUMB:', title, '|', videoUrl, '|', thumbnail, '|', showThumb)
 
   function goToFilm() {
     router.push(`/${stateSlug}/${districtSlug}/film/${id}`)
