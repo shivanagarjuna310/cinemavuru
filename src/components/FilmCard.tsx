@@ -45,7 +45,7 @@ export default function FilmCard({
   const [likeCount, setLikeCount] = useState(likes)
   const [imgError,  setImgError]  = useState(false)
 
-  const thumbnail   = getYouTubeThumbnail(videoUrl)
+  const thumbnail   = getYouTubeThumbnail(videoUrl) ?? 'https://img.youtube.com/vi/Cszr1Mh16bM/hqdefault.jpg'
   const showThumb   = !!thumbnail && !imgError
 if (typeof window !== 'undefined') console.log('THUMB:', title, '|', videoUrl, '|', thumbnail, '|', showThumb)
 
