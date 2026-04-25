@@ -85,6 +85,16 @@ export default function AdminPage() {
   const [winner2, setWinner2] = useState('')
   const [winner3, setWinner3] = useState('')
   const [closing, setClosing] = useState(false)
+  // ── Create contest state ─────────────────────────────────
+  const [showCreatePanel, setShowCreatePanel] = useState(false)
+  const [newContestTitle, setNewContestTitle] = useState('')
+  const [newSeasonNumber, setNewSeasonNumber] = useState(1)
+  const [newEntryFee,     setNewEntryFee]     = useState(299)
+  const [newPrize1,       setNewPrize1]       = useState(5000)
+  const [newPrize2,       setNewPrize2]       = useState(3000)
+  const [newPrize3,       setNewPrize3]       = useState(2000)
+  const [newSubsCloseAt,  setNewSubsCloseAt]  = useState('')
+  const [creating,        setCreating]        = useState(false)
 
   useEffect(() => {
     async function checkAccess() {
@@ -232,7 +242,34 @@ export default function AdminPage() {
     alert(`✅ Season ${activeContest.season_number} closed! Winners saved to Hall of Fame.`)
     fetchContestEntries()
   }
+  async function createContest() {
+    if (!newContestTitle.trim()) { alert('Please enter a contest title.'); return }
+    if (!newSubsCloseAt)         { alert('Please set a submissions close date.'); return }
 
+    setCreating(true)
+    const { error } = await supabase.from('contests').insert({
+      title:                newContestTitle.trim(),
+      season_number:        newSeasonNumber,
+      entry_fee:            newEntryFee,
+      prize_1st:            newPrize1,
+      prize_2nd:            newPrize2,
+      prize_3rd:            newPrize3,
+      submissions_close_at: new Date(newSubsCloseAt).toISOString(),
+      status:               'open',
+    })
+
+    if (error) {
+      alert(`Error creating contest: ${error.message}`)
+      setCreating(false)
+      return
+    }
+
+    setCreating(false)
+    setShowCreatePanel(false)
+    setNewContestTitle('')
+    alert(`✅ Season ${newSeasonNumber} created and is now LIVE!`)
+    fetchContestEntries()
+  }
   async function deleteFilm(film: Film) {
     const confirmed = window.confirm(
       `⚠️ PERMANENTLY DELETE "${film.title_en}"?\n\nThis will also delete all likes, comments and views. Cannot be undone.`
@@ -481,8 +518,117 @@ export default function AdminPage() {
                 )}
               </div>
             ) : (
-              <div className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 mb-5 text-center">
-                <p className="text-[#7A6040] text-sm">No active contest. Create one in Supabase to get started.</p>
+              <div className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 mb-5">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <p className="text-[#7A6040] text-sm mb-1">No active contest running.</p>
+                    <p className="text-[#4A3020] text-xs">Start a new season to accept entries.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowCreatePanel(p => !p)}
+                    className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
+                    ➕ Create New Contest
+                  </button>
+                </div>
+
+                {showCreatePanel && (
+                  <div className="mt-4 pt-4 border-t border-[#2E2010]">
+                    <h3 className="text-sm font-bold text-[#D4A017] uppercase tracking-wide mb-4">
+                      New Contest Details
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Contest Title *</label>
+                        <input
+                          type="text"
+                          value={newContestTitle}
+                          onChange={e => setNewContestTitle(e.target.value)}
+                          placeholder="e.g. CinemaVuru Season 1"
+                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Season Number *</label>
+                        <input
+                          type="number"
+                          value={newSeasonNumber}
+                          onChange={e => setNewSeasonNumber(Number(e.target.value))}
+                          min={1}
+                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Entry Fee (₹) *</label>
+                        <input
+                          type="number"
+                          value={newEntryFee}
+                          onChange={e => setNewEntryFee(Number(e.target.value))}
+                          min={0}
+                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Submissions Close *</label>
+                        <input
+                          type="datetime-local"
+                          value={newSubsCloseAt}
+                          onChange={e => setNewSubsCloseAt(e.target.value)}
+                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🥇 1st Prize (₹)</label>
+                        <input
+                          type="number"
+                          value={newPrize1}
+                          onChange={e => setNewPrize1(Number(e.target.value))}
+                          min={0}
+                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🥈 2nd Prize (₹)</label>
+                        <input
+                          type="number"
+                          value={newPrize2}
+                          onChange={e => setNewPrize2(Number(e.target.value))}
+                          min={0}
+                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🥉 3rd Prize (₹)</label>
+                        <input
+                          type="number"
+                          value={newPrize3}
+                          onChange={e => setNewPrize3(Number(e.target.value))}
+                          min={0}
+                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-[#0D0A06] border border-[#D4A017]/20 rounded-lg p-3 mb-4 text-xs text-[#7A6040]">
+                      Prize Pool: <span className="text-[#D4A017] font-bold">₹{(newPrize1 + newPrize2 + newPrize3).toLocaleString('en-IN')}</span>
+                      &nbsp;·&nbsp; Entry Fee: <span className="text-[#FF6B1A] font-bold">₹{newEntryFee}</span>
+                      &nbsp;·&nbsp; Break even at <span className="text-white font-bold">{newEntryFee > 0 ? Math.ceil((newPrize1 + newPrize2 + newPrize3) / newEntryFee) : '∞'} entries</span>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={createContest}
+                        disabled={creating || !newContestTitle.trim() || !newSubsCloseAt}
+                        className="bg-[#D4A017] hover:bg-[#D4A017]/80 text-black px-6 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition disabled:opacity-40">
+                        {creating ? '⏳ Creating...' : '🚀 Launch Contest'}
+                      </button>
+                      <button
+                        onClick={() => setShowCreatePanel(false)}
+                        className="border border-[#2E2010] text-[#7A6040] px-4 py-2 rounded-lg text-sm hover:text-[#FDF6E3] transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

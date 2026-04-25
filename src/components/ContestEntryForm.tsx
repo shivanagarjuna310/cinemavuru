@@ -54,14 +54,14 @@ export default function ContestEntryForm() {
       // Get profile name from profiles table
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('name')
         .eq('id', user.id)
         .single()
 
       setUserInfo({
         id:    user.id,
         email: user.email ?? '',
-        name:  profile?.full_name ?? 'Filmmaker',
+        name:  profile?.name ?? 'Filmmaker',
       })
 
       const { data: c } = await supabase
