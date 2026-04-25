@@ -1,11 +1,15 @@
 'use client'
 // src/components/FilmFeed.tsx
-// Client component — needs to be interactive for sort tabs.
-// When you click a sort tab it updates the URL and the server
-// re-fetches films in the right order automatically.
 
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import FilmCard from './FilmCard'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 type Film = {
   id:           string
@@ -17,6 +21,7 @@ type Film = {
   duration_sec: number | null
   is_top_film:  boolean
   created_at:   string
+  video_url:    string | null
 }
 
 type Props = {
@@ -26,13 +31,14 @@ type Props = {
   districtSlug: string
 }
 
-// Genre → visual style mapping
 const GENRE_STYLE: Record<string, { emoji: string; gradient: string }> = {
   Drama:       { emoji: '🌾', gradient: 'bg-gradient-to-br from-[#FF6B1A] to-[#F5A623]' },
   Comedy:      { emoji: '🌅', gradient: 'bg-gradient-to-br from-[#8B1A1A] to-[#FF6B1A]' },
   Documentary: { emoji: '🏛️', gradient: 'bg-gradient-to-br from-[#1A1A4E] to-[#8B1A1A]' },
   Thriller:    { emoji: '🌊', gradient: 'bg-gradient-to-br from-[#0A1A2E] to-[#1A4E8B]' },
   Family:      { emoji: '🎭', gradient: 'bg-gradient-to-br from-[#1A1A4E] to-[#FF6B1A]' },
+  Action:      { emoji: '⚡', gradient: 'bg-gradient-to-br from-[#1A0A2E] to-[#8B1A4E]' },
+  Romance:     { emoji: '🌸', gradient: 'bg-gradient-to-br from-[#2E0A1A] to-[#8B1A3A]' },
   Default:     { emoji: '🎬', gradient: 'bg-gradient-to-br from-[#1A1208] to-[#2E2010]' },
 }
 
@@ -53,8 +59,28 @@ function fmtViews(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n)
 }
 
-export default function FilmFeed({ films, currentSort, stateSlug, districtSlug }: Props) {
+export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, districtSlug }: Props) {
   const router = useRouter()
+  const [films, setFilms] = useState<Film[]>(initialFilms)
+
+  // Re-fetch films client-side to ensure video_url is included
+  useEffect(() => {
+    async function fetchFilms() {
+      let query = supabase
+        .from('films')
+        .select('id, title_en, title_te, genre, like_count, view_count, duration_sec, is_top_film, created_at, video_url')
+        .eq('status', 'active')
+
+      if      (currentSort === 'liked')    query = query.order('like_count', { ascending: false })
+      else if (currentSort === 'viewed')   query = query.order('view_count', { ascending: false })
+      else if (currentSort === 'trending') query = query.order('like_count', { ascending: false })
+      else                                 query = query.order('created_at', { ascending: false })
+
+      const { data } = await query
+      if (data && data.length > 0) setFilms(data)
+    }
+    fetchFilms()
+  }, [currentSort])
 
   function handleSort(key: string) {
     router.push(`/${stateSlug}/${districtSlug}?sort=${key}`)
@@ -116,6 +142,7 @@ export default function FilmFeed({ films, currentSort, stateSlug, districtSlug }
                 isTrending={film.like_count > 150}
                 stateSlug={stateSlug}
                 districtSlug={districtSlug}
+                videoUrl={film.video_url ?? undefined}
               />
             )
           })}
