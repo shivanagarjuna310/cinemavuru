@@ -144,7 +144,7 @@ export default async function DistrictPage({
 
         {/* ── Film Feed ── */}
         <FilmFeed
-          films={films as any}
+          films={films.map((f: any) => ({ ...f, video_url: f.video_url ?? null }))}
           currentSort={sort}
           stateSlug={stateSlug}
           districtSlug={districtSlug}
