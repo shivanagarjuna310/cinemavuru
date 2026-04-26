@@ -149,10 +149,12 @@ export default function AdminPage() {
       .single()
     setActiveContest(contest ?? null)
 
-    // Fetch entries
+    // Fetch entries for active contest only
+    if (!contest) { setContestLoading(false); return }
     const { data } = await supabase
       .from('contest_entries')
-      .select('*, films(id, title_en), profiles(name)')
+      .select('*, films(id, title_en), profiles:creator_id(name)')
+      .eq('contest_id', contest.id)
       .order('contest_score', { ascending: false })
     setContestEntries((data as ContestEntry[]) ?? [])
     setContestLoading(false)
