@@ -483,11 +483,32 @@ export default function AdminPage() {
                       <span>🥉 {formatPrize(activeContest.prize_3rd)}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowClosePanel(p => !p)}
-                    className="bg-[#FF6B1A]/20 border border-[#FF6B1A]/40 text-[#FF6B1A] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#FF6B1A]/30 transition">
-                    🏁 Close Contest & Pick Winners
-                  </button>
+                  <div className="flex gap-2 flex-wrap">
+                    {activeContest.status === 'open' && (
+                      <button
+                        onClick={async () => {
+                          const confirmed = window.confirm(
+                            `Switch "${activeContest.title}" to Voting phase?\n\nThis will:\n• Stop accepting new submissions\n• Enable public voting\n• Cannot be undone!`
+                          )
+                          if (!confirmed) return
+                          const { error } = await supabase
+                            .from('contests')
+                            .update({ status: 'voting' })
+                            .eq('id', activeContest.id)
+                          if (error) { alert(`Error: ${error.message}`); return }
+                          setActiveContest(prev => prev ? { ...prev, status: 'voting' } : null)
+                          alert('✅ Contest is now in Voting phase! Vote buttons are live.')
+                        }}
+                        className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
+                        🗳️ Switch to Voting Phase
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowClosePanel(p => !p)}
+                      className="bg-[#FF6B1A]/20 border border-[#FF6B1A]/40 text-[#FF6B1A] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#FF6B1A]/30 transition">
+                      🏁 Close Contest & Pick Winners
+                    </button>
+                  </div>
                 </div>
 
                 {/* Close contest panel */}
