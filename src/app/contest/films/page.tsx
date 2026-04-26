@@ -69,10 +69,13 @@ export default async function ContestFilmsPage() {
       </>
     )
   }
-
+  
   const entries = await getContestEntries(contest.id)
   const isVotingPhase = contest.status === 'voting'
   const isOpenPhase   = contest.status === 'open'
+  console.log('Contest ID:', contest.id)
+  console.log('Entries count:', entries.length)
+  console.log('Entries:', JSON.stringify(entries))
   const timeLeft      = isVotingPhase
     ? daysLeft(contest.voting_close_at)
     : daysLeft(contest.submissions_close_at)
