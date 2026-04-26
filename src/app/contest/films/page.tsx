@@ -1,6 +1,6 @@
 // src/app/contest/films/page.tsx
 // Shows all contest film entries for the active contest — with voting
-
+export const revalidate = 0  // always fetch fresh data
 import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
