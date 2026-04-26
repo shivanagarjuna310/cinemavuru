@@ -28,13 +28,19 @@ async function getActiveContest() {
 async function getContestEntries(contestId: string) {
   const { data, error } = await getSupabase()
     .from('contest_entries')
-    .select('*, films(*, profiles(name))')
+    .select(`
+      *,
+      films(
+        id, title_en, title_te, genre,
+        view_count, like_count, video_url,
+        profiles!films_creator_id_fkey(name)
+      )
+    `)
     .eq('contest_id', contestId)
     .eq('is_approved', true)
     .eq('payment_status', 'paid')
     .order('contest_score', { ascending: false })
   console.log('Entries count:', data?.length, 'Error:', error?.message)
-  console.log('Raw entries:', JSON.stringify(data))
   return data ?? []
 }
 
