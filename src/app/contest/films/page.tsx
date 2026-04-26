@@ -1,35 +1,40 @@
 // src/app/contest/films/page.tsx
-// Shows all contest film entries for the active contest — with voting
 export const dynamic = 'force-dynamic'
+
 import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 async function getActiveContest() {
-  const { data } = await supabase
+  const { data, error } = await getSupabase()
     .from('contests')
     .select('*')
     .in('status', ['open', 'voting'])
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
+  console.log('Active contest:', data?.id, 'Error:', error?.message)
   return data
 }
 
 async function getContestEntries(contestId: string) {
-  const { data } = await supabase
+  const { data, error } = await getSupabase()
     .from('contest_entries')
     .select('*, films(*, profiles(name))')
     .eq('contest_id', contestId)
     .eq('is_approved', true)
     .eq('payment_status', 'paid')
     .order('contest_score', { ascending: false })
+  console.log('Entries count:', data?.length, 'Error:', error?.message)
+  console.log('Raw entries:', JSON.stringify(data))
   return data ?? []
 }
 
@@ -69,13 +74,10 @@ export default async function ContestFilmsPage() {
       </>
     )
   }
-  
+
   const entries = await getContestEntries(contest.id)
   const isVotingPhase = contest.status === 'voting'
   const isOpenPhase   = contest.status === 'open'
-  console.log('Contest ID:', contest.id)
-  console.log('Entries count:', entries.length)
-  console.log('Entries:', JSON.stringify(entries))
   const timeLeft      = isVotingPhase
     ? daysLeft(contest.voting_close_at)
     : daysLeft(contest.submissions_close_at)
@@ -85,11 +87,9 @@ export default async function ContestFilmsPage() {
       <Navbar />
       <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
 
-        {/* Header */}
         <div className="bg-gradient-to-b from-[#1A0A00] to-transparent border-b border-[#2E2010]">
           <div className="max-w-5xl mx-auto px-6 py-10">
 
-            {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-4">
               <Link href="/" className="hover:text-[#D4A017] transition">Home</Link>
               <span>›</span>
@@ -121,7 +121,6 @@ export default async function ContestFilmsPage() {
                 <p className="text-[#7A6040] text-sm">{contest.title}</p>
               </div>
 
-              {/* Stats */}
               <div className="flex gap-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-[#D4A017]">{entries.length}</div>
@@ -130,7 +129,6 @@ export default async function ContestFilmsPage() {
               </div>
             </div>
 
-            {/* Action links */}
             <div className="flex gap-3 mt-6 flex-wrap">
               <Link href="/contest"
                 className="border border-[#2E2010] text-[#7A6040] px-4 py-2 rounded-lg text-sm hover:text-[#D4A017] hover:border-[#D4A017]/40 transition">
@@ -150,7 +148,6 @@ export default async function ContestFilmsPage() {
           </div>
         </div>
 
-        {/* Films grid */}
         <div className="max-w-5xl mx-auto px-6 py-8">
           {entries.length === 0 ? (
             <div className="text-center py-24">
