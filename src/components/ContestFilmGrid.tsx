@@ -158,7 +158,10 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
 
               {/* Rank */}
               <div className={`text-center w-8 flex-shrink-0 font-bold ${RANK_STYLE[rank - 1] ?? 'text-[#7A6040] text-base'}`}>
-                {rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `#${rank}`}
+                {isVotingOpen
+                  ? (rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `#${rank}`)
+                  : <span className="text-[#4A3020] text-xs">#{rank}</span>
+                }
               </div>
 
               {/* Thumbnail */}
