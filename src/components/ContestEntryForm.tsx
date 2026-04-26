@@ -165,7 +165,7 @@ export default function ContestEntryForm() {
     if (error) {
       setStatus('error')
       setMessage(error.code === '23505'
-        ? 'You have already entered this contest with this film.'
+        ? 'You have already entered this contest. Only one film per filmmaker is allowed.'
         : `Submission failed: ${error.message}`)
       return
     }
