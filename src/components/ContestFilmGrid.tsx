@@ -40,7 +40,12 @@ const GENRE_STYLE: Record<string, { emoji: string; gradient: string }> = {
   Romance:     { emoji: '🌸', gradient: 'from-[#2E0A1A] to-[#8B1A3A]'  },
   Default:     { emoji: '🎬', gradient: 'from-[#1A1208] to-[#2E2010]'  },
 }
-
+function getThumbnail(videoUrl: string | null): string | null {
+  if (!videoUrl) return null
+  const match = videoUrl.match(/(?:embed\/|watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (!match) return null
+  return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`
+}
 const RANK_STYLE = [
   'text-[#FFD700] text-xl',  // 1st - gold
   'text-[#C0C0C0] text-lg',  // 2nd - silver
@@ -161,7 +166,15 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
                 onClick={() => goToFilm(film.id)}
                 className={`relative w-28 h-16 rounded-lg overflow-hidden bg-gradient-to-br ${style.gradient} flex items-center justify-center text-2xl cursor-pointer flex-shrink-0 group`}
               >
-                {style.emoji}
+                {getThumbnail(film.video_url) ? (
+                  <img
+                    src={getThumbnail(film.video_url)!}
+                    alt={film.title_en}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  style.emoji
+                )}
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-white text-sm">▶</span>
                 </div>
