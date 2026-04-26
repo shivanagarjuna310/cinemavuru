@@ -153,7 +153,7 @@ export default function AdminPage() {
     if (!contest) { setContestLoading(false); return }
     const { data } = await supabase
       .from('contest_entries')
-      .select('*, films(id, title_en), profiles:creator_id(name)')
+      .select('*, films(id, title_en, status), profiles!contest_entries_creator_id_fkey(name)')
       .eq('contest_id', contest.id)
       .order('contest_score', { ascending: false })
     setContestEntries((data as ContestEntry[]) ?? [])
@@ -206,6 +206,24 @@ export default function AdminPage() {
     if (error) { alert(`Error: ${error.message}`); return }
     setContestEntries(prev => prev.map(e =>
       e.id === entryId ? { ...e, is_approved: isApproved } : e
+    ))
+  }
+
+  // ── Approve contest entry + film on main feed in one click ──
+  async function approveForContestAndFeed(entryId: string, filmId: string) {
+    // 1. Approve contest entry
+    const { error: entryError } = await supabase
+      .from('contest_entries').update({ is_approved: true }).eq('id', entryId)
+    if (entryError) { alert(`Error approving entry: ${entryError.message}`); return }
+
+    // 2. Approve film on main feed
+    const { error: filmError } = await supabase
+      .from('films').update({ status: 'active' }).eq('id', filmId)
+    if (filmError) { alert(`Error approving film: ${filmError.message}`); return }
+
+    // 3. Update local state
+    setContestEntries(prev => prev.map(e =>
+      e.id === entryId ? { ...e, is_approved: true } : e
     ))
   }
 
@@ -682,9 +700,9 @@ export default function AdminPage() {
                         </div>
                         <div className="flex flex-col gap-2">
                           {!entry.is_approved && entry.payment_status === 'paid' && (
-                            <button onClick={() => updateContestEntry(entry.id, true)}
+                            <button onClick={() => approveForContestAndFeed(entry.id, entry.films?.id ?? '')}
                               className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">
-                              ✅ Approve
+                              ✅ Approve for Contest & Feed
                             </button>
                           )}
                           {entry.is_approved && (
