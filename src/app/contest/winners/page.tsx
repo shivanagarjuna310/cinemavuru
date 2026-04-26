@@ -28,12 +28,17 @@ async function getFilmDetails(filmId: string | null) {
   if (!filmId) return null
   const { data } = await supabase
     .from('films')
-    .select('id, title_en, title_te, genre, view_count, like_count, district_id')
+    .select('id, title_en, title_te, genre, view_count, like_count, district_id, video_url')
     .eq('id', filmId)
     .single()
   return data
 }
-
+function getThumbnail(videoUrl: string | null): string | null {
+  if (!videoUrl) return null
+  const match = videoUrl.match(/(?:embed\/|watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (!match) return null
+  return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`
+}
 function formatPrize(amount: number) {
   return `₹${amount.toLocaleString('en-IN')}`
 }
@@ -159,6 +164,15 @@ export default async function HallOfFamePage() {
                           {film ? (
                             <Link href={`/telangana/hyderabad/film/${film.id}`}
                               className="block group">
+                              {getThumbnail(film.video_url ?? null) && (
+                                <div className="w-full aspect-video rounded-lg overflow-hidden mb-3 bg-[#0D0A06]">
+                                  <img
+                                    src={getThumbnail(film.video_url ?? null)!}
+                                    alt={film.title_en}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                </div>
+                              )}
                               <h3 className="font-bold text-[#FDF6E3] group-hover:text-[#D4A017] transition leading-tight mb-1">
                                 {film.title_en}
                               </h3>
