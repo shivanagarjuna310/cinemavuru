@@ -115,28 +115,6 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
   return (
     <div className="space-y-4">
 
-      {/* Voting info banner */}
-      {isVotingOpen && (
-        <div className="bg-[#1A1208] border border-[#2E2010] rounded-xl px-4 py-3 flex items-center gap-3">
-          <span className="text-lg">🗳️</span>
-          <div className="text-sm">
-            {hasVoted ? (
-              <span className="text-[#D4A017] font-semibold">
-                You have cast your vote! ✓ — Votes are final and cannot be changed.
-              </span>
-            ) : userId ? (
-              <span className="text-[#7A6040]">
-                You have <span className="text-[#FDF6E3] font-semibold">1 vote</span> — choose wisely! Once cast, your vote is final.
-              </span>
-            ) : (
-              <span className="text-[#7A6040]">
-                <a href="/auth" className="text-[#D4A017] hover:underline">Login</a> to cast your vote. Each user gets 1 vote per contest.
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
       {localEntries.map((entry, index) => {
         const film  = entry.films
         if (!film) return null
@@ -211,21 +189,12 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
                 <div className="text-[10px] text-[#7A6040] uppercase tracking-wide">Votes</div>
               </div>
 
-              {/* Vote button */}
+              {/* Watch & Vote link */}
               {isVotingOpen && (
                 <button
-                  onClick={() => handleVote(entry.film_id)}
-                  disabled={voting || hasVoted}
-                  title={hasVoted && !isMyVote ? 'You have already voted' : ''}
-                  className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${
-                    isMyVote
-                      ? 'bg-[#D4A017]/20 border border-[#D4A017]/50 text-[#D4A017] cursor-default'
-                      : hasVoted
-                      ? 'bg-[#1A1208] border border-[#2E2010] text-[#4A3020] cursor-not-allowed opacity-40'
-                      : 'bg-[#1A1208] border border-[#2E2010] text-[#7A6040] hover:border-[#D4A017]/40 hover:text-[#D4A017] cursor-pointer'
-                  }`}
-                >
-                  {isMyVote ? '✓ Your Vote' : 'Vote'}
+                  onClick={() => goToFilm(film.id)}
+                  className="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-[#1A1208] border border-[#D4A017]/40 text-[#D4A017] hover:bg-[#D4A017]/10 transition-all">
+                  Watch & Vote →
                 </button>
               )}
 
