@@ -17,7 +17,7 @@ const supabase = createClient(
 async function getFilm(id: string) {
   const { data } = await supabase
     .from('films')
-    .select('*')
+    .select('*, profiles!films_creator_id_fkey(id, name)')
     .eq('id', id)
     .eq('status', 'active')
     .single()
@@ -180,6 +180,15 @@ export default async function FilmPage({
                   <p className="text-[#7A6040] text-base mb-2">{film.title_te}</p>
                 )}
                 <div className="flex items-center gap-3 text-sm text-[#7A6040] flex-wrap">
+                  {(film as any).profiles?.name && (
+                    <>
+                      <Link href={`/creator/${(film as any).profiles.id}`}
+                        className="text-[#D4A017] hover:underline font-semibold">
+                        {(film as any).profiles.name}
+                      </Link>
+                      <span>·</span>
+                    </>
+                  )}
                   <span>{film.genre}</span>
                   <span>·</span>
                   <span>{film.duration_sec ? formatDuration(film.duration_sec) : '—'}</span>

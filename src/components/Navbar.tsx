@@ -197,12 +197,14 @@ export default function Navbar() {
 
         {user ? (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-sm">
-              {initial}
-            </div>
-            <span className="text-sm text-[#7A6040] max-w-[120px] truncate">
-              {user.user_metadata?.name ?? user.email}
-            </span>
+            <Link href="/profile" className="flex items-center gap-2 group">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-sm group-hover:opacity-80 transition">
+                {initial}
+              </div>
+              <span className="text-sm text-[#7A6040] max-w-[120px] truncate group-hover:text-[#D4A017] transition">
+                {user.user_metadata?.name ?? user.email}
+              </span>
+            </Link>
             <button onClick={handleLogout}
               className="border border-[#2E2010] text-[#7A6040] px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide hover:text-[#FF6B1A] hover:border-[#FF6B1A]/30 transition">
               Logout
@@ -265,10 +267,16 @@ export default function Navbar() {
 
           <div className="flex gap-2 mt-2 border-t border-[#2E2010] pt-3">
             {user ? (
-              <button onClick={handleLogout}
-                className="flex-1 border border-[#2E2010] text-[#7A6040] py-2 rounded text-sm font-bold uppercase">
-                Logout
-              </button>
+              <>
+                <Link href="/profile" onClick={() => setOpen(false)}
+                  className="flex-1 border border-[#D4A017]/40 text-[#D4A017] py-2 rounded text-sm font-bold uppercase text-center">
+                  My Profile
+                </Link>
+                <button onClick={handleLogout}
+                  className="flex-1 border border-[#2E2010] text-[#7A6040] py-2 rounded text-sm font-bold uppercase">
+                  Logout
+                </button>
+              </>
             ) : (
               <>
                 <Link href="/auth" className="flex-1 border border-[#D4A017]/40 text-[#D4A017] py-2 rounded text-sm font-bold uppercase text-center">Login</Link>

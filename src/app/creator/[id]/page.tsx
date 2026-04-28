@@ -53,6 +53,12 @@ async function getCreatorFilms(creatorId: string) {
   return data ?? []
 }
 
+function getThumbnail(videoUrl: string | null): string | null {
+  if (!videoUrl) return null
+  const match = videoUrl.match(/(?:embed\/|watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (!match) return null
+  return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`
+}
 function fmtViews(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n)
 }
@@ -153,8 +159,13 @@ export default async function CreatorPage({
                     href={`/${creator.stateSlug}/${creator.districtSlug}/film/${film.id}`}
                     className="flex items-center gap-4 bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 hover:border-[#D4A017]/30 hover:-translate-y-0.5 transition-all duration-200 group"
                   >
-                    <div className={`w-20 h-12 rounded-lg bg-gradient-to-br ${style.gradient} flex items-center justify-center text-xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                      {style.emoji}
+                    <div className={`relative w-20 h-12 rounded-lg overflow-hidden bg-gradient-to-br ${style.gradient} flex items-center justify-center text-xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                      {getThumbnail(film.video_url) ? (
+                        <img src={getThumbnail(film.video_url)!} alt={film.title_en}
+                          className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        style.emoji
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-[#FDF6E3] text-sm group-hover:text-[#D4A017] transition line-clamp-1">
