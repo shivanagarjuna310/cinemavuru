@@ -100,7 +100,7 @@ export default async function CreatorPage({
               {creator.districtSlug}
             </Link>
             <span>›</span>
-            <span className="text-[#D4A017]">Filmmaker</span>
+            <span className="text-[#D4A017]">{creator.name ?? 'Filmmaker'}</span>
           </div>
 
           {/* Filmmaker card */}
