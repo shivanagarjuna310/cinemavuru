@@ -227,10 +227,23 @@ export default function AdminPage() {
     ))
   }
 
-  // ── Close contest and crown winners ──────────────────────
   async function closeContest() {
     if (!activeContest) return
     if (!winner1) { alert('Please select at least the 1st place winner.'); return }
+
+    // ── Minimum vote threshold check ─────────────────────────
+    const MIN_VOTES = 100
+    const winnerEntry = approvedEntries.find(e => e.films?.id === winner1)
+    if (winnerEntry && winnerEntry.contest_score < MIN_VOTES) {
+      const proceed = window.confirm(
+        `⚠️ MINIMUM VOTE THRESHOLD NOT MET!\n\n` +
+        `The 1st place film "${winnerEntry.films?.title_en}" only has ${winnerEntry.contest_score} votes.\n` +
+        `Minimum required: ${MIN_VOTES} votes to be eligible for prize money.\n\n` +
+        `You can still close the contest, but prize money should NOT be paid out this season.\n\n` +
+        `Close anyway (without prize money)?`
+      )
+      if (!proceed) return
+    }
 
     const confirmed = window.confirm(
       `⚠️ Close Season ${activeContest.season_number} — "${activeContest.title}"?\n\nThis will:\n• Mark the contest as closed\n• Save the top 3 winners to Hall of Fame\n• Cannot be undone!\n\nProceed?`
