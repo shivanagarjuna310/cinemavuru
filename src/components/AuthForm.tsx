@@ -53,6 +53,15 @@ export default function AuthForm() {
         return
       }
 
+      // Supabase silently "succeeds" for existing emails
+      // identities array is empty when email already registered
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setStatus('error')
+        setMessage('An account with this email already exists. Please login instead.')
+        setTab('login')
+        return
+      }
+
       // Step 2 — manually create the profile row
       // (more reliable than trigger)
       if (data.user) {
