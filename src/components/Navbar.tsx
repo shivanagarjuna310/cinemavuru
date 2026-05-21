@@ -90,9 +90,8 @@ export default function Navbar() {
              ?? user?.email?.[0]?.toUpperCase() ?? '?'
 
   const mainLinks = [
-    { href: '/',                    label: 'Home'            },
-    { href: '/telangana/hyderabad', label: 'Hyderabad Films' },
-    { href: '/upload',              label: 'Upload'          },
+    { href: '/',       label: 'Home'   },
+    { href: '/upload', label: 'Upload' },
   ]
 
   const contestLinks = [

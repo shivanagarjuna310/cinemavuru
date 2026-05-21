@@ -42,6 +42,8 @@ export default function ContestEntryForm() {
   const [status,         setStatus]         = useState<'idle'|'loading'|'submitted'|'paid'|'error'>('idle')
   const [message,        setMessage]        = useState('')
   const [alreadyEntered, setAlreadyEntered] = useState(false)
+  const [districtId, setDistrictId] = useState('')
+  const [districts,  setDistricts]  = useState<{ id: string; name_en: string }[]>([])
   // After form submit succeeds, we store the final film ID here
   // so the RazorpayButton knows which film to attach payment to
   const [submittedFilmId, setSubmittedFilmId] = useState('')
@@ -80,6 +82,14 @@ export default function ContestEntryForm() {
         .eq('creator_id', user.id)
         .eq('status', 'active')
       setMyFilms(films ?? [])
+
+      // Load all active districts for dropdown
+      const { data: districtList } = await supabase
+        .from('districts')
+        .select('id, name_en')
+        .eq('is_active', true)
+        .order('name_en', { ascending: true })
+      setDistricts(districtList ?? [])
 
       const { data: entry } = await supabase
         .from('contest_entries')
@@ -122,8 +132,11 @@ export default function ContestEntryForm() {
         return
       }
 
-      const { data: district } = await supabase
-        .from('districts').select('id').eq('slug', 'hyderabad').single()
+      if (!districtId) {
+        setStatus('error')
+        setMessage('Please select your district.')
+        return
+      }
 
       const { data: newFilm, error: filmError } = await supabase
         .from('films')
@@ -132,7 +145,7 @@ export default function ContestEntryForm() {
           genre:       newGenre,
           video_url:   embedUrl,
           creator_id:  userInfo.id,
-          district_id: district?.id,
+          district_id: districtId,
           status:      'pending',
           view_count:  0,
           like_count:  0,
@@ -290,6 +303,22 @@ export default function ContestEntryForm() {
             {myFilms.length > 0 && (
               <div className="text-center text-xs text-[#7A6040] py-1">— or submit a new film —</div>
             )}
+            <div>
+              <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+                Your District *
+              </label>
+              <select
+                value={districtId}
+                onChange={e => setDistrictId(e.target.value)}
+                required={!filmId}
+                className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+              >
+                <option value="">— Select your district —</option>
+                {districts.map(d => (
+                  <option key={d.id} value={d.id}>{d.name_en}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Film Title *</label>
               <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)}
