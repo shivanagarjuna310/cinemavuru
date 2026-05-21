@@ -110,7 +110,7 @@ export default function Navbar() {
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-base">🎬</div>
         <div className="flex flex-col leading-none">
           <span className="text-[#D4A017] font-bold text-lg tracking-wide">CinemaVuru</span>
-          <span className="text-[#7A6040] text-[10px] uppercase tracking-widest">సినిమా వూరు</span>
+          <span className="text-[#7A6040] text-[10px] uppercase tracking-widest">సినిమా ఊరు</span>
         </div>
       </Link>
 
