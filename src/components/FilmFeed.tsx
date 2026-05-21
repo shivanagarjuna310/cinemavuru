@@ -62,14 +62,25 @@ function fmtViews(n: number) {
 export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, districtSlug }: Props) {
   const router = useRouter()
   const [films, setFilms] = useState<Film[]>(initialFilms)
+  const [hasMounted, setHasMounted] = useState(false)
 
-  // Re-fetch films client-side to ensure video_url is included
   useEffect(() => {
+    if (!hasMounted) { setHasMounted(true); return }
+
     async function fetchFilms() {
+      const { data: districtRow } = await supabase
+        .from('districts')
+        .select('id')
+        .eq('slug', districtSlug)
+        .single()
+
+      if (!districtRow) return
+
       let query = supabase
         .from('films')
         .select('id, title_en, title_te, genre, like_count, view_count, duration_sec, is_top_film, created_at, video_url')
         .eq('status', 'active')
+        .eq('district_id', districtRow.id)
 
       if      (currentSort === 'liked')    query = query.order('like_count', { ascending: false })
       else if (currentSort === 'viewed')   query = query.order('view_count', { ascending: false })
@@ -77,10 +88,10 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
       else                                 query = query.order('created_at', { ascending: false })
 
       const { data } = await query
-      if (data && data.length > 0) setFilms(data)
+      setFilms(data ?? [])
     }
     fetchFilms()
-  }, [currentSort])
+  }, [currentSort, districtSlug, hasMounted])
 
   function handleSort(key: string) {
     router.push(`/${stateSlug}/${districtSlug}?sort=${key}`)
