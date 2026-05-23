@@ -1,10 +1,10 @@
 'use client'
-// src/components/ContestEntryForm.tsx — with Razorpay payment integrated
+// src/components/ContestEntryForm.tsx — with Cashfree payment integrated
 
 import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
-import RazorpayButton          from '@/components/RazorpayButton'
+import CashfreeButton          from '@/components/CashfreeButton'
 
 // ── Types ─────────────────────────────────────────────────────
 type Contest = {
@@ -22,7 +22,6 @@ type Film = {
   title_en: string
 }
 
-// ── New type to hold logged-in user info ──────────────────────
 type UserInfo = {
   id:    string
   email: string
@@ -42,18 +41,16 @@ export default function ContestEntryForm() {
   const [status,         setStatus]         = useState<'idle'|'loading'|'submitted'|'paid'|'error'>('idle')
   const [message,        setMessage]        = useState('')
   const [alreadyEntered, setAlreadyEntered] = useState(false)
-  const [districtId, setDistrictId] = useState('')
-  const [districts,  setDistricts]  = useState<{ id: string; name_en: string }[]>([])
-  // After form submit succeeds, we store the final film ID here
-  // so the RazorpayButton knows which film to attach payment to
-  const [submittedFilmId, setSubmittedFilmId] = useState('')
+  const [districtId,     setDistrictId]     = useState('')
+  const [districts,      setDistricts]      = useState<{ id: string; name_en: string }[]>([])
+  const [submittedFilmId,  setSubmittedFilmId]  = useState('')
+  const [submittedEntryId, setSubmittedEntryId] = useState('') // ← NEW: contest_entry row ID
 
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Get profile name from profiles table
       const { data: profile } = await supabase
         .from('profiles')
         .select('name')
@@ -83,7 +80,6 @@ export default function ContestEntryForm() {
         .eq('status', 'active')
       setMyFilms(films ?? [])
 
-      // Load all active districts for dropdown
       const { data: districtList } = await supabase
         .from('districts')
         .select('id, name_en')
@@ -167,13 +163,18 @@ export default function ContestEntryForm() {
       return
     }
 
-    const { error } = await supabase.from('contest_entries').insert({
-      contest_id:     contest.id,
-      film_id:        targetFilmId,
-      creator_id:     userInfo.id,
-      payment_status: 'pending',
-      is_approved:    false,
-    })
+    // ← CHANGED: also return 'id' from insert so we can pass to CashfreeButton
+    const { data: newEntry, error } = await supabase
+      .from('contest_entries')
+      .insert({
+        contest_id:     contest.id,
+        film_id:        targetFilmId,
+        creator_id:     userInfo.id,
+        payment_status: 'pending',
+        is_approved:    false,
+      })
+      .select('id')
+      .single()
 
     if (error) {
       setStatus('error')
@@ -183,8 +184,8 @@ export default function ContestEntryForm() {
       return
     }
 
-    // Film submitted! Now store the film ID and show payment button
     setSubmittedFilmId(targetFilmId)
+    setSubmittedEntryId(newEntry.id) // ← NEW: save entry row ID
     setStatus('submitted')
     setMessage('Film submitted! Complete payment to confirm your entry.')
   }
@@ -242,18 +243,20 @@ export default function ContestEntryForm() {
           Without payment, your film won&apos;t appear in the contest.
         </p>
 
-        {/* ✅ REAL RAZORPAY BUTTON — replaces the old fake alert button */}
-        <RazorpayButton
+        {/* ← CHANGED: CashfreeButton replaces RazorpayButton */}
+        <CashfreeButton
           contestId={contest.id}
           filmId={submittedFilmId}
           userId={userInfo.id}
           userEmail={userInfo.email}
           userName={userInfo.name}
+          contestEntryId={submittedEntryId}
           onSuccess={() => setStatus('paid')}
+          onError={(msg) => { setStatus('error'); setMessage(msg) }}
         />
 
         <p className="text-center text-xs text-[#4A3020] mt-3">
-          Secured by Razorpay · Refundable if contest is cancelled
+          Secured by Cashfree · Refundable if contest is cancelled
         </p>
       </div>
     </div>
