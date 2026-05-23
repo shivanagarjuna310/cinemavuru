@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Rajdhani, Noto_Sans_Telugu } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
-
+import PWARegister from '@/components/PWARegister'
 const rajdhani = Rajdhani({
   variable: "--font-rajdhani",
   subsets: ["latin"],
@@ -25,6 +25,17 @@ export const metadata: Metadata = {
     description: "Discover short films from your district. Made by local filmmakers, for local audiences.",
     type: "website",
   },
+  // ← NEW: PWA manifest + icons
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/icon-512.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "CinemaVuru",
+  },
 };
 
 export default function RootLayout({
@@ -34,7 +45,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="te">
+      <head>
+        {/* ← NEW: PWA theme color — shows in browser chrome on mobile */}
+        <meta name="theme-color" content="#FF6B1A" />
+        {/* ← NEW: Makes it feel like a native app on iOS */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="CinemaVuru" />
+        {/* ← NEW: Apple touch icon for iOS home screen */}
+        <link rel="apple-touch-icon" href="/icons/icon-512.png" />
+      </head>
       <body className={`${rajdhani.variable} ${notoTelugu.variable} antialiased`}>
+        <PWARegister />
         {children}
 
         {/* ── Site Footer ── */}
