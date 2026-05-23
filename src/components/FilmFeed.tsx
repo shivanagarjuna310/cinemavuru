@@ -84,7 +84,7 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
 
       if      (currentSort === 'liked')    query = query.order('like_count', { ascending: false })
       else if (currentSort === 'viewed')   query = query.order('view_count', { ascending: false })
-      else if (currentSort === 'trending') query = query.order('like_count', { ascending: false })
+      else if (currentSort === 'trending') query = query.order('view_count', { ascending: false })
       else                                 query = query.order('created_at', { ascending: false })
 
       const { data } = await query

@@ -31,7 +31,7 @@ async function getFilms(districtId: string, sort: string) {
 
   if      (sort === 'liked')    query = query.order('like_count',  { ascending: false })
   else if (sort === 'viewed')   query = query.order('view_count',  { ascending: false })
-  else if (sort === 'trending') query = query.order('like_count',  { ascending: false })
+  else if (sort === 'trending') query = query.order('view_count',  { ascending: false })
   else                          query = query.order('created_at',  { ascending: false })
 
   const { data } = await query
