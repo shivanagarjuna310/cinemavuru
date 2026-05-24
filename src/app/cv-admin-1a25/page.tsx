@@ -11,6 +11,7 @@ type Film = {
   description: string | null; status: string
   created_at: string; like_count: number; view_count: number
   creator_id: string
+  contest_entries?: { payment_status: string; payment_ref: string | null }[]
 }
 type Log = {
   id: string; event_type: string; created_at: string
@@ -126,7 +127,11 @@ export default function AdminPage() {
 
   const fetchFilms = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('films').select('*').eq('status', filmFilter).order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('films')
+      .select('*, contest_entries(payment_status, payment_ref)')
+      .eq('status', filmFilter)
+      .order('created_at', { ascending: false })
     setFilms(data ?? [])
     setLoading(false)
   }, [filmFilter])
@@ -416,6 +421,26 @@ export default function AdminPage() {
                           <span>{timeAgo(film.created_at)}</span>
                           <span>👁 {film.view_count}</span>
                           <span>♥ {film.like_count}</span>
+                          {film.contest_entries && film.contest_entries.length > 0 && (
+                            <span className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-2 py-0.5 rounded font-bold">
+                              🏆 Contest
+                            </span>
+                          )}
+                          {film.contest_entries?.[0]?.payment_ref && (
+                            <span className="bg-green-900/30 border border-green-700/40 text-green-400 px-2 py-0.5 rounded">
+                              UTR: {film.contest_entries[0].payment_ref}
+                            </span>
+                          )}
+                          {film.contest_entries?.[0]?.payment_status === 'pending_verification' && (
+                            <span className="bg-yellow-900/30 border border-yellow-700/40 text-yellow-400 px-2 py-0.5 rounded">
+                              ⏳ Payment Pending Verify
+                            </span>
+                          )}
+                          {film.contest_entries?.[0]?.payment_status === 'paid' && (
+                            <span className="bg-green-900/30 border border-green-700/40 text-green-400 px-2 py-0.5 rounded">
+                              ✅ Payment Verified
+                            </span>
+                          )}
                         </div>
                         {film.video_url && (
                           <a href={film.video_url.replace('/embed/','/watch?v=')} target="_blank" rel="noopener noreferrer"
