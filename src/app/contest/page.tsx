@@ -25,7 +25,7 @@ async function getActiveContest() {
 async function getContestEntries(contestId: string) {
   const { data } = await supabase
     .from('contest_entries')
-    .select('*, films(*, profiles(name))')
+    .select('*, films(id, title_en, title_te, genre, video_url, view_count, like_count, profiles!films_creator_id_fkey(name))')
     .eq('contest_id', contestId)
     .eq('is_approved', true)
     .eq('payment_status', 'paid')
