@@ -89,12 +89,23 @@ export default function ContestEntryForm() {
 
       const { data: entry } = await supabase
         .from('contest_entries')
-        .select('id, payment_status')
+        .select('id, payment_status, film_id')
         .eq('contest_id', c.id)
         .eq('creator_id', user.id)
         .maybeSingle()
-      // Only show "already entered" if payment is confirmed
-      if (entry && entry.payment_status === 'paid') setAlreadyEntered(true)
+
+      if (entry) {
+        if (entry.payment_status === 'paid') {
+          // Fully paid — show already entered
+          setAlreadyEntered(true)
+        } else {
+          // Has entry but not paid yet — resume payment screen
+          setSubmittedEntryId(entry.id)
+          setSubmittedFilmId(entry.film_id)
+          setStatus('submitted')
+          setMessage('Complete your payment to confirm your contest entry.')
+        }
+      }
     }
     init()
   }, [])
