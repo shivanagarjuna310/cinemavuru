@@ -69,15 +69,17 @@ export default function UploadForm() {
     })
   }, [])
 
-  // Get Hyderabad district ID on mount
+  // Load all active districts
+  const [districts, setDistricts] = useState<{ id: string; name_en: string; state_id: string }[]>([])
+
   useEffect(() => {
     supabase
       .from('districts')
-      .select('id')
-      .eq('slug', 'hyderabad')
-      .single()
+      .select('id, name_en, state_id')
+      .eq('is_active', true)
+      .order('name_en', { ascending: true })
       .then(({ data }) => {
-        if (data) setDistrictId(data.id)
+        setDistricts(data ?? [])
       })
   }, [])
 
@@ -207,7 +209,7 @@ export default function UploadForm() {
         <h2 className="text-2xl font-bold text-green-400 mb-3">Film Submitted!</h2>
         <p className="text-[#7A6040] mb-2">{message}</p>
         <p className="text-[#7A6040] text-sm mb-8">
-          Once approved, your film will appear on the Hyderabad film feed.
+          Once approved, your film will appear on your district film feed.
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
           <button
@@ -217,10 +219,10 @@ export default function UploadForm() {
             Submit Another Film
           </button>
           <button
-            onClick={() => router.push('/telangana/hyderabad')}
+            onClick={() => router.push('/')}
             className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-2.5 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition text-sm"
           >
-            View Hyderabad Films
+            Go to Home
           </button>
         </div>
       </div>
@@ -322,20 +324,22 @@ export default function UploadForm() {
           </p>
         </div>
 
-        {/* District — locked to Hyderabad for now */}
+        {/* District dropdown */}
         <div>
           <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            District
+            District <span className="text-[#FF6B1A]">*</span>
           </label>
-          <div className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#D4A017] text-sm flex items-center justify-between">
-            <span>Hyderabad, Telangana</span>
-            <span className="text-[10px] text-[#FF6B1A] uppercase tracking-widest bg-[#FF6B1A]/10 px-2 py-0.5 rounded">
-              Live
-            </span>
-          </div>
-          <p className="text-[#4A3020] text-xs mt-1.5">
-            More districts coming soon.
-          </p>
+          <select
+            value={districtId}
+            onChange={e => setDistrictId(e.target.value)}
+            required
+            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+          >
+            <option value="">— Select your district —</option>
+            {districts.map(d => (
+              <option key={d.id} value={d.id}>{d.name_en}</option>
+            ))}
+          </select>
         </div>
 
         {/* Error message */}
