@@ -726,9 +726,10 @@ export default function AdminPage() {
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            {i === 0 && <span className="text-sm">🥇</span>}
-                            {i === 1 && <span className="text-sm">🥈</span>}
-                            {i === 2 && <span className="text-sm">🥉</span>}
+                            {activeContest?.status === 'voting' && i === 0 && <span className="text-sm">🥇</span>}
+                            {activeContest?.status === 'voting' && i === 1 && <span className="text-sm">🥈</span>}
+                            {activeContest?.status === 'voting' && i === 2 && <span className="text-sm">🥉</span>}
+                            {activeContest?.status === 'open' && <span className="text-xs text-[#4A3020] font-bold">#{i + 1}</span>}
                             <h3 className="font-bold text-[#FDF6E3]">
                               {entry.films?.title_en ?? 'Unknown Film'}
                             </h3>
