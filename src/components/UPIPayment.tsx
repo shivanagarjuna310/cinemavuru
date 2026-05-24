@@ -63,7 +63,8 @@ export default function UPIPayment({
 
       onSuccess()
     } catch (err: any) {
-      onError('Could not save payment details. Please try again.')
+      console.error('UTR save error:', err)
+      onError(`Could not save payment details: ${err?.message ?? JSON.stringify(err)}`)
     } finally {
       setLoading(false)
     }
