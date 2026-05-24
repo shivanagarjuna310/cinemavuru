@@ -23,16 +23,19 @@ export default function UPIPayment({
   const [utrNumber, setUtrNumber] = useState('')
   const [loading, setLoading]     = useState(false)
   const [copied, setCopied]       = useState(false)
+  const [utrError, setUtrError]   = useState('')
 
   const UPI_ID = 'shivanagarjuna777@oksbi'
+  const WHATSAPP_NUMBER = '917801007518' // ← Replace with your WhatsApp number
 
   async function handleSubmit() {
+    setUtrError('')
     if (!utrNumber.trim()) {
-      onError('Please enter your UTR / Transaction ID.')
+      setUtrError('Please enter your UTR / Transaction ID.')
       return
     }
     if (utrNumber.trim().length < 8) {
-      onError('UTR number looks too short. Please check and try again.')
+      setUtrError('UTR number looks too short. Please check and try again.')
       return
     }
 
@@ -42,11 +45,21 @@ export default function UPIPayment({
         .from('contest_entries')
         .update({
           payment_ref:    utrNumber.trim(),
-          payment_status: 'pending_verification', // Admin will verify
+          payment_status: 'pending_verification',
         })
         .eq('id', contestEntryId)
 
-      if (error) throw error
+      if (error) {
+        // Unique constraint violation — UTR already used
+        if (error.code === '23505') {
+          setUtrError(
+            'This UTR has already been used. If you made a genuine payment, contact us on WhatsApp below.'
+          )
+          setLoading(false)
+          return
+        }
+        throw error
+      }
 
       onSuccess()
     } catch (err: any) {
@@ -60,6 +73,13 @@ export default function UPIPayment({
     navigator.clipboard.writeText(UPI_ID)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function openWhatsApp() {
+    const message = encodeURIComponent(
+      `Hi! I made a payment of ₹${entryFee} for CinemaVuru contest entry.\n\nEntry ID: ${contestEntryId}\nUTR: ${utrNumber || 'Not entered yet'}\n\nPlease verify and approve my entry.`
+    )
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank')
   }
 
   return (
@@ -133,10 +153,15 @@ export default function UPIPayment({
         <input
           type="text"
           value={utrNumber}
-          onChange={e => setUtrNumber(e.target.value)}
+          onChange={e => { setUtrNumber(e.target.value); setUtrError('') }}
           placeholder="e.g. 426813XXXXXXXX"
-          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition font-mono"
+          className={`w-full bg-[#0D0A06] border rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none transition font-mono ${
+            utrError ? 'border-red-500/50 focus:border-red-500' : 'border-[#2E2010] focus:border-[#D4A017]/50'
+          }`}
         />
+        {utrError && (
+          <p className="text-xs text-red-400 mt-1">{utrError}</p>
+        )}
         <p className="text-xs text-[#4A3020] mt-1">
           Find this in your UPI app under payment history / transaction details
         </p>
@@ -149,6 +174,21 @@ export default function UPIPayment({
         className="w-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black font-bold py-3 px-6 rounded-xl uppercase tracking-wide text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition">
         {loading ? '⏳ Submitting...' : '✅ I Have Paid — Submit UTR'}
       </button>
+
+      {/* WhatsApp fallback */}
+      <div className="border border-[#2E2010] rounded-xl p-4 text-center">
+        <p className="text-xs text-[#7A6040] mb-3">
+          Made payment but facing issues? Contact us directly.
+        </p>
+        <button
+          onClick={openWhatsApp}
+          className="flex items-center justify-center gap-2 w-full bg-green-700/20 border border-green-700/40 text-green-400 font-bold py-2.5 px-6 rounded-xl text-sm hover:bg-green-700/30 transition">
+          <span>💬</span> Contact on WhatsApp
+        </button>
+        <p className="text-xs text-[#4A3020] mt-2">
+          We'll verify your payment and approve your entry manually.
+        </p>
+      </div>
 
       <p className="text-center text-xs text-[#4A3020]">
         Your entry will be confirmed after admin verifies your payment (usually within 24 hours)
