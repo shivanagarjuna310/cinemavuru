@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
 import CashfreeButton          from '@/components/CashfreeButton'
-
+import UPIPayment from '@/components/UPIPayment'
 // ── Types ─────────────────────────────────────────────────────
 type Contest = {
   id:                   string
@@ -225,7 +225,7 @@ export default function ContestEntryForm() {
     </div>
   )
 
-  // ── SCREEN: Film submitted → show payment button ──────────
+  // ── SCREEN: Film submitted → show UPI payment ──────────
   if (status === 'submitted') return (
     <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
       <div className="text-center mb-6">
@@ -234,31 +234,12 @@ export default function ContestEntryForm() {
         <p className="text-[#7A6040] text-sm">{message}</p>
       </div>
 
-      <div className="bg-[#0D0A06] border border-[#2E2010] rounded-xl p-5">
-        <h3 className="text-sm font-bold text-[#D4A017] uppercase tracking-wide mb-3">
-          Complete Payment — ₹{contest.entry_fee}
-        </h3>
-        <p className="text-[#7A6040] text-sm mb-4 leading-relaxed">
-          Your entry is reserved. Pay the entry fee to confirm your spot.
-          Without payment, your film won&apos;t appear in the contest.
-        </p>
-
-        {/* ← CHANGED: CashfreeButton replaces RazorpayButton */}
-        <CashfreeButton
-          contestId={contest.id}
-          filmId={submittedFilmId}
-          userId={userInfo.id}
-          userEmail={userInfo.email}
-          userName={userInfo.name}
-          contestEntryId={submittedEntryId}
-          onSuccess={() => setStatus('paid')}
-          onError={(msg) => { setStatus('error'); setMessage(msg) }}
-        />
-
-        <p className="text-center text-xs text-[#4A3020] mt-3">
-          Secured by Cashfree · Refundable if contest is cancelled
-        </p>
-      </div>
+      <UPIPayment
+        contestEntryId={submittedEntryId}
+        entryFee={contest.entry_fee}
+        onSuccess={() => setStatus('paid')}
+        onError={(msg) => { setStatus('error'); setMessage(msg) }}
+      />
     </div>
   )
 
@@ -266,9 +247,9 @@ export default function ContestEntryForm() {
   if (status === 'paid') return (
     <div className="bg-[#1A1208] border border-green-700/30 rounded-2xl p-8 text-center">
       <div className="text-5xl mb-4">🎉</div>
-      <p className="text-green-400 font-bold text-xl mb-2">Payment Successful!</p>
-      <p className="text-[#FDF6E3] text-sm mb-1">Your film has been entered into the contest.</p>
-      <p className="text-[#7A6040] text-sm mb-6">Admin will review and approve your entry shortly.</p>
+      <p className="text-green-400 font-bold text-xl mb-2">Payment Details Submitted!</p>
+      <p className="text-[#FDF6E3] text-sm mb-1">We have received your UTR number.</p>
+      <p className="text-[#7A6040] text-sm mb-6">Admin will verify your payment and approve your entry within 24 hours.</p>
       <button onClick={() => router.push('/contest')}
         className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3 rounded-lg font-bold uppercase text-sm">
         View Leaderboard →

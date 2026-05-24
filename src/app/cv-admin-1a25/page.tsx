@@ -26,6 +26,7 @@ type ContestEntry = {
   contest_score: number
   created_at: string
   razorpay_payment_id: string | null
+  payment_ref: string | null
   films: { id: string; title_en: string } | null
   profiles: { name: string | null } | null
 }
@@ -725,6 +726,11 @@ export default function AdminPage() {
                             }`}>
                               {entry.is_approved ? '✅ Approved' : '⏳ Pending'}
                             </span>
+                            {entry.payment_ref && (
+                              <span className="text-xs bg-[#D4A017]/10 border border-[#D4A017]/20 text-[#D4A017] px-2 py-0.5 rounded">
+                                UTR: {entry.payment_ref}
+                              </span>
+                            )}
                             {entry.razorpay_payment_id && (
                               <span className="text-xs text-[#4A3020]">
                                 ID: {entry.razorpay_payment_id}
@@ -745,7 +751,26 @@ export default function AdminPage() {
                               ❌ Revoke
                             </button>
                           )}
-                          {entry.payment_status !== 'paid' && (
+                          {entry.payment_status === 'pending_verification' && (
+                            <button onClick={async () => {
+                              const confirmed = window.confirm(
+                                `Mark payment as verified for "${entry.films?.title_en}"?\n\nUTR: ${entry.payment_ref}\n\nOnly confirm after checking this UTR in your UPI app.`
+                              )
+                              if (!confirmed) return
+                              const { error } = await supabase
+                                .from('contest_entries')
+                                .update({ payment_status: 'paid' })
+                                .eq('id', entry.id)
+                              if (error) { alert(`Error: ${error.message}`); return }
+                              setContestEntries(prev => prev.map(e =>
+                                e.id === entry.id ? { ...e, payment_status: 'paid' } : e
+                              ))
+                            }}
+                            className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#D4A017]/30 transition">
+                              💳 Verify & Mark Paid
+                            </button>
+                          )}
+                          {entry.payment_status === 'pending' && (
                             <span className="text-xs text-yellow-600 text-center">Awaiting payment</span>
                           )}
                         </div>
