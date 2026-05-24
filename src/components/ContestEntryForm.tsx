@@ -89,11 +89,12 @@ export default function ContestEntryForm() {
 
       const { data: entry } = await supabase
         .from('contest_entries')
-        .select('id')
+        .select('id, payment_status')
         .eq('contest_id', c.id)
         .eq('creator_id', user.id)
         .maybeSingle()
-      if (entry) setAlreadyEntered(true)
+      // Only show "already entered" if payment is confirmed
+      if (entry && entry.payment_status === 'paid') setAlreadyEntered(true)
     }
     init()
   }, [])
