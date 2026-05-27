@@ -163,7 +163,7 @@ export default function ContestEntryForm() {
 
       if (filmError || !newFilm) {
         setStatus('error')
-        setMessage('Could not create film. Please upload your film first.')
+        setMessage(`Could not create film: ${filmError?.message ?? 'Unknown error'}`)
         return
       }
       targetFilmId = newFilm.id
