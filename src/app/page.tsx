@@ -1,6 +1,7 @@
 // src/app/page.tsx
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
+import Image from 'next/image'
 import Navbar from '../components/Navbar'
 
 export const dynamic = 'force-dynamic'
@@ -9,6 +10,21 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
+
+// District image + color overlay config
+const DISTRICT_CONFIG: Record<string, { image: string; overlay: string; landmark: string }> = {
+  hyderabad:     { image: '/districts/hyderabad.jpg',     overlay: 'rgba(180,100,0,0.45)',    landmark: 'Charminar' },
+  warangal:      { image: '/districts/warangal.jpg',      overlay: 'rgba(0,80,60,0.5)',        landmark: 'Ramappa Temple' },
+  karimnagar:    { image: '/districts/karimnagar.jpg',    overlay: 'rgba(80,0,100,0.45)',      landmark: 'Elgandal Fort' },
+  nizamabad:     { image: '/districts/nizamabad.jpg',     overlay: 'rgba(0,40,120,0.5)',       landmark: 'Nizamabad Fort' },
+  khammam:       { image: '/districts/khammam.jpg',       overlay: 'rgba(140,0,20,0.45)',      landmark: 'Khammam Fort' },
+  nalgonda:      { image: '/districts/nalgonda.jpg',      overlay: 'rgba(0,80,120,0.5)',       landmark: 'Nagarjuna Sagar' },
+  guntur:        { image: '/districts/guntur.jpg',        overlay: 'rgba(0,100,40,0.45)',      landmark: 'Undavalli Caves' },
+  vijayawada:    { image: '/districts/vijayawada.jpg',    overlay: 'rgba(150,20,60,0.45)',     landmark: 'Kanaka Durga Temple' },
+  tirupati:      { image: '/districts/tirupati.jpg',      overlay: 'rgba(160,100,0,0.45)',     landmark: 'Tirumala Temple' },
+  visakhapatnam: { image: '/districts/visakhapatnam.jpg', overlay: 'rgba(0,60,140,0.5)',       landmark: 'RK Beach' },
+  rajahmundry:   { image: '/districts/rajahmundry.jpg',   overlay: 'rgba(160,60,0,0.45)',      landmark: 'Godavari Ghats' },
+}
 
 async function getData() {
   const { data: districts } = await supabase
@@ -27,7 +43,6 @@ async function getData() {
     counts[f.district_id] = (counts[f.district_id] ?? 0) + 1
   })
 
-  // Fetch active contest
   const { data: contest } = await supabase
     .from('contests')
     .select('*')
@@ -36,7 +51,6 @@ async function getData() {
     .limit(1)
     .single()
 
-  // Fetch total stats
   const { count: totalUsers } = await supabase
     .from('profiles')
     .select('id', { count: 'exact', head: true })
@@ -63,96 +77,148 @@ export default async function Home() {
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative min-h-screen text-[#FDF6E3] bg-[#07080f]">
 
-        {/* ── ACTIVE CONTEST BANNER ── */}
-        {contest && (
-          <div className="bg-gradient-to-r from-[#1A0A00] to-[#0D0A06] border-b border-[#D4A017]/30">
-            <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-[#FF6B1A] rounded-full animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-widest text-[#D4A017]">
-                  🏆 Season {contest.season_number} is LIVE
-                </span>
-                <span className="text-xs text-[#7A6040] hidden sm:block">—</span>
-                <span className="text-xs text-[#7A6040] hidden sm:block">{contest.title}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex gap-3 text-xs text-[#7A6040]">
-                  <span>🥇 ₹{contest.prize_1st?.toLocaleString('en-IN')}</span>
-                  <span>🥈 ₹{contest.prize_2nd?.toLocaleString('en-IN')}</span>
-                  <span>🥉 ₹{contest.prize_3rd?.toLocaleString('en-IN')}</span>
+        {/* ── HERO SECTION ── */}
+        <section className="relative min-h-[92vh] flex items-center overflow-hidden">
+
+          {/* Hero background image */}
+          <div className="absolute inset-0 z-0">
+            <Image
+              src="/hero-bg.jpg"
+              alt="Telugu filmmaker shooting in village"
+              fill
+              priority
+              className="object-cover object-center"
+              sizes="100vw"
+            />
+            {/* Layered overlays for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#07080f] via-[#07080fcc] to-[#07080f60]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07080f] via-transparent to-[#07080f80]" />
+            {/* Film grain texture */}
+            <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay"
+              style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}} />
+          </div>
+
+          {/* Contest banner */}
+          {contest && (
+            <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#D4A017]/20 via-[#D4A017]/10 to-transparent border-b border-[#D4A017]/30 backdrop-blur-sm">
+              <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 bg-[#FF6B1A] rounded-full animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4A017]">
+                    🏆 Season {contest.season_number} is LIVE — {contest.title}
+                  </span>
                 </div>
-                <Link href="/contest"
-                  className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-3 py-1 rounded text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
-                  Enter Now →
+                <div className="flex items-center gap-6">
+                  <div className="hidden sm:flex gap-4 text-xs text-[#7A6040]">
+                    <span>🥇 ₹{contest.prize_1st?.toLocaleString('en-IN')}</span>
+                    <span>🥈 ₹{contest.prize_2nd?.toLocaleString('en-IN')}</span>
+                    <span>🥉 ₹{contest.prize_3rd?.toLocaleString('en-IN')}</span>
+                  </div>
+                  <Link href="/contest"
+                    className="bg-[#D4A017] text-black px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wide hover:bg-[#FFB830] transition">
+                    Enter Now →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hero content */}
+          <div className="relative z-10 max-w-6xl mx-auto px-6 pt-20 pb-12 w-full">
+            <div className="max-w-2xl">
+
+              {/* Eyebrow */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-px bg-[#FF6B1A]" />
+                <span className="text-xs text-[#FF6B1A] uppercase tracking-[4px] font-semibold">
+                  Telugu Short Film Platform
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B1A] animate-pulse" />
+              </div>
+
+              {/* Main headline */}
+              <h1 className="mb-4 leading-[1.05]">
+                <span className="block text-5xl md:text-7xl font-black text-white tracking-tight"
+                  style={{fontFamily: "'Georgia', 'Times New Roman', serif", textShadow: '0 4px 32px rgba(0,0,0,0.8)'}}>
+                  SHOOT.
+                </span>
+                <span className="block text-5xl md:text-7xl font-black tracking-tight"
+                  style={{fontFamily: "'Georgia', 'Times New Roman', serif", textShadow: '0 4px 32px rgba(0,0,0,0.8)', background: 'linear-gradient(135deg, #FF6B1A, #FFB830, #D4A017)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                  SHARE.
+                </span>
+                <span className="block text-5xl md:text-7xl font-black text-white tracking-tight"
+                  style={{fontFamily: "'Georgia', 'Times New Roman', serif", textShadow: '0 4px 32px rgba(0,0,0,0.8)'}}>
+                  WIN.
+                </span>
+              </h1>
+
+              {/* Telugu tagline */}
+              <p className="text-lg text-[#D4A017] mb-2 tracking-wide"
+                style={{fontFamily: "'Noto Sans Telugu', sans-serif"}}>
+                మీ ఊరు కథ · ప్రపంచానికి చూపండి
+              </p>
+              <p className="text-sm text-[#7A8090] mb-1">Your village story. To the world.</p>
+
+              <p className="text-[#6A7A80] max-w-lg mb-10 leading-relaxed text-sm">
+                The first hyperlocal short film platform for Telugu filmmakers across
+                Telangana & Andhra Pradesh. Upload your film, build your audience,
+                compete for real prize money.
+              </p>
+
+              {/* CTA Buttons */}
+              <div className="flex gap-4 flex-wrap mb-12">
+                <Link href="/upload"
+                  className="group relative overflow-hidden bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:shadow-2xl hover:shadow-orange-900/50 hover:-translate-y-0.5 transition-all duration-300">
+                  <span className="relative z-10">🎬 Submit Your Film</span>
+                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
                 </Link>
+                <Link href="/contest"
+                  className="border border-[#D4A017]/40 text-[#D4A017] px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:border-[#D4A017] hover:-translate-y-0.5 transition-all duration-300">
+                  🏆 View Contest
+                </Link>
+              </div>
+
+              {/* Stats */}
+              <div className="flex gap-8 flex-wrap">
+                {[
+                  { num: String(totalFilms || '10+'),  label: 'Short Films' },
+                  { num: String(totalUsers || '20+'),  label: 'Filmmakers' },
+                  { num: String(districts.length),     label: 'Districts Live' },
+                  { num: '2',                          label: 'Telugu States' },
+                ].map((s, i) => (
+                  <div key={s.label} className="flex items-center gap-4">
+                    {i > 0 && <div className="w-px h-8 bg-[#1e2535]" />}
+                    <div>
+                      <div className="text-2xl font-black text-[#D4A017]"
+                        style={{fontFamily: "'Georgia', serif"}}>{s.num}</div>
+                      <div className="text-[10px] text-[#3A4A60] uppercase tracking-[2px] mt-0.5">{s.label}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        )}
 
-        {/* ── HERO ── */}
-        <section className="flex flex-col items-center text-center px-6 py-20">
-
-          <div className="flex items-center gap-2 text-[#D4A017] border border-[#D4A017]/30 bg-[#D4A017]/10 rounded-full px-4 py-1.5 text-xs uppercase tracking-widest mb-6">
-            <span className="w-1.5 h-1.5 bg-[#FF6B1A] rounded-full animate-pulse" />
-            Telugu Short Film Platform
-          </div>
-
-          <h1 className="text-5xl md:text-6xl font-bold mb-3 leading-tight">
-            Submit. Get Votes.{' '}
-            <span className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] bg-clip-text text-transparent">
-              Win Prizes.
-            </span>
-          </h1>
-
-          <p className="text-[#7A6040] text-base mb-2">
-            తెలుగు సినిమా వేదిక · Telugu Cinema Stage
-          </p>
-
-          <p className="text-[#7A6040] max-w-lg mb-10 leading-relaxed">
-            The first hyperlocal short film platform for Telugu filmmakers.
-            Upload your film, build your audience, compete for prize money.
-          </p>
-
-          <div className="flex gap-3 flex-wrap justify-center">
-            <Link
-              href="/upload"
-              className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-7 py-3 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg shadow-orange-900/30"
-            >
-              🎬 Submit Your Film
-            </Link>
-            <Link
-              href="/contest"
-              className="border border-[#D4A017]/40 text-[#D4A017] px-7 py-3 rounded-lg font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition"
-            >
-              🏆 View Contest
-            </Link>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-16 flex gap-12 flex-wrap justify-center">
-            {[
-              { num: String(totalFilms || '10+'),  label: 'Short Films'   },
-              { num: String(totalUsers || '20+'),  label: 'Filmmakers'    },
-              { num: String(districts.length),     label: 'Districts Live' },
-              { num: '2',                          label: 'Telugu States'  },
-            ].map(s => (
-              <div key={s.label} className="text-center">
-                <div className="text-3xl font-bold text-[#D4A017]">{s.num}</div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wider mt-1">{s.label}</div>
-              </div>
-            ))}
-          </div>
+          {/* Bottom fade */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#07080f] to-transparent z-10" />
         </section>
 
         {/* ── HOW IT WORKS ── */}
-        <section className="max-w-4xl mx-auto px-6 pb-20">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-[#D4A017] mb-1">How It Works</h2>
-            <p className="text-[#7A6040] text-sm">మూడు సులభమైన దశలు · Three simple steps</p>
+        <section className="relative max-w-6xl mx-auto px-6 py-20">
+          {/* Section header */}
+          <div className="text-center mb-14">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-12 h-px bg-gradient-to-r from-transparent to-[#D4A017]" />
+              <span className="text-xs text-[#D4A017] uppercase tracking-[4px]">Simple Process</span>
+              <div className="w-12 h-px bg-gradient-to-l from-transparent to-[#D4A017]" />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-2"
+              style={{fontFamily: "'Georgia', serif"}}>How It Works</h2>
+            <p className="text-[#4A5A70] text-sm">మూడు సులభమైన దశలు · Three simple steps</p>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
@@ -160,96 +226,186 @@ export default async function Home() {
                 icon: '🎬',
                 title: 'Upload Your Film',
                 desc: 'Submit your short film with a YouTube link. Our team reviews and approves it within 24 hours.',
+                color: 'from-[#FF6B1A]/20 to-transparent',
+                border: 'border-[#FF6B1A]/20',
               },
               {
                 step: '02',
                 icon: '🗳️',
                 title: 'Get Votes',
                 desc: 'Share your film with friends, family and fans. Every vote counts towards your contest ranking.',
+                color: 'from-[#D4A017]/20 to-transparent',
+                border: 'border-[#D4A017]/20',
               },
               {
                 step: '03',
                 icon: '🏆',
                 title: 'Win Prizes',
                 desc: 'Top 3 films with the most votes win real prize money. New season every month.',
+                color: 'from-[#4A90E2]/20 to-transparent',
+                border: 'border-[#4A90E2]/20',
               },
             ].map(s => (
-              <div key={s.step} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-6 relative overflow-hidden">
-                <div className="absolute top-4 right-4 text-4xl font-black text-[#2E2010]">{s.step}</div>
-                <div className="text-3xl mb-4">{s.icon}</div>
-                <h3 className="font-bold text-[#FDF6E3] mb-2">{s.title}</h3>
-                <p className="text-[#7A6040] text-sm leading-relaxed">{s.desc}</p>
+              <div key={s.step}
+                className={`relative bg-gradient-to-br ${s.color} bg-[#0d1020] border ${s.border} rounded-2xl p-8 overflow-hidden group hover:-translate-y-1 transition-all duration-300`}>
+                <div className="absolute top-4 right-5 text-5xl font-black text-white/5 select-none"
+                  style={{fontFamily: "'Georgia', serif"}}>{s.step}</div>
+                <div className="text-4xl mb-5">{s.icon}</div>
+                <h3 className="font-bold text-white text-lg mb-3">{s.title}</h3>
+                <p className="text-[#4A5A70] text-sm leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── DISTRICT GRID ── */}
-        <section className="max-w-5xl mx-auto px-6 pb-24">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-[#D4A017] mb-1">Choose Your District</h2>
-            <p className="text-[#7A6040] text-sm">తెలుగు జిల్లాలు · Telugu Districts</p>
+        {/* ── TELANGANA DISTRICTS ── */}
+        <section className="max-w-6xl mx-auto px-6 pb-16">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="w-px h-5 bg-[#FF6B1A]" />
+                <span className="text-xs text-[#FF6B1A] uppercase tracking-[3px] font-semibold">Telangana</span>
+              </div>
+              <h2 className="text-2xl font-bold text-white"
+                style={{fontFamily: "'Georgia', serif"}}>Explore by District</h2>
+            </div>
           </div>
 
-          {/* Telangana */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#FF6B1A]">Telangana</span>
-              <div className="flex-1 h-px bg-[#2E2010]" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {telangana.map(d => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-12">
+            {telangana.map(d => {
+              const config = DISTRICT_CONFIG[d.slug] ?? { image: '', overlay: 'rgba(100,60,0,0.5)', landmark: '' }
+              return (
                 <Link
                   key={d.id}
                   href={`/${d.stateSlug}/${d.slug}`}
-                  className="bg-[#1A1208] border border-[#D4A017]/40 rounded-xl p-5 hover:border-[#D4A017] hover:-translate-y-1 transition-all duration-300 group"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="w-2 h-2 bg-[#FF6B1A] rounded-full animate-pulse" />
-                    <span className="text-[10px] text-[#D4A017] uppercase tracking-widest font-bold bg-[#D4A017]/10 px-2 py-0.5 rounded">
-                      Live
-                    </span>
+                  className="group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer">
+
+                  {/* District image */}
+                  {config.image && (
+                    <Image
+                      src={config.image}
+                      alt={d.name_en}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    />
+                  )}
+
+                  {/* Color overlay for variety */}
+                  <div className="absolute inset-0 transition-opacity duration-300"
+                    style={{background: config.overlay}} />
+
+                  {/* Dark gradient for text */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                  {/* Live badge */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                    <span className="text-[9px] text-white uppercase tracking-wide font-bold">Live</span>
                   </div>
-                  <h3 className="font-bold text-lg text-[#FDF6E3] group-hover:text-[#D4A017] transition mb-1">
-                    {d.name_en}
-                  </h3>
-                  <p className="text-sm text-[#7A6040] mb-3">{d.name_te}</p>
-                  <p className="text-xs text-[#D4A017] font-semibold">
-                    {d.filmCount} short films →
-                  </p>
+
+                  {/* Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[#FFB830] transition-colors">
+                      {d.name_en}
+                    </h3>
+                    <p className="text-white/50 text-[10px] mb-1">{d.name_te}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[#D4A017] font-semibold">
+                        {d.filmCount} films
+                      </span>
+                      <span className="text-[9px] text-white/40">{config.landmark}</span>
+                    </div>
+                  </div>
+
+                  {/* Hover border glow -->*/}
+                  <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[#D4A017]/40 transition-all duration-300" />
                 </Link>
-              ))}
-            </div>
+              )
+            })}
           </div>
 
           {/* Andhra Pradesh */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#FF6B1A]">Andhra Pradesh</span>
-              <div className="flex-1 h-px bg-[#2E2010]" />
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="w-px h-5 bg-[#4A90E2]" />
+                <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">Andhra Pradesh</span>
+              </div>
+              <h2 className="text-2xl font-bold text-white"
+                style={{fontFamily: "'Georgia', serif"}}>Andhra Districts</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {andhra.map(d => (
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {andhra.map(d => {
+              const config = DISTRICT_CONFIG[d.slug] ?? { image: '', overlay: 'rgba(0,60,120,0.5)', landmark: '' }
+              return (
                 <Link
                   key={d.id}
                   href={`/${d.stateSlug}/${d.slug}`}
-                  className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-5 hover:border-[#D4A017]/60 hover:-translate-y-1 transition-all duration-300 group"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="w-2 h-2 bg-[#D4A017] rounded-full animate-pulse" />
-                    <span className="text-[10px] text-[#7A6040] uppercase tracking-widest font-bold bg-[#2E2010] px-2 py-0.5 rounded">
-                      Live
-                    </span>
+                  className="group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer">
+
+                  {config.image && (
+                    <Image
+                      src={config.image}
+                      alt={d.name_en}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    />
+                  )}
+
+                  <div className="absolute inset-0 transition-opacity duration-300"
+                    style={{background: config.overlay}} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 bg-[#4A90E2] rounded-full animate-pulse" />
+                    <span className="text-[9px] text-white uppercase tracking-wide font-bold">Live</span>
                   </div>
-                  <h3 className="font-bold text-lg text-[#FDF6E3] group-hover:text-[#D4A017] transition mb-1">
-                    {d.name_en}
-                  </h3>
-                  <p className="text-sm text-[#7A6040] mb-3">{d.name_te}</p>
-                  <p className="text-xs text-[#7A6040] font-semibold">
-                    {d.filmCount} short films →
-                  </p>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[#90C8FF] transition-colors">
+                      {d.name_en}
+                    </h3>
+                    <p className="text-white/50 text-[10px] mb-1">{d.name_te}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[#4A90E2] font-semibold">
+                        {d.filmCount} films
+                      </span>
+                      <span className="text-[9px] text-white/40">{config.landmark}</span>
+                    </div>
+                  </div>
+
+                  <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[#4A90E2]/40 transition-all duration-300" />
                 </Link>
-              ))}
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ── BOTTOM CTA ── */}
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#FF6B1A]/10 via-[#D4A017]/5 to-[#FF6B1A]/10" />
+          <div className="absolute inset-0 border-t border-b border-[#D4A017]/20" />
+          <div className="relative max-w-6xl mx-auto px-6 py-20 text-center">
+            <h2 className="text-3xl md:text-5xl font-black text-white mb-4"
+              style={{fontFamily: "'Georgia', serif"}}>
+              Ready to Tell Your Story?
+            </h2>
+            <p className="text-[#6A7A80] mb-10 max-w-lg mx-auto leading-relaxed">
+              Join hundreds of Telugu filmmakers who are already sharing their stories with the world.
+            </p>
+            <div className="flex gap-4 justify-center flex-wrap">
+              <Link href="/upload"
+                className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-2xl shadow-orange-900/40">
+                🎬 Submit Your Film Free
+              </Link>
+              <Link href="/contest/enter"
+                className="border border-[#D4A017]/40 text-[#D4A017] px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all">
+                🏆 Enter Contest
+              </Link>
             </div>
           </div>
         </section>
