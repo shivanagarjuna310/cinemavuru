@@ -93,8 +93,8 @@ export default async function Home() {
               sizes="100vw"
             />
             {/* Layered overlays for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#07080f] via-[#07080fcc] to-[#07080f60]" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#07080f] via-transparent to-[#07080f80]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#07080f] via-[#07080f80] to-[#07080f20]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07080f] via-transparent to-transparent" />
             {/* Film grain texture */}
             <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay"
               style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}} />
