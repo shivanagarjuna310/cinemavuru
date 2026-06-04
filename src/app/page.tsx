@@ -89,7 +89,7 @@ export default async function Home() {
               alt="Telugu filmmaker shooting in village"
               fill
               priority
-              className="object-cover object-center"
+              className="object-cover object-[70%_center] md:object-center"
               sizes="100vw"
             />
             {/* Layered overlays for text readability */}
