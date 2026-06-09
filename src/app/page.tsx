@@ -171,12 +171,12 @@ export default async function Home() {
               <div className="flex gap-4 flex-wrap mb-12">
                 <Link href="/upload"
                   className="group relative overflow-hidden bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:shadow-2xl hover:shadow-orange-900/50 hover:-translate-y-0.5 transition-all duration-300">
-                  <span className="relative z-10">🎬 Submit Your Film</span>
+                  <span className="relative z-10">📽️ Upload Free</span>
                   <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
                 </Link>
                 <Link href="/contest"
                   className="border border-[#D4A017]/40 text-[#D4A017] px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:border-[#D4A017] hover:-translate-y-0.5 transition-all duration-300">
-                  🏆 View Contest
+                  🏆 Enter Contest
                 </Link>
               </div>
 
@@ -400,7 +400,7 @@ export default async function Home() {
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/upload"
                 className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-2xl shadow-orange-900/40">
-                🎬 Submit Your Film Free
+                📽️ Upload Free
               </Link>
               <Link href="/contest/enter"
                 className="border border-[#D4A017]/40 text-[#D4A017] px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all">
