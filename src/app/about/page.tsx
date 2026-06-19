@@ -70,7 +70,7 @@ export default function AboutPage() {
                 target="_blank" rel="noopener noreferrer"
                 className="group flex items-center gap-4 bg-[#0d1020] border border-[#D4A017]/20 hover:border-[#FF6B1A]/60 rounded-xl px-6 py-4 transition-all duration-300 hover:-translate-y-0.5">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF6B1A]/20 to-[#D4A017]/20 flex items-center justify-center text-xl shrink-0">
-                  📸
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" stroke="#D4A017" strokeWidth="2"/><circle cx="12" cy="12" r="4" stroke="#D4A017" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1" fill="#D4A017"/></svg>
                 </div>
                 <div>
                   <p className="text-[#4A5A70] text-[10px] uppercase tracking-widest mb-0.5">Follow Us</p>
@@ -216,7 +216,7 @@ export default function AboutPage() {
                   { step: '01', text: 'Upload your short film with a YouTube link.' },
                   { step: '02', text: 'Choose the active season contest.' },
                   { step: '03', text: 'Pay the season entry fee.' },
-                  { step: '04', text: 'Share your film and earn votes from your community.' },
+                  { step: '04', text: 'Share your film and earn votes' },
                   { step: '05', text: 'Climb the leaderboard and compete for the top 3.' },
                 ].map(item => (
                   <div key={item.step} className="flex items-center gap-4 bg-[#0d1020] border border-[#1e2535] rounded-xl px-5 py-4">
