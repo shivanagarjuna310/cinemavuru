@@ -171,6 +171,79 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* ── CONTEST SECTION ── */}
+        <section className="max-w-4xl mx-auto px-6 pb-20">
+          <div className="relative rounded-2xl border border-[#D4A017]/30 bg-gradient-to-br from-[#FF6B1A]/5 to-transparent p-8 md:p-12 overflow-hidden">
+
+            {/* Decorative bg text */}
+            <div className="absolute top-4 right-6 text-[120px] font-black text-white/[0.03] select-none leading-none"
+              style={{ fontFamily: "'Georgia', serif" }}>WIN</div>
+
+            <div className="flex items-center gap-3 mb-6">
+              <span className="w-px h-5 bg-[#FF6B1A]" />
+              <span className="text-xs text-[#FF6B1A] uppercase tracking-[3px] font-semibold">The Contest</span>
+            </div>
+
+            <h2 className="text-2xl md:text-4xl font-black text-white mb-4 leading-tight"
+              style={{ fontFamily: "'Georgia', serif" }}>
+              Your Shot at the Spotlight
+            </h2>
+
+            <p className="text-[#4A5A70] text-sm leading-relaxed mb-6 max-w-xl">
+              Once every season, the stage opens. Filmmakers from every corner of Telangana and Andhra
+              Pradesh bring their best work. Only the strongest stories survive.
+            </p>
+
+            <div className="border-l-2 border-[#FF6B1A] pl-6 mb-8">
+              <p className="text-[#FDF6E3] text-sm leading-relaxed italic">
+                That film you shot in your village. That story only your town knows. That emotion only
+                your language can express.<br />
+                <span className="text-white font-bold not-italic">It could win.</span>
+              </p>
+            </div>
+
+            <p className="text-[#4A5A70] text-sm leading-relaxed mb-8 max-w-xl">
+              When you enter the CinemaVuru contest, your film doesn't just get uploaded — it enters a
+              living, breathing leaderboard where your district rallies behind you, your college shares
+              your link, your fans vote, and strangers become your audience.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+              {[
+                { icon: '🏟️', title: 'Your Film on the Leaderboard', desc: 'The whole CinemaVuru community sees you — your district, your story, your name.' },
+                { icon: '🗳️', title: 'Real Votes, Real Support',     desc: 'Your people show up for you. Every vote is someone saying — this story matters.' },
+                { icon: '🏆', title: 'Top 3 Win Real Prize Money',   desc: 'Not likes. Not views. Real cash — straight to the filmmakers who earned it.' },
+                { icon: '🌟', title: 'Hall of Fame — Forever',       desc: 'Winners are remembered here permanently, representing their district for all time.' },
+              ].map(item => (
+                <div key={item.title} className="flex gap-4 bg-[#0d1020] border border-[#1e2535] rounded-xl p-5">
+                  <span className="text-2xl shrink-0">{item.icon}</span>
+                  <div>
+                    <p className="text-white text-sm font-bold mb-1">{item.title}</p>
+                    <p className="text-[#4A5A70] text-xs leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-[#D4A017]/20 pt-8">
+              <p className="text-[#D4A017] text-sm font-semibold mb-1">
+                The entry fee isn't a cost. It's your bet on yourself.
+              </p>
+              <p className="text-[#4A5A70] text-sm mb-6">Are you in?</p>
+              <div className="flex gap-4 flex-wrap">
+                <a href="/contest/enter"
+                  className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all">
+                  🏆 Enter the Contest
+                </a>
+                <a href="/contest"
+                  className="border border-[#D4A017]/40 text-[#D4A017] px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all">
+                  View Current Season
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ── BOTTOM CTA ── */}
         <section className="relative overflow-hidden border-t border-[#D4A017]/20">
           <div className="absolute inset-0 bg-gradient-to-r from-[#FF6B1A]/5 via-[#D4A017]/5 to-[#FF6B1A]/5" />
