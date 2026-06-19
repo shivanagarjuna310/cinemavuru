@@ -1,0 +1,199 @@
+// src/app/about/page.tsx
+import Navbar from '@/components/Navbar'
+import Link from 'next/link'
+
+export const metadata = {
+  title: 'About | CinemaVuru',
+  description: 'CinemaVuru — India\'s first hyperlocal short film platform for Telugu filmmakers across Telangana & Andhra Pradesh.',
+}
+
+export default function AboutPage() {
+  return (
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-[#07080f] text-[#FDF6E3] pt-16">
+
+        {/* ── HERO ── */}
+        <section className="relative max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-12 h-px bg-gradient-to-r from-transparent to-[#D4A017]" />
+            <span className="text-xs text-[#D4A017] uppercase tracking-[4px]">Our Story</span>
+            <div className="w-12 h-px bg-gradient-to-l from-transparent to-[#D4A017]" />
+          </div>
+          <h1 className="text-4xl md:text-6xl font-black text-white mb-4"
+            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+            About CinemaVuru
+          </h1>
+          <p className="text-[#7A6040] text-sm"
+            style={{ fontFamily: "'Noto Sans Telugu', sans-serif" }}>
+            సినిమా ఊరు · Founded February 2026
+          </p>
+        </section>
+
+        {/* ── CONTACT SECTION (top, visible) ── */}
+        <section className="max-w-4xl mx-auto px-6 mb-16">
+          <div className="relative rounded-2xl border border-[#D4A017]/30 bg-gradient-to-br from-[#D4A017]/10 to-transparent p-8 md:p-12">
+
+            {/* Decorative corner */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#FF6B1A]/10 to-transparent rounded-2xl" />
+
+            <div className="flex items-center gap-3 mb-6">
+              <span className="w-px h-5 bg-[#FF6B1A]" />
+              <span className="text-xs text-[#FF6B1A] uppercase tracking-[3px] font-semibold">Get In Touch</span>
+            </div>
+
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3"
+              style={{ fontFamily: "'Georgia', serif" }}>
+              We'd love to hear from you
+            </h2>
+            <p className="text-[#4A5A70] text-sm mb-8 max-w-lg leading-relaxed">
+              Have a question, feedback, or need help with your submission? Reach out — we typically respond within 24 hours.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Email */}
+              <a href="mailto:cinemavuruconnects@gmail.com"
+                className="group flex items-center gap-4 bg-[#0d1020] border border-[#D4A017]/20 hover:border-[#D4A017]/60 rounded-xl px-6 py-4 transition-all duration-300 hover:-translate-y-0.5">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF6B1A]/20 to-[#D4A017]/20 flex items-center justify-center text-xl shrink-0">
+                  ✉️
+                </div>
+                <div>
+                  <p className="text-[#4A5A70] text-[10px] uppercase tracking-widest mb-0.5">Email Us</p>
+                  <p className="text-[#D4A017] text-sm font-semibold group-hover:text-[#FFB830] transition-colors">
+                    cinemavuruconnects@gmail.com
+                  </p>
+                </div>
+              </a>
+
+              {/* Instagram */}
+              <a href="https://www.instagram.com/cinemavuru?igsh=ZzdiYW0wajMwa3Nx"
+                target="_blank" rel="noopener noreferrer"
+                className="group flex items-center gap-4 bg-[#0d1020] border border-[#D4A017]/20 hover:border-[#FF6B1A]/60 rounded-xl px-6 py-4 transition-all duration-300 hover:-translate-y-0.5">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF6B1A]/20 to-[#D4A017]/20 flex items-center justify-center text-xl shrink-0">
+                  📸
+                </div>
+                <div>
+                  <p className="text-[#4A5A70] text-[10px] uppercase tracking-widest mb-0.5">Follow Us</p>
+                  <p className="text-[#D4A017] text-sm font-semibold group-hover:text-[#FFB830] transition-colors">
+                    @cinemavuru
+                  </p>
+                </div>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ── STORY SECTION ── */}
+        <section className="max-w-4xl mx-auto px-6 pb-20">
+
+          <div className="flex items-center gap-3 mb-10">
+            <span className="w-px h-5 bg-[#D4A017]" />
+            <span className="text-xs text-[#D4A017] uppercase tracking-[3px] font-semibold">The Story Behind CinemaVuru</span>
+          </div>
+
+          <div className="grid md:grid-cols-[1fr_2fr] gap-12">
+
+            {/* Left — pull quote */}
+            <div className="space-y-6">
+              <div className="border-l-2 border-[#FF6B1A] pl-6">
+                <p className="text-xl font-bold text-white leading-snug"
+                  style={{ fontFamily: "'Georgia', serif" }}>
+                  "What if every district had its own stage?"
+                </p>
+              </div>
+
+              {/* Mission card */}
+              <div className="bg-[#0d1020] border border-[#D4A017]/20 rounded-xl p-6">
+                <p className="text-[#4A5A70] text-[10px] uppercase tracking-widest mb-3">Our Mission</p>
+                <p className="text-[#FDF6E3] text-sm leading-relaxed">
+                  To discover and celebrate filmmaking talent from every district of Telugu land — because every region has a story worth telling.
+                </p>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { num: 'Feb 2026', label: 'Founded' },
+                  { num: '11+',      label: 'Districts' },
+                  { num: '2',        label: 'States' },
+                  { num: '∞',        label: 'Stories' },
+                ].map(s => (
+                  <div key={s.label} className="bg-[#0d1020] border border-[#1e2535] rounded-lg p-4 text-center">
+                    <div className="text-lg font-black text-[#D4A017]"
+                      style={{ fontFamily: "'Georgia', serif" }}>{s.num}</div>
+                    <div className="text-[9px] text-[#3A4A60] uppercase tracking-[2px] mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right — full story */}
+            <div className="space-y-6 text-[#6A7A80] text-sm leading-relaxed">
+              <p>
+                YouTube gave filmmakers a stage. But for thousands of talented creators from places like
+                Nalgonda, Karimnagar, Warangal, Vizag, and Kadapa, getting discovered remains a challenge.
+                Their films are uploaded into a global ocean of content, where even people from their own
+                district may never find them.
+              </p>
+
+              <p>
+                We asked a simple question: <span className="text-white font-semibold">What if a filmmaker from Warangal could be discovered first by Warangal?</span> What
+                if audiences could easily find and celebrate stories created by people from their own towns
+                and communities?
+              </p>
+
+              <p>
+                That idea became CinemaVuru.
+              </p>
+
+              <p>
+                Founded in February 2026, CinemaVuru is a hyperlocal short film platform built for Telugu
+                filmmakers across Telangana and Andhra Pradesh. Films are organized by district, helping
+                local creators reach local audiences while building recognition that starts at home.
+              </p>
+
+              <p>
+                Think of it like this — in college, a student who excels at dancing or acting and is
+                recognized across their campus feels like a hero. That local recognition is real,
+                personal, and powerful. <span className="text-white font-semibold">CinemaVuru brings that same feeling to filmmakers.</span>
+              </p>
+
+              <p>
+                Here, talent doesn't have to compete with the entire internet to be noticed. A powerful
+                story from a small town deserves the same spotlight as one from a big city.
+              </p>
+
+              <p className="text-[#FDF6E3] font-medium border-l-2 border-[#D4A017] pl-4">
+                CinemaVuru is more than a platform — it's a community where creators grow, audiences
+                discover local talent, and every district gets a chance to celebrate its storytellers.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── BOTTOM CTA ── */}
+        <section className="relative overflow-hidden border-t border-[#D4A017]/20">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#FF6B1A]/5 via-[#D4A017]/5 to-[#FF6B1A]/5" />
+          <div className="relative max-w-4xl mx-auto px-6 py-16 text-center">
+            <h2 className="text-2xl md:text-3xl font-black text-white mb-3"
+              style={{ fontFamily: "'Georgia', serif" }}>
+              Ready to share your story?
+            </h2>
+            <p className="text-[#4A5A70] text-sm mb-8">Join Telugu filmmakers from across Telangana & Andhra Pradesh.</p>
+            <div className="flex gap-4 justify-center flex-wrap">
+              <Link href="/upload"
+                className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all">
+                📽️ Upload Free
+              </Link>
+              <Link href="/contest"
+                className="border border-[#D4A017]/40 text-[#D4A017] px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all">
+                🏆 Enter Contest
+              </Link>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </>
+  )
+}
