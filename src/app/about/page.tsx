@@ -208,12 +208,34 @@ export default function AboutPage() {
               your link, your fans vote, and strangers become your audience.
             </p>
 
+            {/* How to Participate */}
+            <div className="mb-10">
+              <p className="text-xs text-[#D4A017] uppercase tracking-[3px] font-semibold mb-5">How to Participate</p>
+              <div className="space-y-3">
+                {[
+                  { step: '01', text: 'Upload your short film with a YouTube link.' },
+                  { step: '02', text: 'Choose the active season contest.' },
+                  { step: '03', text: 'Pay the season entry fee.' },
+                  { step: '04', text: 'Share your film and earn votes from your community.' },
+                  { step: '05', text: 'Climb the leaderboard and compete for the top 3.' },
+                ].map(item => (
+                  <div key={item.step} className="flex items-center gap-4 bg-[#0d1020] border border-[#1e2535] rounded-xl px-5 py-4">
+                    <span className="text-xs font-black text-[#FF6B1A]/60 w-6 shrink-0"
+                      style={{ fontFamily: "'Georgia', serif" }}>{item.step}</span>
+                    <p className="text-[#6A7A80] text-sm">{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* What You Get */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
               {[
                 { icon: '🏟️', title: 'Your Film on the Leaderboard', desc: 'The whole CinemaVuru community sees you — your district, your story, your name.' },
                 { icon: '🗳️', title: 'Real Votes, Real Support',     desc: 'Your people show up for you. Every vote is someone saying — this story matters.' },
                 { icon: '🏆', title: 'Top 3 Win Real Prize Money',   desc: 'Not likes. Not views. Real cash — straight to the filmmakers who earned it.' },
                 { icon: '🌟', title: 'Hall of Fame — Forever',       desc: 'Winners are remembered here permanently, representing their district for all time.' },
+                { icon: '📈', title: 'Visibility & New Followers',   desc: 'Contest entries get more eyes — from your district and beyond.' },
               ].map(item => (
                 <div key={item.title} className="flex gap-4 bg-[#0d1020] border border-[#1e2535] rounded-xl p-5">
                   <span className="text-2xl shrink-0">{item.icon}</span>
@@ -223,6 +245,27 @@ export default function AboutPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* More than a competition */}
+            <div className="bg-[#0d1020] border border-[#1e2535] rounded-xl p-6 mb-10">
+              <p className="text-xs text-[#D4A017] uppercase tracking-[3px] font-semibold mb-4">🌟 More Than A Competition</p>
+              <div className="space-y-2 text-[#6A7A80] text-sm leading-relaxed">
+                <p>Winning is great. But CinemaVuru is about something bigger.</p>
+                <p>It's about helping every district discover its storytellers. A filmmaker from a small town should have the same opportunity to be celebrated as someone from a major city.</p>
+                <p className="text-[#FDF6E3] font-medium">Every upload matters. Every vote matters. Every story matters.</p>
+              </div>
+            </div>
+
+            {/* Free upload callout */}
+            <div className="bg-[#0d1020] border border-[#4A90E2]/20 rounded-xl p-6 mb-10">
+              <p className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold mb-3">📽️ Just Want to Share Your Film?</p>
+              <p className="text-[#6A7A80] text-sm leading-relaxed mb-1">
+                Not ready for the contest? No problem. CinemaVuru is free to join. Upload your short film anytime — no entry fee, no competition pressure. Your film gets listed on the platform, organized by your district, and discovered by audiences searching for local stories.
+              </p>
+              <p className="text-[#4A90E2] text-sm font-medium mt-3">
+                Free uploads are always welcome. When you're ready to compete — the contest is waiting.
+              </p>
             </div>
 
             <div className="border-t border-[#D4A017]/20 pt-8">
