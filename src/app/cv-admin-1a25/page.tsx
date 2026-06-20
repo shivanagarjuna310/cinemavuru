@@ -547,6 +547,26 @@ export default function AdminPage() {
                       className="bg-[#FF6B1A]/20 border border-[#FF6B1A]/40 text-[#FF6B1A] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#FF6B1A]/30 transition">
                       🏁 Close Contest & Pick Winners
                     </button>
+                    {approvedEntries.length === 0 && (
+                      <button
+                        onClick={async () => {
+                          const confirmed = window.confirm(
+                            `⚠️ Cancel "${activeContest.title}" (Season ${activeContest.season_number})?\n\nThis contest has no approved+paid entries.\nThis will mark it as closed with no winners.\n\nProceed?`
+                          )
+                          if (!confirmed) return
+                          const { error } = await supabase
+                            .from('contests')
+                            .update({ status: 'closed', ended_at: new Date().toISOString() })
+                            .eq('id', activeContest.id)
+                          if (error) { alert(`Error: ${error.message}`); return }
+                          setActiveContest(null)
+                          alert(`✅ Season ${activeContest.season_number} cancelled (no entries).`)
+                          fetchContestEntries()
+                        }}
+                        className="border border-red-700/40 text-red-400 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-red-700/20 transition">
+                        🗑️ Cancel (No Entries)
+                      </button>
+                    )}
                   </div>
                 </div>
 
