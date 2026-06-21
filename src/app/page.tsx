@@ -184,7 +184,6 @@ export default async function Home() {
               <div className="flex gap-8 flex-wrap">
                 {[
                   { num: String(totalFilms || '10+'),  label: 'Short Films' },
-                  { num: String(totalUsers || '20+'),  label: 'Filmmakers' },
                   { num: String(districts.length),     label: 'Districts Live' },
                   { num: '2',                          label: 'Telugu States' },
                 ].map((s, i) => (
