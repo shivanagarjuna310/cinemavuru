@@ -190,7 +190,10 @@ export default function Navbar() {
             <button onClick={() => setSearchOpen(true)}
               className="text-[#7A6040] hover:text-[#D4A017] transition p-2 rounded hover:bg-[#D4A017]/10"
               title="Search films">
-              🔍
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+                <path d="M20 20L17 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
             </button>
           )}
         </div>
@@ -229,7 +232,7 @@ export default function Navbar() {
           {/* Mobile search */}
           <div className="relative">
             <input type="text" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="🔍  Search films..."
+              placeholder="Search films..."
               className="w-full bg-[#1A1208] border border-[#D4A017]/40 text-[#FDF6E3] placeholder-[#7A6040] px-3 py-2 rounded text-sm outline-none focus:border-[#D4A017] transition"
             />
             {(results.length > 0 || searching) && (
