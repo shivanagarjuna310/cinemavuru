@@ -66,7 +66,7 @@ export default function AboutPage() {
               </a>
 
               {/* Instagram */}
-              <a href="https://www.instagram.com/cinemavuru?igsh=ZzdiYW0wajMwa3Nx"
+              <a href="https://www.instagram.com/cinemavuruofficial?igsh=MXRvc2o1NW9mMXFscg=="
                 target="_blank" rel="noopener noreferrer"
                 className="group flex items-center gap-4 bg-[#0d1020] border border-[#D4A017]/20 hover:border-[#FF6B1A]/60 rounded-xl px-6 py-4 transition-all duration-300 hover:-translate-y-0.5">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF6B1A]/20 to-[#D4A017]/20 flex items-center justify-center text-xl shrink-0">
