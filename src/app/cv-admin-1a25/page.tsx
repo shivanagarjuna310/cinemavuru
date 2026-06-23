@@ -42,6 +42,7 @@ type Contest = {
   winner_film_id: string | null
   winner_2nd_film_id: string | null
   winner_3rd_film_id: string | null
+  min_votes: number
 }
 
 type AccessState = 'checking' | 'denied' | 'granted'
@@ -97,6 +98,7 @@ export default function AdminPage() {
   const [newPrize3,       setNewPrize3]       = useState(2000)
   const [newSubsCloseAt,  setNewSubsCloseAt]  = useState('')
   const [creating,        setCreating]        = useState(false)
+  const [newMinVotes,     setNewMinVotes]     = useState(100)
 
   useEffect(() => {
     async function checkAccess() {
@@ -238,7 +240,7 @@ export default function AdminPage() {
     if (!winner1) { alert('Please select at least the 1st place winner.'); return }
 
     // ── Minimum vote threshold check ─────────────────────────
-    const MIN_VOTES = 100
+    const MIN_VOTES = activeContest.min_votes
     const winnerEntry = approvedEntries.find(e => e.films?.id === winner1)
     if (winnerEntry && winnerEntry.contest_score < MIN_VOTES) {
       const proceed = window.confirm(
@@ -295,6 +297,7 @@ export default function AdminPage() {
       prize_3rd:            newPrize3,
       submissions_close_at: new Date(newSubsCloseAt).toISOString(),
       status:               'open',
+      min_votes:            newMinVotes,
     })
 
     if (error) {
@@ -705,6 +708,17 @@ export default function AdminPage() {
                           min={0}
                           className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
                         />
+                      </div>
+                      <div>
+                      <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🗳️ Min Votes to Win</label>
+                      <input
+                        type="number"
+                        value={newMinVotes}
+                        onChange={e => setNewMinVotes(Number(e.target.value))}
+                        min={0}
+                        className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                      />
+                      <p className="text-xs text-[#4A3020] mt-1">Minimum votes a film must have to be eligible for prize money.</p>
                       </div>
                     </div>
 
