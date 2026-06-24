@@ -13,17 +13,31 @@ const supabase = createClient(
 
 // District image + color overlay config
 const DISTRICT_CONFIG: Record<string, { image: string; overlay: string; landmark: string }> = {
-  hyderabad:     { image: '/districts/hyderabad.jpg',     overlay: 'rgba(180,100,0,0.45)',    landmark: 'Charminar' },
-  warangal:      { image: '/districts/warangal.jpg',      overlay: 'rgba(0,80,60,0.5)',        landmark: 'Ramappa Temple' },
-  karimnagar:    { image: '/districts/karimnagar.jpg',    overlay: 'rgba(80,0,100,0.45)',      landmark: 'Elgandal Fort' },
-  nizamabad:     { image: '/districts/nizamabad.jpg',     overlay: 'rgba(0,40,120,0.5)',       landmark: 'Nizamabad Fort' },
-  khammam:       { image: '/districts/khammam.jpg',       overlay: 'rgba(140,0,20,0.45)',      landmark: 'Khammam Fort' },
-  nalgonda:      { image: '/districts/nalgonda.jpg',      overlay: 'rgba(0,80,120,0.5)',       landmark: 'Nagarjuna Sagar' },
-  guntur:        { image: '/districts/guntur.jpg',        overlay: 'rgba(0,100,40,0.45)',      landmark: 'Undavalli Caves' },
-  vijayawada:    { image: '/districts/vijayawada.jpg',    overlay: 'rgba(150,20,60,0.45)',     landmark: 'Kanaka Durga Temple' },
-  tirupati:      { image: '/districts/tirupati.jpg',      overlay: 'rgba(160,100,0,0.45)',     landmark: 'Tirumala Temple' },
-  visakhapatnam: { image: '/districts/visakhapatnam.jpg', overlay: 'rgba(0,60,140,0.5)',       landmark: 'RK Beach' },
-  rajahmundry:   { image: '/districts/rajahmundry.jpg',   overlay: 'rgba(160,60,0,0.45)',      landmark: 'Godavari Ghats' },
+  // Telangana
+  hyderabad:     { image: '/districts/hyderabad.jpg',     overlay: 'rgba(180,100,0,0.45)',   landmark: 'Charminar' },
+  warangal:      { image: '/districts/warangal.jpg',      overlay: 'rgba(0,80,60,0.5)',      landmark: 'Ramappa Temple' },
+  karimnagar:    { image: '/districts/karimnagar.jpg',    overlay: 'rgba(80,0,100,0.45)',    landmark: 'Elgandal Fort' },
+  nizamabad:     { image: '/districts/nizamabad.jpg',     overlay: 'rgba(0,40,120,0.5)',     landmark: 'Nizamabad Fort' },
+  khammam:       { image: '/districts/khammam.jpg',       overlay: 'rgba(140,0,20,0.45)',    landmark: 'Khammam Fort' },
+  nalgonda:      { image: '/districts/nalgonda.jpg',      overlay: 'rgba(0,80,120,0.5)',     landmark: 'Nagarjuna Sagar' },
+  adilabad:      { image: '/districts/adilabad.png',      overlay: 'rgba(0,60,40,0.45)',     landmark: 'Kuntala Waterfall' },
+  mahabubnagar:  { image: '/districts/mahabubnagar.png',  overlay: 'rgba(0,80,100,0.45)',    landmark: 'Jurala Dam' },
+  medak:         { image: '/districts/medak.png',         overlay: 'rgba(60,0,80,0.45)',     landmark: 'Medak Cathedral' },
+  rangareddy:    { image: '/districts/rangareddy.png',    overlay: 'rgba(0,60,80,0.45)',     landmark: 'Durgam Cheruvu' },
+  // Andhra Pradesh
+  guntur:        { image: '/districts/guntur.jpg',        overlay: 'rgba(0,100,40,0.45)',    landmark: 'Undavalli Caves' },
+  krishna:       { image: '/districts/krishna.png',       overlay: 'rgba(150,20,60,0.45)',   landmark: 'Kanaka Durga Temple' },
+  chittoor:      { image: '/districts/chittoor.png',      overlay: 'rgba(160,100,0,0.45)',   landmark: 'Tirumala Temple' },
+  visakhapatnam: { image: '/districts/visakhapatnam.jpg', overlay: 'rgba(0,60,140,0.5)',     landmark: 'RK Beach' },
+  'east-godavari': { image: '/districts/east-godavari.png', overlay: 'rgba(160,60,0,0.45)', landmark: 'Godavari Ghats' },
+  'west-godavari': { image: '/districts/west-godavari.png', overlay: 'rgba(0,100,80,0.45)', landmark: 'Kolleru Lake' },
+  kadapa:        { image: '/districts/kadapa.png',        overlay: 'rgba(100,40,0,0.45)',    landmark: 'Gandikota Canyon' },
+  kurnool:       { image: '/districts/kurnool.png',       overlay: 'rgba(60,20,80,0.45)',    landmark: 'Belum Caves' },
+  anantapur:     { image: '/districts/anantapur.png',     overlay: 'rgba(120,60,0,0.45)',    landmark: 'Lepakshi Temple' },
+  nellore:       { image: '/districts/nellore.png',       overlay: 'rgba(0,80,100,0.45)',    landmark: 'Pulicat Lake' },
+  prakasam:      { image: '/districts/prakasam.png',      overlay: 'rgba(80,40,0,0.45)',     landmark: 'Sangameswaram Temple' },
+  srikakulam:    { image: '/districts/srikakulam.png',    overlay: 'rgba(0,60,60,0.45)',     landmark: 'Arasavalli Sun Temple' },
+  vizianagaram:  { image: '/districts/vizianagaram.png',  overlay: 'rgba(80,0,60,0.45)',     landmark: 'Vizianagaram Fort' },
 }
 
 async function getData() {
