@@ -107,7 +107,7 @@ export default async function Home() {
               sizes="100vw"
             />
             {/* Layered overlays for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#07080f] via-[#07080f80] to-[#07080f20]" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#07080f] via-[#07080f60] to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#07080f] via-transparent to-transparent" />
             {/* Film grain texture */}
             <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay"
@@ -169,13 +169,13 @@ export default async function Home() {
               </h1>
 
               {/* Telugu tagline */}
-              <p className="text-lg text-[#D4A017] mb-2 tracking-wide"
+              <p className="text-sm text-[#FFC845] mb-2 tracking-wide"
                 style={{fontFamily: "'Noto Sans Telugu', sans-serif"}}>
                 మీ ఊరు కథ · ప్రపంచానికి చూపండి
               </p>
-              <p className="text-sm text-[#7A8090] mb-1">Your village story. To the world.</p>
+              <p className="text-base text-[#F0F0F0] mb-2 font-medium">Your village story. To the world.</p>
 
-              <p className="text-[#6A7A80] max-w-lg mb-10 leading-relaxed text-sm">
+              <p className="text-[#D5D5D5] max-w-lg mb-10 leading-relaxed text-base">
                 The first hyperlocal short film platform for Telugu filmmakers across
                 Telangana & Andhra Pradesh. Upload your film, build your audience,
                 compete for real prize money.
@@ -204,9 +204,9 @@ export default async function Home() {
                   <div key={s.label} className="flex items-center gap-4">
                     {i > 0 && <div className="w-px h-8 bg-[#1e2535]" />}
                     <div>
-                      <div className="text-2xl font-black text-[#D4A017]"
+                      <div className="text-2xl font-black text-[#FFC845]"
                         style={{fontFamily: "'Georgia', serif"}}>{s.num}</div>
-                      <div className="text-[10px] text-[#3A4A60] uppercase tracking-[2px] mt-0.5">{s.label}</div>
+                      <div className="text-xs text-[#B5B5B5] uppercase tracking-[2px] mt-1 font-medium">{s.label}</div>
                     </div>
                   </div>
                 ))}

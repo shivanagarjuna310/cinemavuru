@@ -60,28 +60,28 @@ export default function RootLayout({
         {children}
 
         {/* ── Site Footer ── */}
-        <footer className="relative z-10 border-t border-[#2E2010] mt-16">
-          <div className="max-w-6xl mx-auto px-6 py-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <footer className="relative z-10 border-t border-[#2E2010] mt-16 bg-[#0D0A06]">
+          <div className="max-w-6xl mx-auto px-6 py-10">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
 
               {/* Logo */}
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-xs">🎬</div>
-                <span className="text-[#D4A017] font-bold text-sm">CinemaVuru</span>
-                <span className="text-[#4A3020] text-xs">· సినిమా వూరు</span>
+                <span className="text-[#FFB830] font-bold text-sm">CinemaVuru</span>
+                <span className="text-[#A5A5A5] text-xs">· సినిమా వూరు</span>
               </div>
 
               {/* Links */}
-              <div className="flex items-center gap-6 text-xs text-[#4A3020]">
-                <Link href="/telangana/hyderabad" className="hover:text-[#7A6040] transition">Films</Link>
-                <Link href="/contest" className="hover:text-[#7A6040] transition">Contest</Link>
-                <Link href="/contest/winners" className="hover:text-[#7A6040] transition">Hall of Fame</Link>
-                <Link href="/terms" className="hover:text-[#7A6040] transition">Terms</Link>
-                <Link href="/privacy" className="hover:text-[#7A6040] transition">Privacy</Link>
+              <div className="flex items-center gap-6 text-sm text-[#E8E8E8] font-medium">
+                <Link href="/telangana/hyderabad" className="hover:text-[#FFB830] transition">Films</Link>
+                <Link href="/contest" className="hover:text-[#FFB830] transition">Contest</Link>
+                <Link href="/contest/winners" className="hover:text-[#FFB830] transition">Hall of Fame</Link>
+                <Link href="/terms" className="hover:text-[#FFB830] transition">Terms</Link>
+                <Link href="/privacy" className="hover:text-[#FFB830] transition">Privacy</Link>
               </div>
 
               {/* Copyright */}
-              <p className="text-[#4A3020] text-xs">
+              <p className="text-[#A5A5A5] text-xs">
                 © {new Date().getFullYear()} CinemaVuru. All rights reserved.
               </p>
 
