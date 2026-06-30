@@ -11,7 +11,7 @@ type Status = 'idle' | 'loading' | 'success' | 'error'
 
 const GENRES = [
   'Drama', 'Comedy', 'Thriller', 'Documentary',
-  'Family', 'Romance', 'Horror', 'Action', 'Experimental',
+  'Family', 'Romance', 'RomCom','Horror', 'Action', 'Experimental',
 ]
 
 // Convert a YouTube watch URL to embed URL

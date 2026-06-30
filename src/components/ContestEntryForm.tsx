@@ -325,7 +325,7 @@ export default function ContestEntryForm() {
               <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Genre *</label>
               <select value={newGenre} onChange={e => setNewGenre(e.target.value)}
                 className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition">
-                {['Drama','Comedy','Thriller','Documentary','Family','Romance','Action','Experimental'].map(g => (
+                {['Drama','Comedy','Thriller','Documentary','Family','Romance','RomCom','Action','Experimental'].map(g => (
                   <option key={g}>{g}</option>
                 ))}
               </select>
