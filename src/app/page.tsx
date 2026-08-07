@@ -243,7 +243,7 @@ export default async function Home() {
             </div>
             <h2 className="text-2xl font-bold text-white mb-6"
               style={{fontFamily: "'Georgia', serif"}}>
-              🔥 Top 10 This Week
+              🔥 Top 10 Most Watched
             </h2>
 
             <div className="flex gap-6 overflow-x-auto pb-4"
