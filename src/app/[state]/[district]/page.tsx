@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound }      from 'next/navigation'
 import Navbar            from '../../../components/Navbar'
 import FilmFeed          from '../../../components/FilmFeed'
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

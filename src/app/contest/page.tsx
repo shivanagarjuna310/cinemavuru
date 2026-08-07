@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
-export const dynamic = 'force-dynamic'
+export const revalidate = 30
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

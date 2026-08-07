@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '../components/Navbar'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
