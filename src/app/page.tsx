@@ -76,8 +76,16 @@ async function getData() {
     .order('view_count', { ascending: false })
     .limit(10)
 
+  const { data: mostLiked } = await supabase
+    .from('films')
+    .select('id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))')
+    .eq('status', 'active')
+    .order('like_count', { ascending: false })
+    .limit(10)
+
   return {
     topFilms: topFilms ?? [],
+    mostLiked: mostLiked ?? [],
     districts: (districts ?? []).map(d => ({
       ...d,
       stateSlug: (d.states as { slug: string; name_en: string } | null)?.slug ?? 'telangana',
@@ -91,7 +99,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, contest, totalUsers, totalFilms, topFilms } = await getData()
+  const { districts, contest, totalUsers, totalFilms, topFilms, mostLiked } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -284,6 +292,73 @@ export default async function Home() {
                       </p>
                       <p className="text-[#A5A5A5] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
                       <p className="text-[#FF6B1A] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── MOST LOVED FILMS ── */}
+        {mostLiked.length > 0 && (
+          <section className="max-w-6xl mx-auto px-6 pb-12">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-px h-6 bg-[#E84393]" />
+              <span className="text-xs text-[#E84393] uppercase tracking-[3px] font-semibold">Most Loved</span>
+              <span className="w-2 h-2 rounded-full bg-[#E84393] animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-6"
+              style={{fontFamily: "'Georgia', serif"}}>
+              ❤️ Most Loved Films
+            </h2>
+
+            <div className="flex gap-6 overflow-x-auto pb-4"
+              style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+              {mostLiked.map((film: any, index: number) => {
+                const videoId = film.video_url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
+                const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
+                const districtInfo = film.districts as any
+                const stateSlug = districtInfo?.states?.slug ?? 'telangana'
+                const districtSlug = districtInfo?.slug ?? 'hyderabad'
+
+                return (
+                  <Link
+                    key={film.id}
+                    href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
+                    className="relative flex-shrink-0 w-56 group"
+                  >
+                    {/* Big number */}
+                    <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
+                      style={{
+                        fontFamily: "'Georgia', serif",
+                        color: 'transparent',
+                        WebkitTextStroke: '2px rgba(232,67,147,0.5)',
+                      }}>
+                      {index + 1}
+                    </div>
+
+                    {/* Thumbnail */}
+                    <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#E84393]/50 transition-all duration-300">
+                      {thumbnail ? (
+                        <img
+                          src={thumbnail}
+                          alt={film.title_en}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#1A1208] flex items-center justify-center text-2xl">🎬</div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </div>
+
+                    {/* Film info */}
+                    <div className="mt-2 ml-5">
+                      <p className="text-white text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#E84393] transition-colors">
+                        {film.title_en}
+                      </p>
+                      <p className="text-[#A5A5A5] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
+                      <p className="text-[#E84393] text-[10px] font-semibold mt-0.5">❤️ {film.like_count} likes</p>
                     </div>
                   </Link>
                 )
