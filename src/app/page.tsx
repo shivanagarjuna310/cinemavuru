@@ -251,10 +251,10 @@ export default async function Home() {
                   <Link
                     key={film.id}
                     href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
-                    className="relative flex-shrink-0 w-44 group"
+                    className="relative flex-shrink-0 w-56 group"
                   >
                     {/* Big number behind card */}
-                    <div className="absolute -left-3 bottom-10 text-8xl font-black select-none z-10 leading-none"
+                    <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
                       style={{
                         fontFamily: "'Georgia', serif",
                         color: 'transparent',
