@@ -69,7 +69,15 @@ async function getData() {
     .from('profiles')
     .select('id', { count: 'exact', head: true })
 
+  const { data: topFilms } = await supabase
+    .from('films')
+    .select('id, title_en, genre, video_url, view_count, district_id, districts(name_en, slug, states(slug))')
+    .eq('status', 'active')
+    .order('view_count', { ascending: false })
+    .limit(10)
+
   return {
+    topFilms: topFilms ?? [],
     districts: (districts ?? []).map(d => ({
       ...d,
       stateSlug: (d.states as { slug: string; name_en: string } | null)?.slug ?? 'telangana',
@@ -83,7 +91,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, contest, totalUsers, totalFilms } = await getData()
+  const { districts, contest, totalUsers, totalFilms, topFilms } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -217,6 +225,72 @@ export default async function Home() {
           {/* Bottom fade */}
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#07080f] to-transparent z-10" />
         </section>
+        {/* ── TOP 10 FILMS ── */}
+        {topFilms.length > 0 && (
+          <section className="max-w-6xl mx-auto px-6 py-12">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-px h-6 bg-[#FF6B1A]" />
+              <span className="text-xs text-[#FF6B1A] uppercase tracking-[3px] font-semibold">Trending Now</span>
+              <span className="w-2 h-2 rounded-full bg-[#FF6B1A] animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-6"
+              style={{fontFamily: "'Georgia', serif"}}>
+              🔥 Top 10 This Week
+            </h2>
+
+            <div className="flex gap-6 overflow-x-auto pb-4"
+              style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+              {topFilms.map((film: any, index: number) => {
+                const videoId = film.video_url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
+                const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
+                const districtInfo = film.districts as any
+                const stateSlug = districtInfo?.states?.slug ?? 'telangana'
+                const districtSlug = districtInfo?.slug ?? 'hyderabad'
+
+                return (
+                  <Link
+                    key={film.id}
+                    href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
+                    className="relative flex-shrink-0 w-44 group"
+                  >
+                    {/* Big number behind card */}
+                    <div className="absolute -left-3 bottom-10 text-8xl font-black select-none z-10 leading-none"
+                      style={{
+                        fontFamily: "'Georgia', serif",
+                        color: 'transparent',
+                        WebkitTextStroke: '2px rgba(212,160,23,0.5)',
+                      }}>
+                      {index + 1}
+                    </div>
+
+                    {/* Thumbnail */}
+                    <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#D4A017]/50 transition-all duration-300">
+                      {thumbnail ? (
+                        <img
+                          src={thumbnail}
+                          alt={film.title_en}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#1A1208] flex items-center justify-center text-2xl">🎬</div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </div>
+
+                    {/* Film info */}
+                    <div className="mt-2 ml-5">
+                      <p className="text-white text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#FFB830] transition-colors">
+                        {film.title_en}
+                      </p>
+                      <p className="text-[#A5A5A5] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
+                      <p className="text-[#FF6B1A] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ── HOW IT WORKS ── */}
         <section className="relative max-w-6xl mx-auto px-6 py-20">
@@ -407,8 +481,8 @@ export default async function Home() {
               style={{fontFamily: "'Georgia', serif"}}>
               Ready to Tell Your Story?
             </h2>
-            <p className="text-[#6A7A80] mb-10 max-w-lg mx-auto leading-relaxed">
-              Join hundreds of Telugu filmmakers who are already sharing their stories with the world.
+            <p className="text-[#D5D5D5] mb-10 max-w-lg mx-auto leading-relaxed">
+              Join Telugu filmmakers from across Telangana & Andhra Pradesh sharing their stories with the world.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/upload"
