@@ -240,11 +240,15 @@ export default function Navbar() {
                 {searching ? (
                   <div className="px-4 py-3 text-[#7A6040] text-sm">Searching...</div>
                 ) : results.map(film => (
-                  <button key={film.id} onClick={() => { handleResultClick(film.id); setOpen(false) }}
-                    className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0">
-                    <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
-                    {film.genre && <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>}
-                  </button>
+                  <Link key={film.id} 
+                    href={`/telangana/hyderabad/film/${film.id}`}
+                    onClick={() => { setOpen(false); setQuery(''); setResults([]) }}
+                    className="block w-full px-4 py-3 hover:bg-[#2E2010] transition border-b border-[#2E2010] last:border-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
+                      {film.genre && <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>}
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}
