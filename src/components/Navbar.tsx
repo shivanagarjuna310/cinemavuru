@@ -8,11 +8,21 @@ import { supabase }            from '@/lib/supabase'
 import type { User }           from '@supabase/supabase-js'
 import ThemeToggle             from './ThemeToggle'
 
+type DistrictRel = { slug: string; states: { slug: string } | { slug: string }[] | null }
 type SearchResult = {
   id: string
   title_en: string
   genre: string | null
-  district_id: string
+  districts: DistrictRel | DistrictRel[] | null
+}
+
+// Build the correct film URL from its district/state (falls back gracefully)
+function filmHref(film: SearchResult) {
+  const d = Array.isArray(film.districts) ? film.districts[0] : film.districts
+  const s = d && (Array.isArray(d.states) ? d.states[0] : d.states)
+  const districtSlug = d?.slug ?? 'hyderabad'
+  const stateSlug = s?.slug ?? 'telangana'
+  return `/${stateSlug}/${districtSlug}/film/${film.id}`
 }
 
 export default function Navbar() {
@@ -27,6 +37,7 @@ export default function Navbar() {
   const searchRef                     = useRef<HTMLDivElement>(null)
   const contestRef = useRef<HTMLLIElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
+  const mobileRef                     = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -39,12 +50,17 @@ export default function Navbar() {
   // Close search when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      // Don't clear the search when the tap is inside the desktop search OR the
+      // mobile menu — otherwise the result <Link> unmounts before the tap lands.
+      const inSearch = searchRef.current?.contains(target)
+      const inMobile = mobileRef.current?.contains(target)
+      if (!inSearch && !inMobile) {
         setSearchOpen(false)
         setQuery('')
         setResults([])
       }
-      if (contestRef.current && !contestRef.current.contains(e.target as Node)) {
+      if (contestRef.current && !contestRef.current.contains(target)) {
         setContestOpen(false)
       }
     }
@@ -62,13 +78,15 @@ export default function Navbar() {
     if (!query.trim()) { setResults([]); return }
     const timer = setTimeout(async () => {
       setSearching(true)
+      // Strip characters that would break the PostgREST or() filter syntax
+      const term = query.trim().replace(/[,()%*]/g, ' ')
       const { data } = await supabase
         .from('films')
-        .select('id, title_en, genre, district_id')
+        .select('id, title_en, genre, districts(slug, states(slug))')
         .eq('status', 'active')
-        .or(`title_en.ilike.%${query}%,genre.ilike.%${query}%`)
+        .or(`title_en.ilike.%${term}%,genre.ilike.%${term}%`)
         .limit(6)
-      setResults(data ?? [])
+      setResults((data as unknown as SearchResult[]) ?? [])
       setSearching(false)
     }, 300)
     return () => clearTimeout(timer)
@@ -80,9 +98,9 @@ export default function Navbar() {
     router.refresh()
   }
 
-  function handleResultClick(filmId: string) {
-    router.push(`/telangana/hyderabad/film/${filmId}`)
+  function closeSearch() {
     setSearchOpen(false)
+    setOpen(false)
     setQuery('')
     setResults([])
   }
@@ -174,11 +192,11 @@ export default function Navbar() {
                       <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching...</div>
                     ) : (
                       results.map(film => (
-                        <button key={film.id} onClick={() => handleResultClick(film.id)}
+                        <Link key={film.id} href={filmHref(film)} onClick={closeSearch}
                           className="w-full text-left px-4 py-3 hover:bg-[color:var(--border)] transition flex items-center justify-between gap-3 border-b border-[color:var(--border)] last:border-0">
                           <span className="text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
                           {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
-                        </button>
+                        </Link>
                       ))
                     )}
                     {!searching && results.length === 0 && query.trim() && (
@@ -235,7 +253,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] flex flex-col p-4 gap-3 md:hidden">
+        <div ref={mobileRef} className="absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] flex flex-col p-4 gap-3 md:hidden">
           {/* Mobile search */}
           <div className="relative">
             <input type="text" value={query} onChange={e => setQuery(e.target.value)}
@@ -247,9 +265,9 @@ export default function Navbar() {
                 {searching ? (
                   <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching...</div>
                 ) : results.map(film => (
-                  <Link key={film.id} 
-                    href={`/telangana/hyderabad/film/${film.id}`}
-                    onClick={() => { setOpen(false); setQuery(''); setResults([]) }}
+                  <Link key={film.id}
+                    href={filmHref(film)}
+                    onClick={closeSearch}
                     className="block w-full px-4 py-3 hover:bg-[color:var(--border)] transition border-b border-[color:var(--border)] last:border-0">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
