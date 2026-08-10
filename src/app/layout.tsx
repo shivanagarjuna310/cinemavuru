@@ -3,6 +3,7 @@ import { Rajdhani, Noto_Sans_Telugu } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import PWARegister from '@/components/PWARegister'
+import FloatingUploadButton from '@/components/FloatingUploadButton'
 const rajdhani = Rajdhani({
   variable: "--font-rajdhani",
   subsets: ["latin"],
@@ -95,6 +96,9 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
+
+        {/* Global "Share Your Film" floating action button */}
+        <FloatingUploadButton />
 
       </body>
     </html>

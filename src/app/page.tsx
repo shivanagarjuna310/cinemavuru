@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '../components/Navbar'
+import Reveal from '../components/Reveal'
+import CountUp from '../components/CountUp'
 
 export const revalidate = 60
 
@@ -98,6 +100,11 @@ async function getData() {
   }
 }
 
+function filmThumb(url?: string) {
+  const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
+}
+
 export default async function Home() {
   const { districts, contest, totalUsers, totalFilms, topFilms, mostLiked } = await getData()
 
@@ -107,123 +114,98 @@ export default async function Home() {
   return (
     <>
       <Navbar />
-      <main className="relative min-h-screen text-[color:var(--text)] bg-[color:var(--bg)]">
+      <main className="relative min-h-screen text-[color:var(--text)] bg-[color:var(--bg)] overflow-x-hidden">
 
-        {/* ── HERO SECTION ── */}
-        <section className="relative min-h-[92vh] flex items-center overflow-hidden">
+        {/* ══════════ HERO ══════════ */}
+        <section className="relative min-h-[90vh] flex items-center overflow-hidden">
 
-          {/* Hero background image */}
-          <div className="absolute inset-0 z-0">
-            <Image
-              src="/hero-bg.jpg"
-              alt="Telugu filmmaker shooting in village"
-              fill
-              priority
-              className="object-cover object-[70%_center] md:object-center"
-              sizes="100vw"
-            />
-            {/* Layered overlays for text readability — dark in both themes so the
-                cinematic hero keeps light text legible over the image */}
+          {/* Background image (slow ken-burns) */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <div className="absolute inset-0 hero-kenburns">
+              <Image
+                src="/hero-bg.jpg"
+                alt="Telugu filmmaker shooting in a village"
+                fill
+                priority
+                className="object-cover object-[70%_center] md:object-center"
+                sizes="100vw"
+              />
+            </div>
+            {/* Scrims — dark in both themes so light hero text stays legible */}
             <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--scrim)] via-[color:var(--scrim)]/60 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--scrim)] via-transparent to-transparent" />
-            {/* Film grain texture */}
+            {/* Film grain */}
             <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay"
               style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}} />
           </div>
 
-          {/* Contest banner */}
-          {contest && (
-            <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#D4A017]/20 via-[#D4A017]/10 to-transparent border-b border-[color:var(--accent)]/30 backdrop-blur-sm">
-              <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-2 h-2 bg-[#FF6B1A] rounded-full animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
-                    🏆 Season {contest.season_number} is LIVE — {contest.title}
-                  </span>
-                </div>
-                <div className="flex items-center gap-6">
-                  <div className="hidden sm:flex gap-4 text-xs text-[color:var(--muted)]">
-                    <span>🥇 ₹{contest.prize_1st?.toLocaleString('en-IN')}</span>
-                    <span>🥈 ₹{contest.prize_2nd?.toLocaleString('en-IN')}</span>
-                    <span>🥉 ₹{contest.prize_3rd?.toLocaleString('en-IN')}</span>
-                  </div>
-                  <Link href="/contest"
-                    className="bg-[#D4A017] text-black px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wide hover:bg-[#FFB830] transition">
-                    Enter Now →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Hero content */}
-          <div className="relative z-10 max-w-6xl mx-auto px-6 pt-20 pb-12 w-full">
+          {/* Content */}
+          <div className="relative z-10 max-w-6xl mx-auto px-6 pt-24 pb-20 w-full">
             <div className="max-w-2xl">
 
-              {/* Eyebrow */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-px bg-[#FF6B1A]" />
-                <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[4px] font-semibold">
-                  Telugu Short Film Platform
+              {/* Contest pill (demoted — one line, optional) */}
+              <Link href="/contest"
+                className="anim-fade-up inline-flex items-center gap-2 rounded-full border border-[color:var(--accent)]/40 bg-[#D4A017]/10 backdrop-blur-sm px-3.5 py-1.5 text-xs font-semibold text-[#FFD98A] mb-7 hover:bg-[#D4A017]/20 transition"
+                style={{animationDelay: '.05s'}}>
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#FF6B1A]" style={{animation: 'cv-ring 1.8s ease-out infinite'}} />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#FF6B1A]" />
                 </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B1A] animate-pulse" />
-              </div>
+                {contest ? `Season ${contest.season_number} contest is live` : 'Monthly filmmaking contest'}
+                <span aria-hidden>→</span>
+              </Link>
 
-              {/* Main headline */}
-              <h1 className="mb-4 leading-[1.05]">
-                <span className="block text-5xl md:text-7xl font-black text-white tracking-tight"
-                  style={{fontFamily: "'Georgia', 'Times New Roman', serif", textShadow: '0 4px 32px rgba(0,0,0,0.8)'}}>
-                  SHOOT.
+              {/* Headline — purpose first */}
+              <h1 className="mb-5 leading-[1.02]" style={{fontFamily: "'Georgia', 'Times New Roman', serif"}}>
+                <span className="anim-fade-up block text-[2.75rem] sm:text-6xl md:text-7xl font-black text-white tracking-tight"
+                  style={{animationDelay: '.14s', textShadow: '0 4px 32px rgba(0,0,0,0.75)'}}>
+                  The cinema of
                 </span>
-                <span className="block text-5xl md:text-7xl font-black tracking-tight"
-                  style={{fontFamily: "'Georgia', 'Times New Roman', serif", textShadow: '0 4px 32px rgba(0,0,0,0.8)', background: 'linear-gradient(135deg, #FF6B1A, #FFB830, #D4A017)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
-                  SHARE.
-                </span>
-                <span className="block text-5xl md:text-7xl font-black text-white tracking-tight"
-                  style={{fontFamily: "'Georgia', 'Times New Roman', serif", textShadow: '0 4px 32px rgba(0,0,0,0.8)'}}>
-                  WIN.
+                <span className="anim-fade-up block text-[2.75rem] sm:text-6xl md:text-7xl font-black tracking-tight text-shimmer"
+                  style={{animationDelay: '.24s'}}>
+                  your district.
                 </span>
               </h1>
 
-              {/* Telugu tagline */}
-              <p className="text-sm text-[#FFC845] mb-2 tracking-wide"
-                style={{fontFamily: "'Noto Sans Telugu', sans-serif"}}>
-                మీ ఊరు కథ · ప్రపంచానికి చూపండి
-              </p>
-              <p className="text-base text-[#F0F0F0] mb-2 font-medium">Your village story. To the world.</p>
-
-              <p className="text-[#D5D5D5] max-w-lg mb-10 leading-relaxed text-base">
-                The first hyperlocal short film platform for Telugu filmmakers across
-                Telangana & Andhra Pradesh. Upload your film, build your audience,
-                compete for real prize money.
+              {/* Telugu + English tagline */}
+              <p className="anim-fade-up text-base text-[#FFC845] mb-1.5 tracking-wide"
+                style={{fontFamily: "'Noto Sans Telugu', sans-serif", animationDelay: '.34s'}}>
+                మీ ఊరి కథలు · మీ ఊరి సినిమా
               </p>
 
-              {/* CTA Buttons */}
-              <div className="flex gap-4 flex-wrap mb-12">
-                <Link href="/upload"
-                  className="group relative overflow-hidden bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:shadow-2xl hover:shadow-orange-900/50 hover:-translate-y-0.5 transition-all duration-300">
-                  <span className="relative z-10">📽️ Upload Free</span>
+              <p className="anim-fade-up text-[#E7DCC5] max-w-xl mb-9 leading-relaxed text-base sm:text-lg"
+                style={{animationDelay: '.42s'}}>
+                CinemaVuru is the first <span className="text-white font-semibold">hyperlocal short-film platform</span> for
+                Telugu filmmakers. Discover, watch and celebrate stories made by creators
+                from your own district — across Telangana &amp; Andhra Pradesh.
+              </p>
+
+              {/* CTAs — discovery first, creation second */}
+              <div className="anim-fade-up flex gap-3 sm:gap-4 flex-wrap mb-12" style={{animationDelay: '.52s'}}>
+                <a href="#explore"
+                  className="group relative overflow-hidden bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-7 sm:px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:shadow-2xl hover:shadow-orange-900/40 hover:-translate-y-0.5 transition-all duration-300">
+                  <span className="relative z-10">🎬 Explore Films</span>
                   <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
-                </Link>
-                <Link href="/contest"
-                  className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:border-[color:var(--accent)] hover:-translate-y-0.5 transition-all duration-300">
-                  🏆 Enter Contest
+                </a>
+                <Link href="/upload"
+                  className="border border-white/25 bg-white/5 backdrop-blur-sm text-white px-7 sm:px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-white/10 hover:border-white/40 hover:-translate-y-0.5 transition-all duration-300">
+                  ＋ Share Your Film
                 </Link>
               </div>
 
-              {/* Stats */}
-              <div className="flex gap-8 flex-wrap">
+              {/* Stats with count-up */}
+              <div className="anim-fade-up flex gap-8 flex-wrap" style={{animationDelay: '.62s'}}>
                 {[
-                  { num: String(totalFilms || '10+'),  label: 'Short Films' },
-                  { num: String(districts.length),     label: 'Districts Live' },
-                  { num: '2',                          label: 'Telugu States' },
+                  { value: totalFilms, suffix: '+', label: 'Short Films' },
+                  { value: districts.length, suffix: '', label: 'Districts Live' },
+                  { value: totalUsers, suffix: '+', label: 'Storytellers' },
                 ].map((s, i) => (
                   <div key={s.label} className="flex items-center gap-4">
-                    {i > 0 && <div className="w-px h-8 bg-[color:var(--border-2)]" />}
+                    {i > 0 && <div className="w-px h-9 bg-white/15" />}
                     <div>
-                      <div className="text-2xl font-black text-[#FFC845]"
-                        style={{fontFamily: "'Georgia', serif"}}>{s.num}</div>
-                      <div className="text-xs text-[#B5B5B5] uppercase tracking-[2px] mt-1 font-medium">{s.label}</div>
+                      <CountUp value={s.value} suffix={s.suffix}
+                        className="block text-2xl sm:text-3xl font-black text-[#FFC845]" />
+                      <div className="text-[11px] text-white/60 uppercase tracking-[2px] mt-1 font-medium">{s.label}</div>
                     </div>
                   </div>
                 ))}
@@ -231,346 +213,337 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Bottom fade */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[color:var(--bg)] to-transparent z-10" />
+          {/* Scroll cue */}
+          <a href="#explore"
+            className="anim-fade-in absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 text-white/60 hover:text-white transition"
+            style={{animationDelay: '1s'}}>
+            <span className="text-[10px] uppercase tracking-[3px]">Discover</span>
+            <svg className="anim-bob" width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
+
+          {/* Fade into page */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[color:var(--bg)] to-transparent z-[5]" />
         </section>
-        {/* ── TOP 10 FILMS ── */}
-        {topFilms.length > 0 && (
-          <section className="max-w-6xl mx-auto px-6 py-12">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-px h-6 bg-[#FF6B1A]" />
-              <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Trending Now</span>
-              <span className="w-2 h-2 rounded-full bg-[#FF6B1A] animate-pulse" />
-            </div>
-            <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6"
+
+        {/* ══════════ PURPOSE STRIP ══════════ */}
+        <section className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
+          <Reveal className="text-center mb-12">
+            <span className="text-xs text-[color:var(--accent)] uppercase tracking-[4px] font-semibold">Why CinemaVuru</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[color:var(--text)] mt-3"
               style={{fontFamily: "'Georgia', serif"}}>
-              🔥 Top 10 Most Watched
+              A stage for every district
             </h2>
+          </Reveal>
 
-            <div className="flex gap-6 overflow-x-auto pb-4"
-              style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-              {topFilms.map((film: any, index: number) => {
-                const videoId = film.video_url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
-                const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
-                const districtInfo = film.districts as any
-                const stateSlug = districtInfo?.states?.slug ?? 'telangana'
-                const districtSlug = districtInfo?.slug ?? 'hyderabad'
-
-                return (
-                  <Link
-                    key={film.id}
-                    href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
-                    className="relative flex-shrink-0 w-56 group"
-                  >
-                    {/* Big number behind card */}
-                    <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
-                      style={{
-                        fontFamily: "'Georgia', serif",
-                        color: 'transparent',
-                        WebkitTextStroke: '2px rgba(212,160,23,0.5)',
-                      }}>
-                      {index + 1}
-                    </div>
-
-                    {/* Thumbnail */}
-                    <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[color:var(--accent)]/50 transition-all duration-300">
-                      {thumbnail ? (
-                        <img
-                          src={thumbnail}
-                          alt={film.title_en}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    </div>
-
-                    {/* Film info */}
-                    <div className="mt-2 ml-5">
-                      <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[color:var(--accent)] transition-colors">
-                        {film.title_en}
-                      </p>
-                      <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
-                      <p className="text-[color:var(--accent-hot)] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* ── MOST LOVED FILMS ── */}
-        {mostLiked.length > 0 && (
-          <section className="max-w-6xl mx-auto px-6 pb-12">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-px h-6 bg-[#E84393]" />
-              <span className="text-xs text-[#E84393] uppercase tracking-[3px] font-semibold">Most Loved</span>
-              <span className="w-2 h-2 rounded-full bg-[#E84393] animate-pulse" />
-            </div>
-            <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6"
-              style={{fontFamily: "'Georgia', serif"}}>
-              ❤️ Most Loved Films
-            </h2>
-
-            <div className="flex gap-6 overflow-x-auto pb-4"
-              style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-              {mostLiked.map((film: any, index: number) => {
-                const videoId = film.video_url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
-                const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
-                const districtInfo = film.districts as any
-                const stateSlug = districtInfo?.states?.slug ?? 'telangana'
-                const districtSlug = districtInfo?.slug ?? 'hyderabad'
-
-                return (
-                  <Link
-                    key={film.id}
-                    href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
-                    className="relative flex-shrink-0 w-56 group"
-                  >
-                    {/* Big number */}
-                    <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
-                      style={{
-                        fontFamily: "'Georgia', serif",
-                        color: 'transparent',
-                        WebkitTextStroke: '2px rgba(232,67,147,0.5)',
-                      }}>
-                      {index + 1}
-                    </div>
-
-                    {/* Thumbnail */}
-                    <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#E84393]/50 transition-all duration-300">
-                      {thumbnail ? (
-                        <img
-                          src={thumbnail}
-                          alt={film.title_en}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    </div>
-
-                    {/* Film info */}
-                    <div className="mt-2 ml-5">
-                      <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#E84393] transition-colors">
-                        {film.title_en}
-                      </p>
-                      <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
-                      <p className="text-[#E84393] text-[10px] font-semibold mt-0.5">❤️ {film.like_count} likes</p>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* ── HOW IT WORKS ── */}
-        <section className="relative max-w-6xl mx-auto px-6 py-20">
-          {/* Section header */}
-          <div className="text-center mb-14">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-px bg-gradient-to-r from-transparent to-[#D4A017]" />
-              <span className="text-xs text-[color:var(--accent)] uppercase tracking-[4px]">Simple Process</span>
-              <div className="w-12 h-px bg-gradient-to-l from-transparent to-[#D4A017]" />
-            </div>
-            <h2 className="text-3xl font-bold text-[color:var(--text)] mb-2"
-              style={{fontFamily: "'Georgia', serif"}}>How It Works</h2>
-            <p className="text-[#4A5A70] text-sm">మూడు సులభమైన దశలు · Three simple steps</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              {
-                step: '01',
-                icon: '🎬',
-                title: 'Enter the Contest',
-                desc: 'Enter the contest, pay a small season fee, and put your film in the race for prizes. Just uploading? You\'re still welcome — but only contest entries can win.',
-                color: 'from-[#FF6B1A]/20 to-transparent',
-                border: 'border-[color:var(--accent-hot)]/20',
-              },
-              {
-                step: '02',
-                icon: '🗳️',
-                title: 'Get Votes',
-                desc: 'Share your film with friends, family and fans. Every vote counts towards your contest ranking.',
-                color: 'from-[#D4A017]/20 to-transparent',
-                border: 'border-[color:var(--accent)]/20',
-              },
-              {
-                step: '03',
-                icon: '🏆',
-                title: 'Win Prizes',
-                desc: 'Top 3 contest entries with the most votes (above the season\'s minimum threshold) win real prize money. New season every month.',
-                color: 'from-[#4A90E2]/20 to-transparent',
-                border: 'border-[#4A90E2]/20',
-              },
-            ].map(s => (
-              <div key={s.step}
-                className={`relative bg-gradient-to-br ${s.color} bg-[color:var(--surface-2)] border ${s.border} rounded-2xl p-8 overflow-hidden group hover:-translate-y-1 transition-all duration-300`}>
-                <div className="absolute top-4 right-5 text-5xl font-black text-[color:var(--text)]/[0.06] select-none"
-                  style={{fontFamily: "'Georgia', serif"}}>{s.step}</div>
-                <div className="text-4xl mb-5">{s.icon}</div>
-                <h3 className="font-bold text-[color:var(--text)] text-lg mb-3">{s.title}</h3>
-                <p className="text-[#4A5A70] text-sm leading-relaxed">{s.desc}</p>
-              </div>
+              { icon: '📍', title: 'Hyperlocal by design', desc: 'Films are organised by district — so a story from your town reaches the people of your town first.' },
+              { icon: '🌱', title: 'Local talent, real spotlight', desc: 'A filmmaker from a small village gets the same stage as one from the big city. Talent, not location, wins.' },
+              { icon: '❤️', title: 'A community, not an algorithm', desc: 'Watch, like and comment. Every view is your district showing up to celebrate one of its own.' },
+            ].map((c, i) => (
+              <Reveal key={c.title} delay={i * 110}>
+                <div className="h-full bg-[color:var(--surface-2)] border border-[color:var(--border-2)] rounded-2xl p-7 hover:-translate-y-1 hover:border-[color:var(--accent)]/40 transition-all duration-300">
+                  <div className="text-4xl mb-4 anim-float" style={{animationDelay: `${i * 0.4}s`}}>{c.icon}</div>
+                  <h3 className="font-bold text-[color:var(--text)] text-lg mb-2">{c.title}</h3>
+                  <p className="text-[color:var(--muted)] text-sm leading-relaxed">{c.desc}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </section>
 
-        {/* ── TELANGANA DISTRICTS ── */}
-        <section className="max-w-6xl mx-auto px-6 pb-16">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="w-px h-5 bg-[#FF6B1A]" />
-                <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Telangana</span>
+        {/* ══════════ MOST WATCHED ══════════ */}
+        {topFilms.length > 0 && (
+          <Reveal>
+            <section className="max-w-6xl mx-auto px-6 pb-12">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-px h-6 bg-[#FF6B1A]" />
+                <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Trending Now</span>
+                <span className="w-2 h-2 rounded-full bg-[#FF6B1A] animate-pulse" />
               </div>
-              <h2 className="text-2xl font-bold text-[color:var(--text)]"
-                style={{fontFamily: "'Georgia', serif"}}>Explore by District</h2>
-            </div>
-          </div>
+              <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6" style={{fontFamily: "'Georgia', serif"}}>
+                🔥 Most Watched
+              </h2>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-12">
-            {telangana.map(d => {
+              <div className="flex gap-6 overflow-x-auto pb-4" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+                {topFilms.map((film: any, index: number) => {
+                  const thumbnail = filmThumb(film.video_url)
+                  const districtInfo = film.districts as any
+                  const stateSlug = districtInfo?.states?.slug ?? 'telangana'
+                  const districtSlug = districtInfo?.slug ?? 'hyderabad'
+                  return (
+                    <Link key={film.id} href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
+                      className="relative flex-shrink-0 w-56 group">
+                      <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
+                        style={{fontFamily: "'Georgia', serif", color: 'transparent', WebkitTextStroke: '2px rgba(212,160,23,0.5)'}}>
+                        {index + 1}
+                      </div>
+                      <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[color:var(--accent)]/50 transition-all duration-300">
+                        {thumbnail ? (
+                          <img src={thumbnail} alt={film.title_en}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        ) : (
+                          <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      </div>
+                      <div className="mt-2 ml-5">
+                        <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[color:var(--accent)] transition-colors">
+                          {film.title_en}
+                        </p>
+                        <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
+                        <p className="text-[color:var(--accent-hot)] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </section>
+          </Reveal>
+        )}
+
+        {/* ══════════ MOST LOVED ══════════ */}
+        {mostLiked.length > 0 && (
+          <Reveal>
+            <section className="max-w-6xl mx-auto px-6 pb-12">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-px h-6 bg-[#E84393]" />
+                <span className="text-xs text-[#E84393] uppercase tracking-[3px] font-semibold">Most Loved</span>
+                <span className="w-2 h-2 rounded-full bg-[#E84393] animate-pulse" />
+              </div>
+              <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6" style={{fontFamily: "'Georgia', serif"}}>
+                ❤️ Most Loved Films
+              </h2>
+
+              <div className="flex gap-6 overflow-x-auto pb-4" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+                {mostLiked.map((film: any, index: number) => {
+                  const thumbnail = filmThumb(film.video_url)
+                  const districtInfo = film.districts as any
+                  const stateSlug = districtInfo?.states?.slug ?? 'telangana'
+                  const districtSlug = districtInfo?.slug ?? 'hyderabad'
+                  return (
+                    <Link key={film.id} href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
+                      className="relative flex-shrink-0 w-56 group">
+                      <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
+                        style={{fontFamily: "'Georgia', serif", color: 'transparent', WebkitTextStroke: '2px rgba(232,67,147,0.5)'}}>
+                        {index + 1}
+                      </div>
+                      <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#E84393]/50 transition-all duration-300">
+                        {thumbnail ? (
+                          <img src={thumbnail} alt={film.title_en}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        ) : (
+                          <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      </div>
+                      <div className="mt-2 ml-5">
+                        <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#E84393] transition-colors">
+                          {film.title_en}
+                        </p>
+                        <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
+                        <p className="text-[#E84393] text-[10px] font-semibold mt-0.5">❤️ {film.like_count} likes</p>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </section>
+          </Reveal>
+        )}
+
+        {/* ══════════ EXPLORE BY DISTRICT ══════════ */}
+        <section id="explore" className="max-w-6xl mx-auto px-6 py-16 scroll-mt-20">
+          <Reveal className="text-center mb-12">
+            <span className="text-xs text-[color:var(--accent)] uppercase tracking-[4px] font-semibold">Start Here</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[color:var(--text)] mt-3" style={{fontFamily: "'Georgia', serif"}}>
+              Explore by district
+            </h2>
+            <p className="text-[color:var(--muted)] text-sm mt-3 max-w-md mx-auto">
+              Pick your district and dive into the short films made right where you live.
+            </p>
+          </Reveal>
+
+          {/* Telangana */}
+          <Reveal className="flex items-center gap-3 mb-6">
+            <span className="w-px h-5 bg-[#FF6B1A]" />
+            <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Telangana</span>
+          </Reveal>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-14">
+            {telangana.map((d, i) => {
               const config = DISTRICT_CONFIG[d.slug] ?? { image: '', overlay: 'rgba(100,60,0,0.5)', landmark: '' }
               return (
-                <Link
-                  key={d.id}
-                  href={`/${d.stateSlug}/${d.slug}`}
-                  className="group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer">
-
-                  {/* District image */}
-                  {config.image && (
-                    <Image
-                      src={config.image}
-                      alt={d.name_en}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    />
-                  )}
-
-                  {/* Color overlay for variety */}
-                  <div className="absolute inset-0 transition-opacity duration-300"
-                    style={{background: config.overlay}} />
-
-                  {/* Dark gradient for text */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                  {/* Live badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                    <span className="text-[9px] text-white uppercase tracking-wide font-bold">Live</span>
-                  </div>
-
-                  {/* Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[color:var(--accent)] transition-colors">
-                      {d.name_en}
-                    </h3>
-                    <p className="text-white/50 text-[10px] mb-1">{d.name_te}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[color:var(--accent)] font-semibold">
-                        {d.filmCount} films
-                      </span>
-                      <span className="text-[9px] text-white/40">{config.landmark}</span>
+                <Reveal key={d.id} delay={(i % 4) * 70}>
+                  <Link href={`/${d.stateSlug}/${d.slug}`}
+                    className="group relative block aspect-[4/3] rounded-xl overflow-hidden cursor-pointer">
+                    {config.image && (
+                      <Image src={config.image} alt={d.name_en} fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
+                    )}
+                    <div className="absolute inset-0 transition-opacity duration-300" style={{background: config.overlay}} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                      <span className="text-[9px] text-white uppercase tracking-wide font-bold">Live</span>
                     </div>
-                  </div>
-
-                  {/* Hover border glow -->*/}
-                  <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[color:var(--accent)]/40 transition-all duration-300" />
-                </Link>
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[color:var(--accent)] transition-colors">{d.name_en}</h3>
+                      <p className="text-white/50 text-[10px] mb-1">{d.name_te}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-[color:var(--accent)] font-semibold">{d.filmCount} films</span>
+                        <span className="text-[9px] text-white/40">{config.landmark}</span>
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[color:var(--accent)]/40 transition-all duration-300" />
+                  </Link>
+                </Reveal>
               )
             })}
           </div>
 
           {/* Andhra Pradesh */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <span className="w-px h-5 bg-[#4A90E2]" />
-                <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">Andhra Pradesh</span>
-              </div>
-              <h2 className="text-2xl font-bold text-[color:var(--text)]"
-                style={{fontFamily: "'Georgia', serif"}}>Andhra Districts</h2>
-            </div>
-          </div>
-
+          <Reveal className="flex items-center gap-3 mb-6">
+            <span className="w-px h-5 bg-[#4A90E2]" />
+            <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">Andhra Pradesh</span>
+          </Reveal>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {andhra.map(d => {
+            {andhra.map((d, i) => {
               const config = DISTRICT_CONFIG[d.slug] ?? { image: '', overlay: 'rgba(0,60,120,0.5)', landmark: '' }
               return (
-                <Link
-                  key={d.id}
-                  href={`/${d.stateSlug}/${d.slug}`}
-                  className="group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer">
-
-                  {config.image && (
-                    <Image
-                      src={config.image}
-                      alt={d.name_en}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    />
-                  )}
-
-                  <div className="absolute inset-0 transition-opacity duration-300"
-                    style={{background: config.overlay}} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 bg-[#4A90E2] rounded-full animate-pulse" />
-                    <span className="text-[9px] text-white uppercase tracking-wide font-bold">Live</span>
-                  </div>
-
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[#90C8FF] transition-colors">
-                      {d.name_en}
-                    </h3>
-                    <p className="text-white/50 text-[10px] mb-1">{d.name_te}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#4A90E2] font-semibold">
-                        {d.filmCount} films
-                      </span>
-                      <span className="text-[9px] text-white/40">{config.landmark}</span>
+                <Reveal key={d.id} delay={(i % 4) * 70}>
+                  <Link href={`/${d.stateSlug}/${d.slug}`}
+                    className="group relative block aspect-[4/3] rounded-xl overflow-hidden cursor-pointer">
+                    {config.image && (
+                      <Image src={config.image} alt={d.name_en} fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
+                    )}
+                    <div className="absolute inset-0 transition-opacity duration-300" style={{background: config.overlay}} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 bg-[#4A90E2] rounded-full animate-pulse" />
+                      <span className="text-[9px] text-white uppercase tracking-wide font-bold">Live</span>
                     </div>
-                  </div>
-
-                  <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[#4A90E2]/40 transition-all duration-300" />
-                </Link>
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[#90C8FF] transition-colors">{d.name_en}</h3>
+                      <p className="text-white/50 text-[10px] mb-1">{d.name_te}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-[#4A90E2] font-semibold">{d.filmCount} films</span>
+                        <span className="text-[9px] text-white/40">{config.landmark}</span>
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[#4A90E2]/40 transition-all duration-300" />
+                  </Link>
+                </Reveal>
               )
             })}
           </div>
         </section>
 
-        {/* ── BOTTOM CTA ── */}
+        {/* ══════════ HOW IT WORKS (generic) ══════════ */}
+        <section className="relative max-w-6xl mx-auto px-6 py-16 sm:py-20">
+          <Reveal className="text-center mb-14">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="w-12 h-px bg-gradient-to-r from-transparent to-[#D4A017]" />
+              <span className="text-xs text-[color:var(--accent)] uppercase tracking-[4px]">How It Works</span>
+              <div className="w-12 h-px bg-gradient-to-l from-transparent to-[#D4A017]" />
+            </div>
+            <h2 className="text-3xl font-bold text-[color:var(--text)] mb-2" style={{fontFamily: "'Georgia', serif"}}>
+              Watch local. Or be watched.
+            </h2>
+            <p className="text-[color:var(--muted)] text-sm">Whether you came to discover or to create — start in seconds.</p>
+          </Reveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { step: '01', icon: '🍿', title: 'Discover', desc: 'Browse short films by district and find stories from your own corner of Telugu land.' },
+              { step: '02', icon: '▶️', title: 'Watch & support', desc: 'Stream free, like your favourites and drop a comment. Your support means the world to a local creator.' },
+              { step: '03', icon: '🎥', title: 'Share your own', desc: 'Upload your short film free in minutes — and get discovered by your district and far beyond.' },
+            ].map((s, i) => (
+              <Reveal key={s.step} delay={i * 110}>
+                <div className="relative h-full bg-[color:var(--surface-2)] border border-[color:var(--border-2)] rounded-2xl p-8 overflow-hidden group hover:-translate-y-1 hover:border-[color:var(--accent)]/40 transition-all duration-300">
+                  <div className="absolute top-4 right-5 text-5xl font-black text-[color:var(--text)]/[0.06] select-none" style={{fontFamily: "'Georgia', serif"}}>{s.step}</div>
+                  <div className="text-4xl mb-5">{s.icon}</div>
+                  <h3 className="font-bold text-[color:var(--text)] text-lg mb-3">{s.title}</h3>
+                  <p className="text-[color:var(--muted)] text-sm leading-relaxed">{s.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal className="text-center mt-8">
+            <p className="text-sm text-[color:var(--muted)]">
+              Feeling competitive?{' '}
+              <Link href="/contest" className="text-[color:var(--accent)] font-semibold hover:underline">
+                Enter the monthly contest for real prizes →
+              </Link>
+            </p>
+          </Reveal>
+        </section>
+
+        {/* ══════════ CONTEST BAND (demoted highlight) ══════════ */}
+        <Reveal>
+          <section className="max-w-6xl mx-auto px-6 pb-16">
+            <div className="relative overflow-hidden rounded-3xl border border-[color:var(--accent)]/30 bg-gradient-to-br from-[#D4A017]/12 via-[#FF6B1A]/6 to-transparent p-8 sm:p-12">
+              <div className="absolute -top-10 -right-10 text-[160px] leading-none select-none opacity-[0.06]" aria-hidden>🏆</div>
+              <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="max-w-xl">
+                  <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">The Monthly Contest</span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-[color:var(--text)] mt-2 mb-3" style={{fontFamily: "'Georgia', serif"}}>
+                    {contest ? `Season ${contest.season_number} is live` : 'Put your film in the race'}
+                  </h2>
+                  <p className="text-[color:var(--muted)] text-sm leading-relaxed">
+                    Every season, filmmakers across both states compete for real prize money and a
+                    permanent place in the Hall of Fame. Your district rallies, your fans vote, the top films win.
+                  </p>
+                  {contest && (
+                    <div className="flex gap-5 mt-5 text-sm text-[color:var(--text)] font-semibold">
+                      <span>🥇 ₹{contest.prize_1st?.toLocaleString('en-IN')}</span>
+                      <span>🥈 ₹{contest.prize_2nd?.toLocaleString('en-IN')}</span>
+                      <span>🥉 ₹{contest.prize_3rd?.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3 shrink-0">
+                  <Link href="/contest"
+                    className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3.5 rounded-xl font-bold uppercase tracking-wider text-sm text-center hover:opacity-90 hover:-translate-y-0.5 transition-all">
+                    🏆 View Contest
+                  </Link>
+                  <Link href="/contest/winners"
+                    className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-8 py-3.5 rounded-xl font-bold uppercase tracking-wider text-sm text-center hover:bg-[#D4A017]/10 transition-all">
+                    Hall of Fame
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        </Reveal>
+
+        {/* ══════════ FINAL CTA ══════════ */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-[#FF6B1A]/10 via-[#D4A017]/5 to-[#FF6B1A]/10" />
           <div className="absolute inset-0 border-t border-b border-[color:var(--accent)]/20" />
-          <div className="relative max-w-6xl mx-auto px-6 py-20 text-center">
-            <h2 className="text-3xl md:text-5xl font-black text-[color:var(--text)] mb-4"
-              style={{fontFamily: "'Georgia', serif"}}>
-              Ready to Tell Your Story?
+          <Reveal className="relative max-w-6xl mx-auto px-6 py-20 text-center">
+            <h2 className="text-3xl md:text-5xl font-black text-[color:var(--text)] mb-4" style={{fontFamily: "'Georgia', serif"}}>
+              Be part of your district&apos;s cinema
             </h2>
             <p className="text-[color:var(--muted)] mb-10 max-w-lg mx-auto leading-relaxed">
-              Join Telugu filmmakers from across Telangana & Andhra Pradesh sharing their stories with the world.
+              Discover local stories, cheer on your neighbours, or pick up a camera and add your own.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
+              <a href="#explore"
+                className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-2xl shadow-orange-900/30">
+                🎬 Explore Films
+              </a>
               <Link href="/upload"
-                className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-2xl shadow-orange-900/40">
-                📽️ Upload Free
-              </Link>
-              <Link href="/contest/enter"
                 className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all">
-                🏆 Enter Contest
+                ＋ Share Your Film
               </Link>
             </div>
-          </div>
+          </Reveal>
         </section>
 
       </main>
