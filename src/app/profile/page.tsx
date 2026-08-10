@@ -91,7 +91,7 @@ export default function MyProfilePage() {
   if (loading) return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-[#0D0A06] flex items-center justify-center text-[#7A6040]">
+      <div className="min-h-screen bg-[color:var(--bg)] flex items-center justify-center text-[color:var(--muted)]">
         Loading...
       </div>
     </>
@@ -106,18 +106,18 @@ export default function MyProfilePage() {
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
         <div className="max-w-4xl mx-auto px-6 py-10">
 
           {/* Header */}
-          <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-8">
-            <Link href="/" className="hover:text-[#D4A017] transition">Home</Link>
+          <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] uppercase tracking-widest mb-8">
+            <Link href="/" className="hover:text-[color:var(--accent)] transition">Home</Link>
             <span>›</span>
-            <span className="text-[#D4A017]">My Profile</span>
+            <span className="text-[color:var(--accent)]">My Profile</span>
           </div>
 
           {/* Profile card */}
-          <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-6 mb-8">
+          <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-6 mb-8">
             <div className="flex items-start gap-5 flex-wrap">
               {/* Avatar */}
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-2xl flex-shrink-0">
@@ -129,23 +129,23 @@ export default function MyProfilePage() {
                 {editing ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Display Name</label>
+                      <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Display Name</label>
                       <input
                         type="text"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         placeholder="Your name"
-                        className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+                        className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Bio</label>
+                      <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Bio</label>
                       <textarea
                         value={editBio}
                         onChange={e => setEditBio(e.target.value)}
                         placeholder="Tell us about yourself as a filmmaker..."
                         rows={3}
-                        className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition resize-none"
+                        className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition resize-none"
                       />
                     </div>
                     <div className="flex gap-3">
@@ -154,7 +154,7 @@ export default function MyProfilePage() {
                         {saving ? '⏳ Saving...' : '✓ Save Changes'}
                       </button>
                       <button onClick={() => { setEditing(false); setEditName(profile?.name ?? ''); setEditBio(profile?.bio ?? '') }}
-                        className="border border-[#2E2010] text-[#7A6040] px-4 py-2 rounded-lg text-sm hover:text-[#FDF6E3] transition">
+                        className="border border-[color:var(--border)] text-[color:var(--muted)] px-4 py-2 rounded-lg text-sm hover:text-[color:var(--text)] transition">
                         Cancel
                       </button>
                     </div>
@@ -162,18 +162,18 @@ export default function MyProfilePage() {
                 ) : (
                   <div>
                     <div className="flex items-center gap-3 mb-1">
-                      <h1 className="text-xl font-bold text-[#FDF6E3]">
+                      <h1 className="text-xl font-bold text-[color:var(--text)]">
                         {profile?.name ?? 'No name set'}
                       </h1>
                       {saved && <span className="text-xs text-green-400">✓ Saved!</span>}
                     </div>
                     {profile?.bio ? (
-                      <p className="text-sm text-[#7A6040] leading-relaxed mb-3 max-w-lg">{profile.bio}</p>
+                      <p className="text-sm text-[color:var(--muted)] leading-relaxed mb-3 max-w-lg">{profile.bio}</p>
                     ) : (
-                      <p className="text-sm text-[#4A3020] italic mb-3">No bio yet — add one!</p>
+                      <p className="text-sm text-[color:var(--faint)] italic mb-3">No bio yet — add one!</p>
                     )}
                     <button onClick={() => setEditing(true)}
-                      className="text-xs text-[#D4A017] border border-[#D4A017]/30 px-3 py-1.5 rounded-lg hover:bg-[#D4A017]/10 transition font-bold uppercase tracking-wide">
+                      className="text-xs text-[color:var(--accent)] border border-[color:var(--accent)]/30 px-3 py-1.5 rounded-lg hover:bg-[#D4A017]/10 transition font-bold uppercase tracking-wide">
                       ✏️ Edit Profile
                     </button>
                   </div>
@@ -183,27 +183,27 @@ export default function MyProfilePage() {
               {/* Stats */}
               <div className="flex gap-6 flex-shrink-0">
                 <div className="text-center">
-                  <div className="text-xl font-bold text-[#D4A017]">{activeFilms.length}</div>
-                  <div className="text-xs text-[#7A6040] uppercase tracking-wide">Films</div>
+                  <div className="text-xl font-bold text-[color:var(--accent)]">{activeFilms.length}</div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Films</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xl font-bold text-[#D4A017]">
+                  <div className="text-xl font-bold text-[color:var(--accent)]">
                     {totalViews >= 1000 ? `${(totalViews/1000).toFixed(1)}K` : totalViews}
                   </div>
-                  <div className="text-xs text-[#7A6040] uppercase tracking-wide">Views</div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-xl font-bold text-[#D4A017]">{totalLikes}</div>
-                  <div className="text-xs text-[#7A6040] uppercase tracking-wide">Likes</div>
+                  <div className="text-xl font-bold text-[color:var(--accent)]">{totalLikes}</div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Likes</div>
                 </div>
               </div>
             </div>
 
             {/* Public profile link */}
             {profile && (
-              <div className="mt-4 pt-4 border-t border-[#2E2010]">
+              <div className="mt-4 pt-4 border-t border-[color:var(--border)]">
                 <Link href={`/creator/${profile.id}`}
-                  className="text-xs text-[#7A6040] hover:text-[#D4A017] transition">
+                  className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
                   👁 View public profile →
                 </Link>
               </div>
@@ -216,19 +216,19 @@ export default function MyProfilePage() {
               <p className="text-yellow-400 text-sm font-semibold mb-1">
                 ⏳ {pendingFilms.length} film{pendingFilms.length > 1 ? 's' : ''} pending review
               </p>
-              <p className="text-[#7A6040] text-xs">
+              <p className="text-[color:var(--muted)] text-xs">
                 Our team will review and approve your film within 24 hours.
               </p>
             </div>
           )}
 
           {/* My Films */}
-          <h2 className="text-base font-bold text-[#7A6040] uppercase tracking-widest mb-4">
+          <h2 className="text-base font-bold text-[color:var(--muted)] uppercase tracking-widest mb-4">
             My Films
           </h2>
 
           {films.length === 0 ? (
-            <div className="text-center py-16 text-[#7A6040]">
+            <div className="text-center py-16 text-[color:var(--muted)]">
               <div className="text-4xl mb-3">🎬</div>
               <p className="text-sm mb-4">You haven&apos;t uploaded any films yet.</p>
               <Link href="/upload"
@@ -240,10 +240,10 @@ export default function MyProfilePage() {
             <div className="space-y-3">
               {films.map(film => (
                 <div key={film.id}
-                  className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 flex items-center gap-4">
+                  className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 flex items-center gap-4">
 
                   {/* Thumbnail */}
-                  <div className="relative w-20 h-12 rounded-lg overflow-hidden bg-[#0D0A06] flex-shrink-0">
+                  <div className="relative w-20 h-12 rounded-lg overflow-hidden bg-[color:var(--bg)] flex-shrink-0">
                     {getThumbnail(film.video_url) ? (
                       <img src={getThumbnail(film.video_url)!} alt={film.title_en}
                         className="w-full h-full object-cover" />
@@ -255,7 +255,7 @@ export default function MyProfilePage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="font-semibold text-[#FDF6E3] text-sm line-clamp-1">{film.title_en}</h3>
+                      <h3 className="font-semibold text-[color:var(--text)] text-sm line-clamp-1">{film.title_en}</h3>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase flex-shrink-0 ${
                         film.status === 'active'
                           ? 'bg-green-900/40 text-green-400 border border-green-700/40'
@@ -266,7 +266,7 @@ export default function MyProfilePage() {
                         {film.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-[#7A6040]">
+                    <div className="flex items-center gap-2 text-xs text-[color:var(--muted)]">
                       <span>{film.genre}</span>
                       <span>·</span>
                       <span>👁 {film.view_count}</span>
@@ -280,7 +280,7 @@ export default function MyProfilePage() {
                   {/* Action */}
                   {film.status === 'active' && (
                     <Link href={`/telangana/hyderabad/film/${film.id}`}
-                      className="text-xs text-[#D4A017] border border-[#D4A017]/30 px-3 py-1.5 rounded-lg hover:bg-[#D4A017]/10 transition font-bold uppercase tracking-wide flex-shrink-0">
+                      className="text-xs text-[color:var(--accent)] border border-[color:var(--accent)]/30 px-3 py-1.5 rounded-lg hover:bg-[#D4A017]/10 transition font-bold uppercase tracking-wide flex-shrink-0">
                       View →
                     </Link>
                   )}

@@ -1,22 +1,67 @@
 @import "tailwindcss";
 
+/* ── Theme tokens ──
+   Default (:root) = DARK, so server-rendered HTML matches the original look.
+   `html.light` flips the neutrals + accents. Brand *fills* (gradients, solid
+   buttons) stay vivid via --gold/--saffron; interactive *text/borders* use the
+   theme-aware --accent / --accent-hot so they keep contrast on cream. */
 :root {
-  --background: #0D0A06;
-  --foreground: #FDF6E3;
-  --saffron: #FF6B1A;
+  /* Neutrals */
+  --bg: #0D0A06;        /* app background (near-black) */
+  --surface: #1A1208;   /* cards / inputs / dropdowns */
+  --border: #2E2010;    /* hairlines / card borders */
+  --surface-2: #0D1020; /* slate/navy feature + contact cards */
+  --border-2: #1E2535;  /* borders on --surface-2 */
+  --text: #FDF6E3;      /* primary text (cream) */
+  --muted: #7A6040;     /* secondary text */
+  --faint: #4A3020;     /* subtle labels */
+
+  /* Interactive accents (text / links / icons / borders) */
+  --accent: #D4A017;      /* gold */
+  --accent-hot: #FF6B1A;  /* saffron */
+
+  /* Brand fills — identical in both themes (gradients, solid buttons) */
   --gold: #D4A017;
-  --card-bg: #1A1208;
-  --card-border: #2E2010;
-  --muted: #7A6040;
+  --saffron: #FF6B1A;
+
+  /* Media scrim — always dark so hero/card text stays legible over images */
+  --scrim: #08060F;
+
+  /* Back-compat aliases */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card-bg: var(--surface);
+  --card-border: var(--border);
+}
+
+html.light {
+  /* Warm cinematic "paper" palette */
+  --bg: #F6F1E7;        /* warm ivory */
+  --surface: #FFFCF6;   /* soft white cards */
+  --border: #E6D9BF;    /* warm sand hairline */
+  --text: #241B10;      /* deep espresso */
+  --muted: #6B5333;     /* readable warm brown (AA on ivory) */
+  --faint: #9A8763;     /* soft taupe */
+  --surface-2: #F2ECE0; /* feature/contact cards recede slightly on ivory */
+  --border-2: #E2D5BB;
+
+  /* Deepened accents so they read as rich gold/orange, not washed out */
+  --accent: #9A6100;      /* deep goldenrod */
+  --accent-hot: #C2410C;  /* burnt saffron */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: 'Rajdhani', sans-serif;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Kolam dot pattern background */
+/* Kolam dot pattern — gold dots, subtle in both themes.
+   Slightly stronger in light so the texture stays visible on ivory. */
 body::before {
   content: '';
   position: fixed;
@@ -26,9 +71,12 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
+html.light body::before {
+  background-image: radial-gradient(circle, rgba(154, 97, 0, 0.10) 1px, transparent 1px);
+}
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0D0A06; }
+::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: rgba(212,160,23,0.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(212,160,23,0.5); }

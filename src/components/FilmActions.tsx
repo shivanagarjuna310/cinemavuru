@@ -158,14 +158,14 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
   const isMyVote = votedFilmId === filmId
 
   return (
-    <div className="flex items-center gap-3 py-4 border-t border-b border-[#2E2010] mb-6 flex-wrap">
+    <div className="flex items-center gap-3 py-4 border-t border-b border-[color:var(--border)] mb-6 flex-wrap">
 
       {/* Like */}
       <button onClick={handleLike} disabled={loading}
         className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-60 ${
           liked
-            ? 'bg-[#FF6B1A]/20 border border-[#FF6B1A]/50 text-[#FF6B1A]'
-            : 'bg-[#1A1208] border border-[#2E2010] text-[#7A6040] hover:text-[#FF6B1A] hover:border-[#FF6B1A]/30'
+            ? 'bg-[#FF6B1A]/20 border border-[color:var(--accent-hot)]/50 text-[color:var(--accent-hot)]'
+            : 'bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent-hot)] hover:border-[color:var(--accent-hot)]/30'
         }`}>
         {liked ? '♥' : '♡'}
         <span>{likeCount} {liked ? 'Liked!' : 'Like'}</span>
@@ -179,10 +179,10 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
           title={hasVoted && !isMyVote ? 'You already voted for another film' : ''}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide transition-all ${
             isMyVote
-              ? 'bg-[#D4A017]/20 border border-[#D4A017]/50 text-[#D4A017] cursor-default'
+              ? 'bg-[#D4A017]/20 border border-[color:var(--accent)]/50 text-[color:var(--accent)] cursor-default'
               : hasVoted
-              ? 'bg-[#1A1208] border border-[#2E2010] text-[#4A3020] cursor-not-allowed opacity-40'
-              : 'bg-[#1A1208] border border-[#2E2010] text-[#7A6040] hover:text-[#D4A017] hover:border-[#D4A017]/30 cursor-pointer'
+              ? 'bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--faint)] cursor-not-allowed opacity-40'
+              : 'bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]/30 cursor-pointer'
           }`}>
           🗳️
           <span>
@@ -197,13 +197,13 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
 
       {/* WhatsApp */}
       <button onClick={handleWhatsApp}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide bg-[#1A1208] border border-[#2E2010] text-[#7A6040] hover:text-[#25D366] hover:border-[#25D366]/30 transition-all">
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[#25D366] hover:border-[#25D366]/30 transition-all">
         📱 WhatsApp
       </button>
 
       {/* Copy */}
       <button onClick={handleCopy}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide bg-[#1A1208] border border-[#2E2010] text-[#7A6040] hover:text-[#D4A017] hover:border-[#D4A017]/30 transition-all">
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]/30 transition-all">
         {copied ? '✓ Copied!' : '🔗 Copy Link'}
       </button>
 

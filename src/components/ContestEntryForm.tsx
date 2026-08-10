@@ -204,10 +204,10 @@ export default function ContestEntryForm() {
 
   // ── SCREEN: Not logged in ─────────────────────────────────
   if (!userInfo) return (
-    <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8 text-center">
+    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8 text-center">
       <div className="text-4xl mb-4">🔐</div>
-      <p className="text-[#FDF6E3] font-semibold mb-2">Login Required</p>
-      <p className="text-[#7A6040] text-sm mb-6">You need to be logged in to enter the contest.</p>
+      <p className="text-[color:var(--text)] font-semibold mb-2">Login Required</p>
+      <p className="text-[color:var(--muted)] text-sm mb-6">You need to be logged in to enter the contest.</p>
       <button onClick={() => router.push('/auth')}
         className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3 rounded-lg font-bold uppercase tracking-wide text-sm">
         Login / Create Account
@@ -217,19 +217,19 @@ export default function ContestEntryForm() {
 
   // ── SCREEN: No active contest ─────────────────────────────
   if (!contest) return (
-    <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8 text-center">
+    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8 text-center">
       <div className="text-4xl mb-4">⏳</div>
-      <p className="text-[#FDF6E3] font-semibold mb-2">No Active Contest</p>
-      <p className="text-[#7A6040] text-sm">Check back soon for the next contest!</p>
+      <p className="text-[color:var(--text)] font-semibold mb-2">No Active Contest</p>
+      <p className="text-[color:var(--muted)] text-sm">Check back soon for the next contest!</p>
     </div>
   )
 
   // ── SCREEN: Already entered ───────────────────────────────
   if (alreadyEntered) return (
-    <div className="bg-[#1A1208] border border-green-700/30 rounded-2xl p-8 text-center">
+    <div className="bg-[color:var(--surface)] border border-green-700/30 rounded-2xl p-8 text-center">
       <div className="text-4xl mb-4">✅</div>
       <p className="text-green-400 font-semibold mb-2">You&apos;ve Already Entered!</p>
-      <p className="text-[#7A6040] text-sm mb-6">Your film is in the contest. Share it to get more votes!</p>
+      <p className="text-[color:var(--muted)] text-sm mb-6">Your film is in the contest. Share it to get more votes!</p>
       <button onClick={() => router.push('/contest')}
         className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase text-sm">
         View Leaderboard →
@@ -239,11 +239,11 @@ export default function ContestEntryForm() {
 
   // ── SCREEN: Film submitted → show UPI payment ──────────
   if (status === 'submitted') return (
-    <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
+    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8">
       <div className="text-center mb-6">
         <div className="text-4xl mb-3">🎬</div>
         <p className="text-green-400 font-bold text-lg mb-2">Film Submitted!</p>
-        <p className="text-[#7A6040] text-sm">{message}</p>
+        <p className="text-[color:var(--muted)] text-sm">{message}</p>
       </div>
 
       <UPIPayment
@@ -257,11 +257,11 @@ export default function ContestEntryForm() {
 
   // ── SCREEN: Payment complete ──────────────────────────────
   if (status === 'paid') return (
-    <div className="bg-[#1A1208] border border-green-700/30 rounded-2xl p-8 text-center">
+    <div className="bg-[color:var(--surface)] border border-green-700/30 rounded-2xl p-8 text-center">
       <div className="text-5xl mb-4">🎉</div>
       <p className="text-green-400 font-bold text-xl mb-2">Payment Details Submitted!</p>
-      <p className="text-[#FDF6E3] text-sm mb-1">We have received your UTR number.</p>
-      <p className="text-[#7A6040] text-sm mb-6">Admin will verify your payment and approve your entry within 24 hours.</p>
+      <p className="text-[color:var(--text)] text-sm mb-1">We have received your UTR number.</p>
+      <p className="text-[color:var(--muted)] text-sm mb-6">Admin will verify your payment and approve your entry within 24 hours.</p>
       <button onClick={() => router.push('/contest')}
         className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3 rounded-lg font-bold uppercase text-sm">
         View Leaderboard →
@@ -271,10 +271,10 @@ export default function ContestEntryForm() {
 
   // ── SCREEN: Main entry form ───────────────────────────────
   return (
-    <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
-      <div className="mb-6 p-4 bg-[#D4A017]/05 border border-[#D4A017]/20 rounded-xl">
-        <p className="text-sm text-[#D4A017] font-semibold mb-0.5">{contest.title}</p>
-        <p className="text-xs text-[#7A6040]">
+    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8">
+      <div className="mb-6 p-4 bg-[#D4A017]/05 border border-[color:var(--accent)]/20 rounded-xl">
+        <p className="text-sm text-[color:var(--accent)] font-semibold mb-0.5">{contest.title}</p>
+        <p className="text-xs text-[color:var(--muted)]">
           Entry Fee: ₹{contest.entry_fee} · Prize Pool: ₹{(contest.prize_1st + contest.prize_2nd + contest.prize_3rd).toLocaleString('en-IN')}
         </p>
       </div>
@@ -283,11 +283,11 @@ export default function ContestEntryForm() {
 
         {myFilms.length > 0 && (
           <div>
-            <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+            <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
               Select Your Film (already uploaded)
             </label>
             <select value={filmId} onChange={e => setFilmId(e.target.value)}
-              className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition">
+              className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition">
               <option value="">— Choose a film —</option>
               {myFilms.map(f => <option key={f.id} value={f.id}>{f.title_en}</option>)}
             </select>
@@ -297,17 +297,17 @@ export default function ContestEntryForm() {
         {!filmId && (
           <>
             {myFilms.length > 0 && (
-              <div className="text-center text-xs text-[#7A6040] py-1">— or submit a new film —</div>
+              <div className="text-center text-xs text-[color:var(--muted)] py-1">— or submit a new film —</div>
             )}
             <div>
-              <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+              <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
                 Your District *
               </label>
               <select
                 value={districtId}
                 onChange={e => setDistrictId(e.target.value)}
                 required={!filmId}
-                className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
               >
                 <option value="">— Select your district —</option>
                 {districts.map(d => (
@@ -316,26 +316,26 @@ export default function ContestEntryForm() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Film Title *</label>
+              <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Film Title *</label>
               <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)}
                 placeholder="Your film title" required={!filmId}
-                className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition" />
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition" />
             </div>
             <div>
-              <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Genre *</label>
+              <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Genre *</label>
               <select value={newGenre} onChange={e => setNewGenre(e.target.value)}
-                className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition">
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition">
                 {['Drama','Comedy','Thriller','Documentary','Family','Romance','RomCom','Action','Experimental'].map(g => (
                   <option key={g}>{g}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">YouTube URL *</label>
+              <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">YouTube URL *</label>
               <input type="url" value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
                 placeholder="https://youtu.be/your-film-id" required={!filmId}
-                className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition" />
-              <p className="text-xs text-[#4A3020] mt-1">Upload to YouTube as Unlisted, paste the link here.</p>
+                className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition" />
+              <p className="text-xs text-[color:var(--faint)] mt-1">Upload to YouTube as Unlisted, paste the link here.</p>
             </div>
           </>
         )}
@@ -351,7 +351,7 @@ export default function ContestEntryForm() {
           {status === 'loading' ? '⏳ Submitting...' : `Submit Film →`}
         </button>
 
-        <p className="text-center text-xs text-[#4A3020]">
+        <p className="text-center text-xs text-[color:var(--faint)]">
           By entering, you confirm this is your original work.
         </p>
       </form>

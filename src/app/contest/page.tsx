@@ -61,11 +61,11 @@ export default async function ContestPage() {
     return (
       <>
         <Navbar />
-        <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16 flex items-center justify-center">
+        <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16 flex items-center justify-center">
           <div className="text-center px-6">
             <div className="text-6xl mb-4">🏆</div>
-            <h1 className="text-2xl font-bold text-[#D4A017] mb-3">No Active Contest</h1>
-            <p className="text-[#7A6040] mb-6">The next contest is coming soon. Stay tuned!</p>
+            <h1 className="text-2xl font-bold text-[color:var(--accent)] mb-3">No Active Contest</h1>
+            <p className="text-[color:var(--muted)] mb-6">The next contest is coming soon. Stay tuned!</p>
             <Link href="/" className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition text-sm">
               ← Back to Films
             </Link>
@@ -89,10 +89,10 @@ export default async function ContestPage() {
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
 
         {/* ── Contest Header ── */}
-        <div className="bg-gradient-to-b from-[#1A0A00] to-transparent border-b border-[#2E2010]">
+        <div className="bg-gradient-to-b from-[color:var(--surface)] to-transparent border-b border-[color:var(--border)]">
           <div className="max-w-5xl mx-auto px-6 py-10">
 
             {/* Status badge */}
@@ -101,41 +101,41 @@ export default async function ContestPage() {
                 isOpenPhase
                   ? 'text-green-400 border-green-700/40 bg-green-900/20'
                   : isVotingPhase
-                  ? 'text-[#D4A017] border-[#D4A017]/40 bg-[#D4A017]/10'
-                  : 'text-[#7A6040] border-[#2E2010]'
+                  ? 'text-[color:var(--accent)] border-[color:var(--accent)]/40 bg-[#D4A017]/10'
+                  : 'text-[color:var(--muted)] border-[color:var(--border)]'
               }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isOpenPhase ? 'bg-green-400 animate-pulse' : isVotingPhase ? 'bg-[#D4A017] animate-pulse' : 'bg-[#7A6040]'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${isOpenPhase ? 'bg-green-400 animate-pulse' : isVotingPhase ? 'bg-[#D4A017] animate-pulse' : 'bg-[color:var(--muted)]'}`} />
                 {isOpenPhase ? 'Submissions Open' : isVotingPhase ? 'Voting Live' : contest.status}
               </span>
               {district && (
-                <span className="text-xs text-[#7A6040] uppercase tracking-widest">
+                <span className="text-xs text-[color:var(--muted)] uppercase tracking-widest">
                   {district.name_en} · {district.name_te}
                 </span>
               )}
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-bold text-[#FDF6E3] mb-3 leading-tight">
+            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--text)] mb-3 leading-tight">
               {contest.title}
             </h1>
-            <p className="text-[#7A6040] text-sm leading-relaxed max-w-2xl mb-6">
+            <p className="text-[color:var(--muted)] text-sm leading-relaxed max-w-2xl mb-6">
               {contest.description}
             </p>
 
             {/* Stats row */}
             <div className="flex gap-6 flex-wrap mb-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-[#D4A017]">{entries.length}</div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wide">Films Entered</div>
+                <div className="text-2xl font-bold text-[color:var(--accent)]">{entries.length}</div>
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Films Entered</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-[#D4A017]">{voteCount}</div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wide">Total Votes</div>
+                <div className="text-2xl font-bold text-[color:var(--accent)]">{voteCount}</div>
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Total Votes</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-[#FF6B1A]">
+                <div className="text-2xl font-bold text-[color:var(--accent-hot)]">
                   {isOpenPhase ? submissionsLeft : votingLeft}
                 </div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wide">
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">
                   {isOpenPhase ? 'To Submit' : 'To Vote'}
                 </div>
               </div>
@@ -148,14 +148,14 @@ export default async function ContestPage() {
                 { place: '🥈 2nd', amount: contest.prize_2nd },
                 { place: '🥉 3rd', amount: contest.prize_3rd },
               ].map(p => (
-                <div key={p.place} className="bg-[#1A1208] border border-[#2E2010] rounded-lg px-4 py-2 text-sm">
-                  <span className="text-[#7A6040] mr-2">{p.place}</span>
-                  <span className="text-[#D4A017] font-bold">{formatPrize(p.amount)}</span>
+                <div key={p.place} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-4 py-2 text-sm">
+                  <span className="text-[color:var(--muted)] mr-2">{p.place}</span>
+                  <span className="text-[color:var(--accent)] font-bold">{formatPrize(p.amount)}</span>
                 </div>
               ))}
-              <div className="bg-[#1A1208] border border-[#2E2010] rounded-lg px-4 py-2 text-sm">
-                <span className="text-[#7A6040] mr-2">Entry Fee</span>
-                <span className="text-[#FDF6E3] font-bold">{formatPrize(contest.entry_fee)}</span>
+              <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-4 py-2 text-sm">
+                <span className="text-[color:var(--muted)] mr-2">Entry Fee</span>
+                <span className="text-[color:var(--text)] font-bold">{formatPrize(contest.entry_fee)}</span>
               </div>
             </div>
 
@@ -168,7 +168,7 @@ export default async function ContestPage() {
                 >
                   🎬 Enter Your Film — {formatPrize(contest.entry_fee)}
                 </Link>
-                <div className="border border-[#2E2010] rounded-lg px-4 py-3 text-sm text-[#7A6040]">
+                <div className="border border-[color:var(--border)] rounded-lg px-4 py-3 text-sm text-[color:var(--muted)]">
                   Voting opens after submissions close
                 </div>
               </div>
@@ -179,7 +179,7 @@ export default async function ContestPage() {
         {/* ── Contest Films ── */}
         <div className="max-w-5xl mx-auto px-6 py-8">
           {entries.length === 0 ? (
-            <div className="text-center py-20 text-[#7A6040]">
+            <div className="text-center py-20 text-[color:var(--muted)]">
               <div className="text-5xl mb-4">🎬</div>
               <p className="text-xl font-semibold mb-2">No entries yet</p>
               <p className="text-sm mb-6">Be the first filmmaker to enter!</p>
@@ -193,7 +193,7 @@ export default async function ContestPage() {
           ) : (
             <>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-[#D4A017]">
+                <h2 className="text-xl font-bold text-[color:var(--accent)]">
                   {isVotingPhase ? '🗳️ Vote for Your Favourite' : '🎬 Contest Films'}
                 </h2>
               </div>

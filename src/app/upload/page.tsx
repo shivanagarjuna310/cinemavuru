@@ -11,7 +11,7 @@ export default function UploadPage() {
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
 
         {/* Background glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_0%,rgba(255,107,26,0.06),transparent)] pointer-events-none" />
@@ -21,10 +21,10 @@ export default function UploadPage() {
           {/* Header */}
           <div className="text-center mb-10">
             <div className="text-5xl mb-4">🎬</div>
-            <h1 className="text-3xl font-bold text-[#FDF6E3] mb-2">
+            <h1 className="text-3xl font-bold text-[color:var(--text)] mb-2">
               Upload Your Film
             </h1>
-            <p className="text-[#7A6040] leading-relaxed">
+            <p className="text-[color:var(--muted)] leading-relaxed">
               Submit your short film to CinemaVuru. We review every film
               before it goes live — usually within 24 hours.
             </p>
@@ -37,10 +37,10 @@ export default function UploadPage() {
               { step: '2', icon: '📝', label: 'Fill this form',    desc: 'Paste your link' },
               { step: '3', icon: '✅', label: 'We review & publish', desc: 'Within 24hrs' },
             ].map(s => (
-              <div key={s.step} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 text-center">
+              <div key={s.step} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 text-center">
                 <div className="text-2xl mb-2">{s.icon}</div>
-                <div className="text-xs font-bold text-[#D4A017] uppercase tracking-wide mb-1">{s.label}</div>
-                <div className="text-xs text-[#7A6040]">{s.desc}</div>
+                <div className="text-xs font-bold text-[color:var(--accent)] uppercase tracking-wide mb-1">{s.label}</div>
+                <div className="text-xs text-[color:var(--muted)]">{s.desc}</div>
               </div>
             ))}
           </div>

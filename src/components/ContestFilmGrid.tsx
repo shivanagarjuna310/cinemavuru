@@ -38,7 +38,7 @@ const GENRE_STYLE: Record<string, { emoji: string; gradient: string }> = {
   Family:      { emoji: '🎭', gradient: 'from-[#1A1A4E] to-[#FF6B1A]' },
   Action:      { emoji: '⚡', gradient: 'from-[#1A0A2E] to-[#8B1A4E]'  },
   Romance:     { emoji: '🌸', gradient: 'from-[#2E0A1A] to-[#8B1A3A]'  },
-  Default:     { emoji: '🎬', gradient: 'from-[#1A1208] to-[#2E2010]'  },
+  Default:     { emoji: '🎬', gradient: 'from-[color:var(--surface)] to-[color:var(--border)]'  },
 }
 function getThumbnail(videoUrl: string | null): string | null {
   if (!videoUrl) return null
@@ -125,20 +125,20 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
         return (
           <div
             key={entry.id}
-            className={`bg-[#1A1208] border rounded-xl overflow-hidden transition-all duration-300 ${
+            className={`bg-[color:var(--surface)] border rounded-xl overflow-hidden transition-all duration-300 ${
               rank === 1 ? 'border-[#FFD700]/30' :
               rank === 2 ? 'border-[#C0C0C0]/20' :
               rank === 3 ? 'border-[#CD7F32]/20' :
-              'border-[#2E2010]'
+              'border-[color:var(--border)]'
             } ${isMyVote ? 'ring-1 ring-[#D4A017]/30' : ''}`}
           >
             <div className="flex items-center gap-4 p-4">
 
               {/* Rank */}
-              <div className={`text-center w-8 flex-shrink-0 font-bold ${RANK_STYLE[rank - 1] ?? 'text-[#7A6040] text-base'}`}>
+              <div className={`text-center w-8 flex-shrink-0 font-bold ${RANK_STYLE[rank - 1] ?? 'text-[color:var(--muted)] text-base'}`}>
                 {isVotingOpen
                   ? (rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `#${rank}`)
-                  : <span className="text-[#4A3020] text-xs">#{rank}</span>
+                  : <span className="text-[color:var(--faint)] text-xs">#{rank}</span>
                 }
               </div>
 
@@ -165,14 +165,14 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
               <div className="flex-1 min-w-0">
                 <h3
                   onClick={() => goToFilm(film.id)}
-                  className="font-bold text-[#FDF6E3] text-sm cursor-pointer hover:text-[#D4A017] transition line-clamp-1 mb-0.5"
+                  className="font-bold text-[color:var(--text)] text-sm cursor-pointer hover:text-[color:var(--accent)] transition line-clamp-1 mb-0.5"
                 >
                   {film.title_en}
                 </h3>
                 {film.title_te && (
-                  <p className="text-[#7A6040] text-xs mb-1">{film.title_te}</p>
+                  <p className="text-[color:var(--muted)] text-xs mb-1">{film.title_te}</p>
                 )}
-                <div className="flex items-center gap-2 text-xs text-[#7A6040]">
+                <div className="flex items-center gap-2 text-xs text-[color:var(--muted)]">
                   <span>{film.profiles?.name ?? 'Creator'}</span>
                   <span>·</span>
                   <span>{film.genre}</span>
@@ -185,15 +185,15 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
 
               {/* Vote count */}
               <div className="text-center flex-shrink-0">
-                <div className="text-xl font-bold text-[#D4A017]">{entry.contest_score}</div>
-                <div className="text-[10px] text-[#7A6040] uppercase tracking-wide">Votes</div>
+                <div className="text-xl font-bold text-[color:var(--accent)]">{entry.contest_score}</div>
+                <div className="text-[10px] text-[color:var(--muted)] uppercase tracking-wide">Votes</div>
               </div>
 
               {/* Watch & Vote link */}
               {isVotingOpen && (
                 <button
                   onClick={() => goToFilm(film.id)}
-                  className="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-[#1A1208] border border-[#D4A017]/40 text-[#D4A017] hover:bg-[#D4A017]/10 transition-all">
+                  className="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--accent)] hover:bg-[#D4A017]/10 transition-all">
                   Watch & Vote →
                 </button>
               )}
@@ -202,7 +202,7 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
 
             {/* Vote bar — visual progress */}
             {isVotingOpen && localEntries[0]?.contest_score > 0 && (
-              <div className="h-0.5 bg-[#2E2010]">
+              <div className="h-0.5 bg-[color:var(--border)]">
                 <div
                   className="h-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] transition-all duration-500"
                   style={{ width: `${Math.round((entry.contest_score / localEntries[0].contest_score) * 100)}%` }}

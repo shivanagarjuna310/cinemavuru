@@ -16,7 +16,7 @@ const GENRE_STYLE: Record<string, { emoji: string; gradient: string }> = {
   Documentary: { emoji: '🏛️', gradient: 'from-[#1A1A4E] to-[#8B1A1A]' },
   Thriller:    { emoji: '🌊', gradient: 'from-[#0A1A2E] to-[#1A4E8B]'  },
   Family:      { emoji: '🎭', gradient: 'from-[#1A1A4E] to-[#FF6B1A]' },
-  Default:     { emoji: '🎬', gradient: 'from-[#1A1208] to-[#2E2010]'  },
+  Default:     { emoji: '🎬', gradient: 'from-[color:var(--surface)] to-[color:var(--border)]'  },
 }
 
 async function getCreator(id: string) {
@@ -88,64 +88,64 @@ export default async function CreatorPage({
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
         <div className="max-w-4xl mx-auto px-6 py-10">
 
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-8">
-            <Link href="/" className="hover:text-[#D4A017] transition">Home</Link>
+          <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] uppercase tracking-widest mb-8">
+            <Link href="/" className="hover:text-[color:var(--accent)] transition">Home</Link>
             <span>›</span>
             <Link href={`/${creator.stateSlug}/${creator.districtSlug}`}
-              className="hover:text-[#D4A017] transition capitalize">
+              className="hover:text-[color:var(--accent)] transition capitalize">
               {creator.districtSlug}
             </Link>
             <span>›</span>
-            <span className="text-[#D4A017]">{creator.name ?? 'Filmmaker'}</span>
+            <span className="text-[color:var(--accent)]">{creator.name ?? 'Filmmaker'}</span>
           </div>
 
           {/* Filmmaker card */}
-          <div className="flex items-center gap-5 mb-10 pb-8 border-b border-[#2E2010]">
+          <div className="flex items-center gap-5 mb-10 pb-8 border-b border-[color:var(--border)]">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-2xl flex-shrink-0">
               {initial}
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-[#FDF6E3] mb-1">
+              <h1 className="text-2xl font-bold text-[color:var(--text)] mb-1">
                 {creator.name ?? 'Independent Filmmaker'}
               </h1>
               {creator.districtName && (
-                <p className="text-sm text-[#FF6B1A] mb-2">
+                <p className="text-sm text-[color:var(--accent-hot)] mb-2">
                   📍 {creator.districtName}, Telangana
                 </p>
               )}
               {creator.bio && (
-                <p className="text-sm text-[#7A6040] leading-relaxed max-w-lg">
+                <p className="text-sm text-[color:var(--muted)] leading-relaxed max-w-lg">
                   {creator.bio}
                 </p>
               )}
             </div>
             <div className="hidden md:flex gap-6 flex-shrink-0">
               <div className="text-center">
-                <div className="text-xl font-bold text-[#D4A017]">{films.length}</div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wide">Films</div>
+                <div className="text-xl font-bold text-[color:var(--accent)]">{films.length}</div>
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Films</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-[#D4A017]">{fmtViews(totalViews)}</div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wide">Views</div>
+                <div className="text-xl font-bold text-[color:var(--accent)]">{fmtViews(totalViews)}</div>
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-[#D4A017]">{totalLikes}</div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wide">Likes</div>
+                <div className="text-xl font-bold text-[color:var(--accent)]">{totalLikes}</div>
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Likes</div>
               </div>
             </div>
           </div>
 
           {/* Filmography */}
-          <h2 className="text-base font-bold text-[#7A6040] uppercase tracking-widest mb-5">
+          <h2 className="text-base font-bold text-[color:var(--muted)] uppercase tracking-widest mb-5">
             Filmography
           </h2>
 
           {films.length === 0 ? (
-            <div className="text-center py-16 text-[#7A6040]">
+            <div className="text-center py-16 text-[color:var(--muted)]">
               <div className="text-4xl mb-3">🎬</div>
               <p className="text-sm">No films published yet.</p>
             </div>
@@ -157,7 +157,7 @@ export default async function CreatorPage({
                   <Link
                     key={film.id}
                     href={`/${creator.stateSlug}/${creator.districtSlug}/film/${film.id}`}
-                    className="flex items-center gap-4 bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 hover:border-[#D4A017]/30 hover:-translate-y-0.5 transition-all duration-200 group"
+                    className="flex items-center gap-4 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 hover:border-[color:var(--accent)]/30 hover:-translate-y-0.5 transition-all duration-200 group"
                   >
                     <div className={`relative w-20 h-12 rounded-lg overflow-hidden bg-gradient-to-br ${style.gradient} flex items-center justify-center text-xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
                       {getThumbnail(film.video_url) ? (
@@ -168,23 +168,23 @@ export default async function CreatorPage({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-[#FDF6E3] text-sm group-hover:text-[#D4A017] transition line-clamp-1">
+                      <h3 className="font-semibold text-[color:var(--text)] text-sm group-hover:text-[color:var(--accent)] transition line-clamp-1">
                         {film.title_en}
                       </h3>
                       {film.title_te && (
-                        <p className="text-[10px] text-[#7A6040] mb-0.5">{film.title_te}</p>
+                        <p className="text-[10px] text-[color:var(--muted)] mb-0.5">{film.title_te}</p>
                       )}
-                      <div className="flex items-center gap-2 text-xs text-[#7A6040]">
+                      <div className="flex items-center gap-2 text-xs text-[color:var(--muted)]">
                         <span>{film.genre}</span>
                         {film.duration_sec && (
                           <><span>·</span><span>{fmt(film.duration_sec)}</span></>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-[#7A6040] flex-shrink-0">
+                    <div className="flex items-center gap-4 text-xs text-[color:var(--muted)] flex-shrink-0">
                       <span>♥ {film.like_count ?? 0}</span>
                       <span>👁 {fmtViews(film.view_count ?? 0)}</span>
-                      <span className="text-[#D4A017]">▶</span>
+                      <span className="text-[color:var(--accent)]">▶</span>
                     </div>
                   </Link>
                 )

@@ -80,14 +80,14 @@ export default function ErrorLogViewer() {
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wide transition border ${
               filter === f
-                ? 'border-[#D4A017]/40 text-[#D4A017] bg-[#D4A017]/10'
-                : 'border-[#2E2010] text-[#7A6040] hover:text-[#FDF6E3]'
+                ? 'border-[color:var(--accent)]/40 text-[color:var(--accent)] bg-[#D4A017]/10'
+                : 'border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--text)]'
             }`}>
             {f} {f !== 'all' && counts[f] ? `(${counts[f]})` : f === 'all' ? `(${logs.length})` : ''}
           </button>
         ))}
         <button onClick={fetchLogs}
-          className="ml-auto px-3 py-1 rounded text-xs border border-[#2E2010] text-[#7A6040] hover:text-[#D4A017] transition">
+          className="ml-auto px-3 py-1 rounded text-xs border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
           ↻ Refresh
         </button>
         <button onClick={cleanLogs}
@@ -105,19 +105,19 @@ export default function ErrorLogViewer() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-[#7A6040] text-sm">Loading logs...</div>
+        <div className="text-center py-12 text-[color:var(--muted)] text-sm">Loading logs...</div>
       ) : logs.length === 0 ? (
-        <div className="text-center py-12 text-[#7A6040]">
+        <div className="text-center py-12 text-[color:var(--muted)]">
           <p className="text-3xl mb-2">✅</p>
           <p className="text-sm">No {filter === 'all' ? '' : filter} logs</p>
         </div>
       ) : (
-        <div className="bg-[#0A0806] border border-[#2E2010] rounded-xl overflow-hidden font-mono text-xs">
+        <div className="bg-[color:var(--bg)] border border-[color:var(--border)] rounded-xl overflow-hidden font-mono text-xs">
           {logs.map((log, i) => (
             <div key={log.id}>
               <div
                 onClick={() => setExpanded(expanded === log.id ? null : log.id)}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-white/[0.02] ${i !== 0 ? 'border-t border-[#1A1208]' : ''}`}
+                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-white/[0.02] ${i !== 0 ? 'border-t border-[color:var(--surface)]' : ''}`}
               >
                 {/* Level badge */}
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0 w-14 text-center ${LEVEL_STYLE[log.level] ?? 'text-gray-400'}`}>
@@ -125,49 +125,49 @@ export default function ErrorLogViewer() {
                 </span>
 
                 {/* Source.function */}
-                <span className="text-[#D4A017] flex-shrink-0 w-48 truncate">
+                <span className="text-[color:var(--accent)] flex-shrink-0 w-48 truncate">
                   {log.source}{log.function_name ? `.${log.function_name}` : ''}
                 </span>
 
                 {/* Message */}
-                <span className="text-[#FDF6E3]/70 flex-1 truncate">{log.message}</span>
+                <span className="text-[color:var(--text)]/70 flex-1 truncate">{log.message}</span>
 
                 {/* Duration */}
                 {log.duration_ms != null && (
-                  <span className={`flex-shrink-0 w-16 text-right ${log.duration_ms > 2000 ? 'text-yellow-400' : 'text-[#4A3020]'}`}>
+                  <span className={`flex-shrink-0 w-16 text-right ${log.duration_ms > 2000 ? 'text-yellow-400' : 'text-[color:var(--faint)]'}`}>
                     {log.duration_ms}ms
                   </span>
                 )}
 
                 {/* Time */}
-                <span className="text-[#4A3020] flex-shrink-0 w-16 text-right">
+                <span className="text-[color:var(--faint)] flex-shrink-0 w-16 text-right">
                   {timeAgo(log.created_at)}
                 </span>
 
                 {/* Expand indicator */}
-                <span className="text-[#4A3020] flex-shrink-0">
+                <span className="text-[color:var(--faint)] flex-shrink-0">
                   {expanded === log.id ? '▲' : '▼'}
                 </span>
               </div>
 
               {/* Expanded detail */}
               {expanded === log.id && (
-                <div className="bg-[#0D0A06] border-t border-[#2E2010] px-6 py-4 space-y-2">
+                <div className="bg-[color:var(--bg)] border-t border-[color:var(--border)] px-6 py-4 space-y-2">
                   {log.error_code && (
-                    <div><span className="text-red-400">Error code: </span><span className="text-[#FDF6E3]">{log.error_code}</span></div>
+                    <div><span className="text-red-400">Error code: </span><span className="text-[color:var(--text)]">{log.error_code}</span></div>
                   )}
                   {log.error_detail && (
-                    <div><span className="text-red-400">Detail: </span><span className="text-[#FDF6E3]/70">{log.error_detail}</span></div>
+                    <div><span className="text-red-400">Detail: </span><span className="text-[color:var(--text)]/70">{log.error_detail}</span></div>
                   )}
                   {Object.keys(log.request_data ?? {}).length > 0 && (
                     <div>
-                      <div className="text-[#7A6040] mb-1">Request data:</div>
-                      <pre className="text-[#FDF6E3]/60 bg-[#0A0806] rounded p-2 overflow-x-auto text-[10px]">
+                      <div className="text-[color:var(--muted)] mb-1">Request data:</div>
+                      <pre className="text-[color:var(--text)]/60 bg-[color:var(--bg)] rounded p-2 overflow-x-auto text-[10px]">
                         {JSON.stringify(log.request_data, null, 2)}
                       </pre>
                     </div>
                   )}
-                  <div className="text-[#4A3020]">
+                  <div className="text-[color:var(--faint)]">
                     {new Date(log.created_at).toLocaleString()} · {log.profiles?.name ?? 'anonymous'}
                   </div>
                 </div>

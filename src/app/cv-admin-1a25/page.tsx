@@ -66,8 +66,8 @@ const EVENT_STYLE: Record<string, { color: string; label: string }> = {
   film_uploaded:   { color: 'text-blue-400',   label: '📤 Uploaded'   },
   film_approved:   { color: 'text-green-400',  label: '✅ Approved'   },
   film_rejected:   { color: 'text-red-400',    label: '❌ Rejected'   },
-  user_registered: { color: 'text-[#D4A017]',  label: '👤 Registered' },
-  system_cleanup:  { color: 'text-[#7A6040]',  label: '🗑 Cleanup'    },
+  user_registered: { color: 'text-[color:var(--accent)]',  label: '👤 Registered' },
+  system_cleanup:  { color: 'text-[color:var(--muted)]',  label: '🗑 Cleanup'    },
 }
 
 export default function AdminPage() {
@@ -330,14 +330,14 @@ export default function AdminPage() {
   }
 
   if (access === 'checking') return (
-    <div className="min-h-screen bg-[#0D0A06] flex items-center justify-center text-[#7A6040]">Checking...</div>
+    <div className="min-h-screen bg-[color:var(--bg)] flex items-center justify-center text-[color:var(--muted)]">Checking...</div>
   )
 
   if (access === 'denied') return (
-    <div className="min-h-screen bg-[#0D0A06] flex items-center justify-center text-[#FDF6E3]">
+    <div className="min-h-screen bg-[color:var(--bg)] flex items-center justify-center text-[color:var(--text)]">
       <div className="text-center">
         <div className="text-5xl mb-4">🔐</div>
-        <h1 className="text-2xl font-bold text-[#FF6B1A] mb-2">Access Denied</h1>
+        <h1 className="text-2xl font-bold text-[color:var(--accent-hot)] mb-2">Access Denied</h1>
         <a href="/" className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-2.5 rounded-lg font-bold uppercase text-sm">Go Home</a>
       </div>
     </div>
@@ -347,29 +347,29 @@ export default function AdminPage() {
   const approvedEntries = contestEntries.filter(e => e.is_approved && e.payment_status === 'paid')
 
   return (
-    <div className="min-h-screen bg-[#0D0A06] text-[#FDF6E3] p-6">
+    <div className="min-h-screen bg-[color:var(--bg)] text-[color:var(--text)] p-6">
       <div className="max-w-5xl mx-auto">
 
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#D4A017]">🎬 CinemaVuru Admin</h1>
-            <p className="text-[#7A6040] text-sm mt-0.5">Platform management dashboard</p>
+            <h1 className="text-2xl font-bold text-[color:var(--accent)]">🎬 CinemaVuru Admin</h1>
+            <p className="text-[color:var(--muted)] text-sm mt-0.5">Platform management dashboard</p>
           </div>
-          <a href="/" className="text-[#7A6040] hover:text-[#D4A017] text-sm transition">← Back to site</a>
+          <a href="/" className="text-[color:var(--muted)] hover:text-[color:var(--accent)] text-sm transition">← Back to site</a>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           {[
-            { label: 'Pending',    value: stats.pending, color: 'text-[#FF6B1A]' },
+            { label: 'Pending',    value: stats.pending, color: 'text-[color:var(--accent-hot)]' },
             { label: 'Live Films', value: stats.active,  color: 'text-green-400'  },
-            { label: 'Users',      value: stats.users,   color: 'text-[#D4A017]'  },
+            { label: 'Users',      value: stats.users,   color: 'text-[color:var(--accent)]'  },
             { label: 'Views',      value: stats.views >= 1000 ? `${(stats.views/1000).toFixed(1)}K` : stats.views, color: 'text-blue-400' },
             { label: 'Errors',     value: stats.errors,  color: stats.errors > 0 ? 'text-red-400' : 'text-green-400' },
           ].map(s => (
-            <div key={s.label} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-3 text-center">
+            <div key={s.label} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-3 text-center">
               <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-[10px] text-[#7A6040] uppercase tracking-wide mt-0.5">{s.label}</div>
+              <div className="text-[10px] text-[color:var(--muted)] uppercase tracking-wide mt-0.5">{s.label}</div>
             </div>
           ))}
         </div>
@@ -383,7 +383,7 @@ export default function AdminPage() {
             { key: 'contest',  label: '🏆 Contest'  },
           ] as { key: MainTab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setMainTab(t.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[#D4A017] border border-[#D4A017]/40' : 'bg-[#1A1208] text-[#7A6040] border border-[#2E2010]'}`}>
+              className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[color:var(--accent)] border border-[color:var(--accent)]/40' : 'bg-[color:var(--surface)] text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
               {t.label}
             </button>
           ))}
@@ -392,7 +392,7 @@ export default function AdminPage() {
             if (mainTab === 'films')    fetchFilms()
             else if (mainTab === 'activity') fetchLogs()
             else if (mainTab === 'contest')  fetchContestEntries()
-          }} className="ml-auto px-4 py-2 rounded-lg text-sm border border-[#2E2010] text-[#7A6040] hover:text-[#D4A017] transition">
+          }} className="ml-auto px-4 py-2 rounded-lg text-sm border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
             ↻ Refresh
           </button>
         </div>
@@ -403,29 +403,29 @@ export default function AdminPage() {
             <div className="flex gap-2 mb-4">
               {(['pending','active','rejected'] as FilmFilter[]).map(s => (
                 <button key={s} onClick={() => setFilmFilter(s)}
-                  className={`px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wide transition capitalize ${filmFilter === s ? 'bg-[#D4A017]/15 text-[#D4A017] border border-[#D4A017]/30' : 'text-[#7A6040] border border-[#2E2010]'}`}>
+                  className={`px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wide transition capitalize ${filmFilter === s ? 'bg-[#D4A017]/15 text-[color:var(--accent)] border border-[color:var(--accent)]/30' : 'text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
                   {s} {filmFilter === s && `(${films.length})`}
                 </button>
               ))}
             </div>
-            {loading ? <div className="text-center py-16 text-[#7A6040]">Loading...</div>
+            {loading ? <div className="text-center py-16 text-[color:var(--muted)]">Loading...</div>
             : films.length === 0 ? (
-              <div className="text-center py-16 text-[#7A6040]"><div className="text-4xl mb-2">✅</div><p>No {filmFilter} films</p></div>
+              <div className="text-center py-16 text-[color:var(--muted)]"><div className="text-4xl mb-2">✅</div><p>No {filmFilter} films</p></div>
             ) : (
               <div className="space-y-3">
                 {films.map(film => (
-                  <div key={film.id} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4">
+                  <div key={film.id} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div className="flex-1">
-                        <h3 className="font-bold text-[#FDF6E3] mb-1">{film.title_en}</h3>
-                        {film.title_te && <p className="text-[#7A6040] text-sm mb-1">{film.title_te}</p>}
-                        <div className="flex gap-2 text-xs text-[#7A6040] flex-wrap mb-2">
-                          <span className="bg-[#2E2010] px-2 py-0.5 rounded">{film.genre}</span>
+                        <h3 className="font-bold text-[color:var(--text)] mb-1">{film.title_en}</h3>
+                        {film.title_te && <p className="text-[color:var(--muted)] text-sm mb-1">{film.title_te}</p>}
+                        <div className="flex gap-2 text-xs text-[color:var(--muted)] flex-wrap mb-2">
+                          <span className="bg-[color:var(--border)] px-2 py-0.5 rounded">{film.genre}</span>
                           <span>{timeAgo(film.created_at)}</span>
                           <span>👁 {film.view_count}</span>
                           <span>♥ {film.like_count}</span>
                           {film.contest_entries && film.contest_entries.length > 0 && (
-                            <span className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-2 py-0.5 rounded font-bold">
+                            <span className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-2 py-0.5 rounded font-bold">
                               🏆 Contest
                             </span>
                           )}
@@ -447,7 +447,7 @@ export default function AdminPage() {
                         </div>
                         {film.video_url && (
                           <a href={film.video_url.replace('/embed/','/watch?v=')} target="_blank" rel="noopener noreferrer"
-                            className="text-[#D4A017] text-xs hover:underline">▶ Preview →</a>
+                            className="text-[color:var(--accent)] text-xs hover:underline">▶ Preview →</a>
                         )}
                       </div>
                       <div className="flex flex-col gap-2">
@@ -477,19 +477,19 @@ export default function AdminPage() {
         {/* ACTIVITY TAB */}
         {mainTab === 'activity' && (
           <>
-            <p className="text-xs text-[#7A6040] mb-4">Last 100 business events</p>
-            {loading ? <div className="text-center py-16 text-[#7A6040]">Loading...</div>
-            : logs.length === 0 ? <div className="text-center py-16 text-[#7A6040]"><p className="text-3xl mb-2">📋</p><p className="text-sm">No activity yet</p></div>
+            <p className="text-xs text-[color:var(--muted)] mb-4">Last 100 business events</p>
+            {loading ? <div className="text-center py-16 text-[color:var(--muted)]">Loading...</div>
+            : logs.length === 0 ? <div className="text-center py-16 text-[color:var(--muted)]"><p className="text-3xl mb-2">📋</p><p className="text-sm">No activity yet</p></div>
             : (
-              <div className="bg-[#1A1208] border border-[#2E2010] rounded-xl overflow-hidden">
+              <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl overflow-hidden">
                 {logs.map((log, i) => {
-                  const style = EVENT_STYLE[log.event_type] ?? { color: 'text-[#7A6040]', label: log.event_type }
+                  const style = EVENT_STYLE[log.event_type] ?? { color: 'text-[color:var(--muted)]', label: log.event_type }
                   return (
-                    <div key={log.id} className={`flex items-center gap-4 px-5 py-3 text-sm ${i !== 0 ? 'border-t border-[#2E2010]' : ''}`}>
+                    <div key={log.id} className={`flex items-center gap-4 px-5 py-3 text-sm ${i !== 0 ? 'border-t border-[color:var(--border)]' : ''}`}>
                       <span className={`font-semibold text-xs uppercase tracking-wide w-28 flex-shrink-0 ${style.color}`}>{style.label}</span>
-                      <span className="text-[#FDF6E3] flex-1 line-clamp-1">{log.films?.title_en ?? log.metadata?.title ?? log.metadata?.name ?? '—'}</span>
-                      <span className="text-[#7A6040] text-xs flex-shrink-0">{log.profiles?.name ?? 'system'}</span>
-                      <span className="text-[#4A3020] text-xs flex-shrink-0 w-20 text-right">{timeAgo(log.created_at)}</span>
+                      <span className="text-[color:var(--text)] flex-1 line-clamp-1">{log.films?.title_en ?? log.metadata?.title ?? log.metadata?.name ?? '—'}</span>
+                      <span className="text-[color:var(--muted)] text-xs flex-shrink-0">{log.profiles?.name ?? 'system'}</span>
+                      <span className="text-[color:var(--faint)] text-xs flex-shrink-0 w-20 text-right">{timeAgo(log.created_at)}</span>
                     </div>
                   )
                 })}
@@ -501,7 +501,7 @@ export default function AdminPage() {
         {/* ERROR LOGS TAB */}
         {mainTab === 'errors' && (
           <>
-            <p className="text-xs text-[#7A6040] mb-4">Technical debug logs — auto-purged after 7 days.</p>
+            <p className="text-xs text-[color:var(--muted)] mb-4">Technical debug logs — auto-purged after 7 days.</p>
             <ErrorLogViewer />
           </>
         )}
@@ -511,15 +511,15 @@ export default function AdminPage() {
           <>
             {/* Active contest banner */}
             {activeContest ? (
-              <div className="bg-[#1A0A00] border border-[#D4A017]/30 rounded-xl p-4 mb-5">
+              <div className="bg-[color:var(--surface)] border border-[color:var(--accent)]/30 rounded-xl p-4 mb-5">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                       <span className="text-xs font-bold uppercase tracking-widest text-green-400">Active — Season {activeContest.season_number}</span>
                     </div>
-                    <h3 className="font-bold text-[#FDF6E3]">{activeContest.title}</h3>
-                    <div className="flex gap-4 mt-1 text-xs text-[#7A6040]">
+                    <h3 className="font-bold text-[color:var(--text)]">{activeContest.title}</h3>
+                    <div className="flex gap-4 mt-1 text-xs text-[color:var(--muted)]">
                       <span>🥇 {formatPrize(activeContest.prize_1st)}</span>
                       <span>🥈 {formatPrize(activeContest.prize_2nd)}</span>
                       <span>🥉 {formatPrize(activeContest.prize_3rd)}</span>
@@ -541,13 +541,13 @@ export default function AdminPage() {
                           setActiveContest(prev => prev ? { ...prev, status: 'voting' } : null)
                           alert('✅ Contest is now in Voting phase! Vote buttons are live.')
                         }}
-                        className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
+                        className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
                         🗳️ Switch to Voting Phase
                       </button>
                     )}
                     <button
                       onClick={() => setShowClosePanel(p => !p)}
-                      className="bg-[#FF6B1A]/20 border border-[#FF6B1A]/40 text-[#FF6B1A] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#FF6B1A]/30 transition">
+                      className="bg-[#FF6B1A]/20 border border-[color:var(--accent-hot)]/40 text-[color:var(--accent-hot)] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#FF6B1A]/30 transition">
                       🏁 Close Contest & Pick Winners
                     </button>
                     {approvedEntries.length === 0 && (
@@ -575,8 +575,8 @@ export default function AdminPage() {
 
                 {/* Close contest panel */}
                 {showClosePanel && (
-                  <div className="mt-4 pt-4 border-t border-[#2E2010]">
-                    <p className="text-xs text-[#7A6040] mb-4">
+                  <div className="mt-4 pt-4 border-t border-[color:var(--border)]">
+                    <p className="text-xs text-[color:var(--muted)] mb-4">
                       Select the top 3 winning films. Only approved + paid entries are shown, sorted by score.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -586,13 +586,13 @@ export default function AdminPage() {
                         { label: '🥉 3rd Place', value: winner3, setter: setWinner3 },
                       ].map((w) => (
                         <div key={w.label}>
-                          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+                          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
                             {w.label}
                           </label>
                           <select
                             value={w.value}
                             onChange={e => w.setter(e.target.value)}
-                            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-3 py-2 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-3 py-2 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                           >
                             <option value="">— Select film —</option>
                             {approvedEntries.map(e => (
@@ -613,7 +613,7 @@ export default function AdminPage() {
                       </button>
                       <button
                         onClick={() => setShowClosePanel(false)}
-                        className="border border-[#2E2010] text-[#7A6040] px-4 py-2 rounded-lg text-sm hover:text-[#FDF6E3] transition">
+                        className="border border-[color:var(--border)] text-[color:var(--muted)] px-4 py-2 rounded-lg text-sm hover:text-[color:var(--text)] transition">
                         Cancel
                       </button>
                     </div>
@@ -621,110 +621,110 @@ export default function AdminPage() {
                 )}
               </div>
             ) : (
-              <div className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4 mb-5">
+              <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 mb-5">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
-                    <p className="text-[#7A6040] text-sm mb-1">No active contest running.</p>
-                    <p className="text-[#4A3020] text-xs">Start a new season to accept entries.</p>
+                    <p className="text-[color:var(--muted)] text-sm mb-1">No active contest running.</p>
+                    <p className="text-[color:var(--faint)] text-xs">Start a new season to accept entries.</p>
                   </div>
                   <button
                     onClick={() => setShowCreatePanel(p => !p)}
-                    className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
+                    className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
                     ➕ Create New Contest
                   </button>
                 </div>
 
                 {showCreatePanel && (
-                  <div className="mt-4 pt-4 border-t border-[#2E2010]">
-                    <h3 className="text-sm font-bold text-[#D4A017] uppercase tracking-wide mb-4">
+                  <div className="mt-4 pt-4 border-t border-[color:var(--border)]">
+                    <h3 className="text-sm font-bold text-[color:var(--accent)] uppercase tracking-wide mb-4">
                       New Contest Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Contest Title *</label>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Contest Title *</label>
                         <input
                           type="text"
                           value={newContestTitle}
                           onChange={e => setNewContestTitle(e.target.value)}
                           placeholder="e.g. CinemaVuru Season 1"
-                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Season Number *</label>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Season Number *</label>
                         <input
                           type="number"
                           value={newSeasonNumber}
                           onChange={e => setNewSeasonNumber(Number(e.target.value))}
                           min={1}
-                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Entry Fee (₹) *</label>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Entry Fee (₹) *</label>
                         <input
                           type="number"
                           value={newEntryFee}
                           onChange={e => setNewEntryFee(Number(e.target.value))}
                           min={0}
-                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">Submissions Close *</label>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Submissions Close *</label>
                         <input
                           type="datetime-local"
                           value={newSubsCloseAt}
                           onChange={e => setNewSubsCloseAt(e.target.value)}
-                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🥇 1st Prize (₹)</label>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">🥇 1st Prize (₹)</label>
                         <input
                           type="number"
                           value={newPrize1}
                           onChange={e => setNewPrize1(Number(e.target.value))}
                           min={0}
-                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🥈 2nd Prize (₹)</label>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">🥈 2nd Prize (₹)</label>
                         <input
                           type="number"
                           value={newPrize2}
                           onChange={e => setNewPrize2(Number(e.target.value))}
                           min={0}
-                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🥉 3rd Prize (₹)</label>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">🥉 3rd Prize (₹)</label>
                         <input
                           type="number"
                           value={newPrize3}
                           onChange={e => setNewPrize3(Number(e.target.value))}
                           min={0}
-                          className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
                       </div>
                       <div>
-                      <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">🗳️ Min Votes to Win</label>
+                      <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">🗳️ Min Votes to Win</label>
                       <input
                         type="number"
                         value={newMinVotes}
                         onChange={e => setNewMinVotes(Number(e.target.value))}
                         min={0}
-                        className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-2.5 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+                        className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                       />
-                      <p className="text-xs text-[#4A3020] mt-1">Minimum votes a film must have to be eligible for prize money.</p>
+                      <p className="text-xs text-[color:var(--faint)] mt-1">Minimum votes a film must have to be eligible for prize money.</p>
                       </div>
                     </div>
 
-                    <div className="bg-[#0D0A06] border border-[#D4A017]/20 rounded-lg p-3 mb-4 text-xs text-[#7A6040]">
-                      Prize Pool: <span className="text-[#D4A017] font-bold">₹{(newPrize1 + newPrize2 + newPrize3).toLocaleString('en-IN')}</span>
-                      &nbsp;·&nbsp; Entry Fee: <span className="text-[#FF6B1A] font-bold">₹{newEntryFee}</span>
+                    <div className="bg-[color:var(--bg)] border border-[color:var(--accent)]/20 rounded-lg p-3 mb-4 text-xs text-[color:var(--muted)]">
+                      Prize Pool: <span className="text-[color:var(--accent)] font-bold">₹{(newPrize1 + newPrize2 + newPrize3).toLocaleString('en-IN')}</span>
+                      &nbsp;·&nbsp; Entry Fee: <span className="text-[color:var(--accent-hot)] font-bold">₹{newEntryFee}</span>
                       &nbsp;·&nbsp; Break even at <span className="text-white font-bold">{newEntryFee > 0 ? Math.ceil((newPrize1 + newPrize2 + newPrize3) / newEntryFee) : '∞'} entries</span>
                     </div>
 
@@ -737,7 +737,7 @@ export default function AdminPage() {
                       </button>
                       <button
                         onClick={() => setShowCreatePanel(false)}
-                        className="border border-[#2E2010] text-[#7A6040] px-4 py-2 rounded-lg text-sm hover:text-[#FDF6E3] transition">
+                        className="border border-[color:var(--border)] text-[color:var(--muted)] px-4 py-2 rounded-lg text-sm hover:text-[color:var(--text)] transition">
                         Cancel
                       </button>
                     </div>
@@ -746,30 +746,30 @@ export default function AdminPage() {
               </div>
             )}
 
-            <p className="text-xs text-[#7A6040] mb-4">
+            <p className="text-xs text-[color:var(--muted)] mb-4">
               Contest entries — approve after verifying payment is confirmed.
             </p>
             {contestLoading
-              ? <div className="text-center py-16 text-[#7A6040]">Loading...</div>
+              ? <div className="text-center py-16 text-[color:var(--muted)]">Loading...</div>
               : contestEntries.length === 0
-              ? <div className="text-center py-16 text-[#7A6040]"><div className="text-4xl mb-2">🏆</div><p>No contest entries yet</p></div>
+              ? <div className="text-center py-16 text-[color:var(--muted)]"><div className="text-4xl mb-2">🏆</div><p>No contest entries yet</p></div>
               : (
                 <div className="space-y-3">
                   {contestEntries.map((entry, i) => (
-                    <div key={entry.id} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4">
+                    <div key={entry.id} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             {activeContest?.status === 'voting' && i === 0 && <span className="text-sm">🥇</span>}
                             {activeContest?.status === 'voting' && i === 1 && <span className="text-sm">🥈</span>}
                             {activeContest?.status === 'voting' && i === 2 && <span className="text-sm">🥉</span>}
-                            {activeContest?.status === 'open' && <span className="text-xs text-[#4A3020] font-bold">#{i + 1}</span>}
-                            <h3 className="font-bold text-[#FDF6E3]">
+                            {activeContest?.status === 'open' && <span className="text-xs text-[color:var(--faint)] font-bold">#{i + 1}</span>}
+                            <h3 className="font-bold text-[color:var(--text)]">
                               {entry.films?.title_en ?? 'Unknown Film'}
                             </h3>
                           </div>
-                          <p className="text-[#7A6040] text-xs mb-2">
-                            by {entry.profiles?.name ?? 'Unknown'} · Score: <span className="text-[#D4A017] font-bold">{entry.contest_score}</span>
+                          <p className="text-[color:var(--muted)] text-xs mb-2">
+                            by {entry.profiles?.name ?? 'Unknown'} · Score: <span className="text-[color:var(--accent)] font-bold">{entry.contest_score}</span>
                           </p>
                           <div className="flex gap-2 flex-wrap">
                             <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
@@ -787,12 +787,12 @@ export default function AdminPage() {
                               {entry.is_approved ? '✅ Approved' : '⏳ Pending'}
                             </span>
                             {entry.payment_ref && (
-                              <span className="text-xs bg-[#D4A017]/10 border border-[#D4A017]/20 text-[#D4A017] px-2 py-0.5 rounded">
+                              <span className="text-xs bg-[#D4A017]/10 border border-[color:var(--accent)]/20 text-[color:var(--accent)] px-2 py-0.5 rounded">
                                 UTR: {entry.payment_ref}
                               </span>
                             )}
                             {entry.razorpay_payment_id && (
-                              <span className="text-xs text-[#4A3020]">
+                              <span className="text-xs text-[color:var(--faint)]">
                                 ID: {entry.razorpay_payment_id}
                               </span>
                             )}
@@ -826,7 +826,7 @@ export default function AdminPage() {
                                 e.id === entry.id ? { ...e, payment_status: 'paid' } : e
                               ))
                             }}
-                            className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#D4A017]/30 transition">
+                            className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#D4A017]/30 transition">
                               💳 Verify & Mark Paid
                             </button>
                           )}

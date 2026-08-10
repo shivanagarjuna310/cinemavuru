@@ -114,7 +114,7 @@ const GENRE_STYLE: Record<string, { emoji: string; gradient: string }> = {
   Documentary: { emoji: '🏛️', gradient: 'from-[#1A1A4E] to-[#8B1A1A]' },
   Thriller:    { emoji: '🌊', gradient: 'from-[#0A1A2E] to-[#1A4E8B]'  },
   Family:      { emoji: '🎭', gradient: 'from-[#1A1A4E] to-[#FF6B1A]' },
-  Default:     { emoji: '🎬', gradient: 'from-[#1A1208] to-[#2E2010]'  },
+  Default:     { emoji: '🎬', gradient: 'from-[color:var(--surface)] to-[color:var(--border)]'  },
 }
 
 export default async function FilmPage({
@@ -137,23 +137,23 @@ export default async function FilmPage({
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
         <div className="max-w-4xl mx-auto px-6 py-8">
 
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-6">
-            <Link href="/" className="hover:text-[#D4A017] transition">Home</Link>
+          <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] uppercase tracking-widest mb-6">
+            <Link href="/" className="hover:text-[color:var(--accent)] transition">Home</Link>
             <span>›</span>
             <Link href={`/${stateSlug}/${districtSlug}`}
-              className="hover:text-[#D4A017] transition capitalize">
+              className="hover:text-[color:var(--accent)] transition capitalize">
               {districtSlug}
             </Link>
             <span>›</span>
-            <span className="text-[#D4A017] line-clamp-1">{film.title_en}</span>
+            <span className="text-[color:var(--accent)] line-clamp-1">{film.title_en}</span>
           </div>
 
           {/* Video player */}
-          <div className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br ${style.gradient} mb-6 border border-[#2E2010]`}>
+          <div className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br ${style.gradient} mb-6 border border-[color:var(--border)]`}>
             {film.video_url ? (
               <iframe
                 src={`${film.video_url}?rel=0`}
@@ -164,7 +164,7 @@ export default async function FilmPage({
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center gap-4">
                 <div className="text-8xl">{style.emoji}</div>
-                <p className="text-[#FDF6E3]/60 text-sm">Video coming soon</p>
+                <p className="text-[color:var(--text)]/60 text-sm">Video coming soon</p>
               </div>
             )}
           </div>
@@ -173,17 +173,17 @@ export default async function FilmPage({
           <div className="mb-6">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-[#FDF6E3] leading-tight mb-1">
+                <h1 className="text-2xl md:text-3xl font-bold text-[color:var(--text)] leading-tight mb-1">
                   {film.title_en}
                 </h1>
                 {film.title_te && (
-                  <p className="text-[#7A6040] text-base mb-2">{film.title_te}</p>
+                  <p className="text-[color:var(--muted)] text-base mb-2">{film.title_te}</p>
                 )}
-                <div className="flex items-center gap-3 text-sm text-[#7A6040] flex-wrap">
+                <div className="flex items-center gap-3 text-sm text-[color:var(--muted)] flex-wrap">
                   {(film as any).profiles?.name && (
                     <>
                       <Link href={`/creator/${(film as any).profiles.id}`}
-                        className="text-[#D4A017] hover:underline font-semibold">
+                        className="text-[color:var(--accent)] hover:underline font-semibold">
                         {(film as any).profiles.name}
                       </Link>
                       <span>·</span>
@@ -195,16 +195,16 @@ export default async function FilmPage({
                   <span>·</span>
                   <span>{timeAgo(film.created_at)}</span>
                   <span>·</span>
-                  <span className="text-[#FF6B1A] font-semibold capitalize">{districtSlug}</span>
+                  <span className="text-[color:var(--accent-hot)] font-semibold capitalize">{districtSlug}</span>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-[#D4A017]">
+                <div className="text-2xl font-bold text-[color:var(--accent)]">
                   {film.view_count >= 1000
                     ? `${(film.view_count / 1000).toFixed(1)}K`
                     : film.view_count}
                 </div>
-                <div className="text-xs text-[#7A6040] uppercase tracking-wide">Views</div>
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
               </div>
             </div>
           </div>
@@ -219,11 +219,11 @@ export default async function FilmPage({
 
           {/* Description */}
           {film.description && (
-            <div className="my-6 p-4 bg-[#1A1208] border border-[#2E2010] rounded-xl">
-              <h3 className="text-sm font-bold text-[#D4A017] uppercase tracking-wide mb-2">
+            <div className="my-6 p-4 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl">
+              <h3 className="text-sm font-bold text-[color:var(--accent)] uppercase tracking-wide mb-2">
                 About this film
               </h3>
-              <p className="text-[#7A6040] leading-relaxed text-sm">{film.description}</p>
+              <p className="text-[color:var(--muted)] leading-relaxed text-sm">{film.description}</p>
             </div>
           )}
 

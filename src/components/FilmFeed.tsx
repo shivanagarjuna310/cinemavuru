@@ -39,7 +39,7 @@ const GENRE_STYLE: Record<string, { emoji: string; gradient: string }> = {
   Family:      { emoji: '🎭', gradient: 'bg-gradient-to-br from-[#1A1A4E] to-[#FF6B1A]' },
   Action:      { emoji: '⚡', gradient: 'bg-gradient-to-br from-[#1A0A2E] to-[#8B1A4E]' },
   Romance:     { emoji: '🌸', gradient: 'bg-gradient-to-br from-[#2E0A1A] to-[#8B1A3A]' },
-  Default:     { emoji: '🎬', gradient: 'bg-gradient-to-br from-[#1A1208] to-[#2E2010]' },
+  Default:     { emoji: '🎬', gradient: 'bg-gradient-to-br from-[color:var(--surface)] to-[color:var(--border)]' },
 }
 
 const SORT_TABS = [
@@ -102,19 +102,19 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
 
       {/* Sort bar */}
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-        <p className="text-sm text-[#7A6040]">
-          Showing <span className="text-[#D4A017] font-semibold">{films.length}</span> films
+        <p className="text-sm text-[color:var(--muted)]">
+          Showing <span className="text-[color:var(--accent)] font-semibold">{films.length}</span> films
         </p>
 
-        <div className="flex gap-1 bg-[#1A1208] border border-[#2E2010] rounded-lg p-1">
+        <div className="flex gap-1 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg p-1">
           {SORT_TABS.map(tab => (
             <button
               key={tab.key}
               onClick={() => handleSort(tab.key)}
               className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wide transition ${
                 currentSort === tab.key
-                  ? 'text-[#D4A017] bg-[#D4A017]/10'
-                  : 'text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10'
+                  ? 'text-[color:var(--accent)] bg-[#D4A017]/10'
+                  : 'text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[#D4A017]/10'
               }`}
             >
               {tab.label}
@@ -125,7 +125,7 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
 
       {/* Empty state */}
       {films.length === 0 && (
-        <div className="text-center py-24 text-[#7A6040]">
+        <div className="text-center py-24 text-[color:var(--muted)]">
           <div className="text-5xl mb-4">🎬</div>
           <p className="text-xl font-semibold mb-2">No films yet</p>
           <p className="text-sm">Be the first filmmaker to upload from this district!</p>

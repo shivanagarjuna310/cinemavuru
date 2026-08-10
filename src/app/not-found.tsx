@@ -7,7 +7,7 @@ export default function NotFound() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0D0A06',
+      background: 'var(--bg)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -53,7 +53,7 @@ export default function NotFound() {
         {/* English subtitle */}
         <p style={{
           fontSize: '16px',
-          color: '#7A6040',
+          color: 'var(--muted)',
           marginBottom: '40px',
           maxWidth: '360px',
         }}>
@@ -78,7 +78,7 @@ export default function NotFound() {
         {/* Tagline */}
         <p style={{
           fontSize: '13px',
-          color: '#4A3020',
+          color: 'var(--faint)',
           marginTop: '40px',
         }}>
           CinemaVuru — Hyperlocal Short Films from Telangana

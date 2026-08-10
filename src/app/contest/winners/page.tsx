@@ -66,7 +66,7 @@ export default async function HallOfFamePage() {
   )
 
   const medals = [
-    { key: 'film1', emoji: '🥇', label: '1st Place', color: '#D4A017', bg: 'bg-[#D4A017]/10 border-[#D4A017]/30' },
+    { key: 'film1', emoji: '🥇', label: '1st Place', color: '#D4A017', bg: 'bg-[#D4A017]/10 border-[color:var(--accent)]/30' },
     { key: 'film2', emoji: '🥈', label: '2nd Place', color: '#9CA3AF', bg: 'bg-[#9CA3AF]/10 border-[#9CA3AF]/30' },
     { key: 'film3', emoji: '🥉', label: '3rd Place', color: '#CD7F32', bg: 'bg-[#CD7F32]/10 border-[#CD7F32]/30' },
   ]
@@ -74,23 +74,23 @@ export default async function HallOfFamePage() {
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
 
         {/* Header */}
-        <div className="bg-gradient-to-b from-[#1A0A00] to-transparent border-b border-[#2E2010]">
+        <div className="bg-gradient-to-b from-[color:var(--surface)] to-transparent border-b border-[color:var(--border)]">
           <div className="max-w-5xl mx-auto px-6 py-10">
-            <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-4">
-              <Link href="/" className="hover:text-[#D4A017] transition">Home</Link>
+            <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] uppercase tracking-widest mb-4">
+              <Link href="/" className="hover:text-[color:var(--accent)] transition">Home</Link>
               <span>›</span>
-              <Link href="/contest" className="hover:text-[#D4A017] transition">Contest</Link>
+              <Link href="/contest" className="hover:text-[color:var(--accent)] transition">Contest</Link>
               <span>›</span>
-              <span className="text-[#D4A017]">Hall of Fame</span>
+              <span className="text-[color:var(--accent)]">Hall of Fame</span>
             </div>
             <div className="text-5xl mb-4">🏛️</div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#FDF6E3] mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-[color:var(--text)] mb-2">
               Hall of Fame
             </h1>
-            <p className="text-[#7A6040] text-sm max-w-xl leading-relaxed">
+            <p className="text-[color:var(--muted)] text-sm max-w-xl leading-relaxed">
               The finest short films from Telangana — top 3 winners from every CinemaVuru contest season.
             </p>
           </div>
@@ -102,8 +102,8 @@ export default async function HallOfFamePage() {
           {contestsWithFilms.length === 0 ? (
             <div className="text-center py-24">
               <div className="text-6xl mb-4">🏆</div>
-              <h2 className="text-xl font-bold text-[#D4A017] mb-2">No winners yet</h2>
-              <p className="text-[#7A6040] text-sm mb-6">
+              <h2 className="text-xl font-bold text-[color:var(--accent)] mb-2">No winners yet</h2>
+              <p className="text-[color:var(--muted)] text-sm mb-6">
                 Winners will appear here once the first contest concludes.
               </p>
               <Link href="/contest"
@@ -120,16 +120,16 @@ export default async function HallOfFamePage() {
                   <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                     <div>
                       <div className="flex items-center gap-3">
-                        <span className="bg-[#D4A017]/20 border border-[#D4A017]/40 text-[#D4A017] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+                        <span className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full">
                           Season {contest.season_number}
                         </span>
                         {contest.ended_at && (
-                          <span className="text-xs text-[#7A6040]">
+                          <span className="text-xs text-[color:var(--muted)]">
                             {formatDate(contest.ended_at)}
                           </span>
                         )}
                       </div>
-                      <h2 className="text-xl font-bold text-[#FDF6E3] mt-2">
+                      <h2 className="text-xl font-bold text-[color:var(--text)] mt-2">
                         {contest.title}
                       </h2>
                     </div>
@@ -140,8 +140,8 @@ export default async function HallOfFamePage() {
                         { label: '🥉', amount: contest.prize_3rd },
                       ].map((p, i) => (
                         <div key={i} className="text-center">
-                          <div className="text-[#D4A017] font-bold">{formatPrize(p.amount)}</div>
-                          <div className="text-xs text-[#7A6040]">{p.label}</div>
+                          <div className="text-[color:var(--accent)] font-bold">{formatPrize(p.amount)}</div>
+                          <div className="text-xs text-[color:var(--muted)]">{p.label}</div>
                         </div>
                       ))}
                     </div>
@@ -165,7 +165,7 @@ export default async function HallOfFamePage() {
                             <Link href={`/telangana/hyderabad/film/${film.id}`}
                               className="block group">
                               {getThumbnail(film.video_url ?? null) && (
-                                <div className="w-full aspect-video rounded-lg overflow-hidden mb-3 bg-[#0D0A06]">
+                                <div className="w-full aspect-video rounded-lg overflow-hidden mb-3 bg-[color:var(--bg)]">
                                   <img
                                     src={getThumbnail(film.video_url ?? null)!}
                                     alt={film.title_en}
@@ -173,13 +173,13 @@ export default async function HallOfFamePage() {
                                   />
                                 </div>
                               )}
-                              <h3 className="font-bold text-[#FDF6E3] group-hover:text-[#D4A017] transition leading-tight mb-1">
+                              <h3 className="font-bold text-[color:var(--text)] group-hover:text-[color:var(--accent)] transition leading-tight mb-1">
                                 {film.title_en}
                               </h3>
                               {film.title_te && (
-                                <p className="text-xs text-[#7A6040] mb-3">{film.title_te}</p>
+                                <p className="text-xs text-[color:var(--muted)] mb-3">{film.title_te}</p>
                               )}
-                              <div className="flex gap-4 text-xs text-[#7A6040]">
+                              <div className="flex gap-4 text-xs text-[color:var(--muted)]">
                                 {film.genre && <span>{film.genre}</span>}
                                 <span>👁 {film.view_count ?? 0}</span>
                                 <span>♥ {film.like_count ?? 0}</span>
@@ -190,7 +190,7 @@ export default async function HallOfFamePage() {
                               </div>
                             </Link>
                           ) : (
-                            <p className="text-sm text-[#7A6040] italic">
+                            <p className="text-sm text-[color:var(--muted)] italic">
                               Winner not announced yet
                             </p>
                           )}
@@ -200,7 +200,7 @@ export default async function HallOfFamePage() {
                   </div>
 
                   {/* Divider */}
-                  <div className="border-b border-[#2E2010] mt-10" />
+                  <div className="border-b border-[color:var(--border)] mt-10" />
                 </div>
               ))}
             </div>

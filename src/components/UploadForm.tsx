@@ -175,7 +175,7 @@ export default function UploadForm() {
   // Still checking auth
   if (checkingAuth) {
     return (
-      <div className="text-center py-20 text-[#7A6040]">
+      <div className="text-center py-20 text-[color:var(--muted)]">
         <div className="text-3xl mb-3">⏳</div>
         <p>Checking login status...</p>
       </div>
@@ -185,10 +185,10 @@ export default function UploadForm() {
   // Not logged in
   if (!userId) {
     return (
-      <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8 text-center">
+      <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8 text-center">
         <div className="text-4xl mb-4">🔐</div>
-        <h2 className="text-xl font-bold text-[#FDF6E3] mb-2">Login Required</h2>
-        <p className="text-[#7A6040] mb-6 text-sm">
+        <h2 className="text-xl font-bold text-[color:var(--text)] mb-2">Login Required</h2>
+        <p className="text-[color:var(--muted)] mb-6 text-sm">
           You need to be logged in to upload a film.
         </p>
         <button
@@ -204,17 +204,17 @@ export default function UploadForm() {
   // Success state
   if (status === 'success') {
     return (
-      <div className="bg-[#1A1208] border border-green-700/30 rounded-2xl p-8 text-center">
+      <div className="bg-[color:var(--surface)] border border-green-700/30 rounded-2xl p-8 text-center">
         <div className="text-5xl mb-4">🎬</div>
         <h2 className="text-2xl font-bold text-green-400 mb-3">Film Submitted!</h2>
-        <p className="text-[#7A6040] mb-2">{message}</p>
-        <p className="text-[#7A6040] text-sm mb-8">
+        <p className="text-[color:var(--muted)] mb-2">{message}</p>
+        <p className="text-[color:var(--muted)] text-sm mb-8">
           Once approved, your film will appear on your district film feed.
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
           <button
             onClick={() => setStatus('idle')}
-            className="border border-[#D4A017]/40 text-[#D4A017] px-6 py-2.5 rounded-lg font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition text-sm"
+            className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-6 py-2.5 rounded-lg font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition text-sm"
           >
             Submit Another Film
           </button>
@@ -230,14 +230,14 @@ export default function UploadForm() {
   }
 
   return (
-    <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
+    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8">
 
       <form onSubmit={handleSubmit} className="space-y-5">
 
         {/* Title English */}
         <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            Film Title (English) <span className="text-[#FF6B1A]">*</span>
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+            Film Title (English) <span className="text-[color:var(--accent-hot)]">*</span>
           </label>
           <input
             type="text"
@@ -246,14 +246,14 @@ export default function UploadForm() {
             placeholder="e.g. The Last Rain"
             required
             maxLength={200}
-            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
           />
         </div>
 
         {/* Title Telugu */}
         <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            Film Title (Telugu) <span className="text-[#4A3020]">— Optional</span>
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+            Film Title (Telugu) <span className="text-[color:var(--faint)]">— Optional</span>
           </label>
           <input
             type="text"
@@ -261,20 +261,20 @@ export default function UploadForm() {
             onChange={e => setTitleTe(e.target.value)}
             placeholder="తెలుగు శీర్షిక"
             maxLength={200}
-            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
           />
         </div>
 
         {/* Genre */}
         <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            Genre <span className="text-[#FF6B1A]">*</span>
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+            Genre <span className="text-[color:var(--accent-hot)]">*</span>
           </label>
           <select
             value={genre}
             onChange={e => setGenre(e.target.value)}
             required
-            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
           >
             <option value="" disabled>Select a genre</option>
             {GENRES.map(g => (
@@ -285,8 +285,8 @@ export default function UploadForm() {
 
         {/* Description */}
         <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            Description <span className="text-[#4A3020]">— Optional</span>
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+            Description <span className="text-[color:var(--faint)]">— Optional</span>
           </label>
           <textarea
             value={description}
@@ -294,14 +294,14 @@ export default function UploadForm() {
             placeholder="Tell viewers what your film is about..."
             rows={3}
             maxLength={1000}
-            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition resize-none"
+            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition resize-none"
           />
         </div>
 
         {/* YouTube URL */}
         <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            YouTube Video URL <span className="text-[#FF6B1A]">*</span>
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+            YouTube Video URL <span className="text-[color:var(--accent-hot)]">*</span>
           </label>
           <input
             type="url"
@@ -309,31 +309,31 @@ export default function UploadForm() {
             onChange={e => handleUrlChange(e.target.value)}
             placeholder="https://youtu.be/your-video-id  or  https://youtube.com/watch?v=..."
             required
-            className={`w-full bg-[#0D0A06] border rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none transition ${
+            className={`w-full bg-[color:var(--bg)] border rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none transition ${
               urlError
                 ? 'border-red-700/60 focus:border-red-500'
-                : 'border-[#2E2010] focus:border-[#D4A017]/50'
+                : 'border-[color:var(--border)] focus:border-[color:var(--accent)]/50'
             }`}
           />
           {urlError && (
             <p className="text-red-400 text-xs mt-1.5">{urlError}</p>
           )}
-          <p className="text-[#4A3020] text-xs mt-1.5">
-            Upload your film to YouTube as <strong className="text-[#7A6040]">Unlisted</strong> first,
+          <p className="text-[color:var(--faint)] text-xs mt-1.5">
+            Upload your film to YouTube as <strong className="text-[color:var(--muted)]">Unlisted</strong> first,
             then paste the link here.
           </p>
         </div>
 
         {/* District dropdown */}
         <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
-            District <span className="text-[#FF6B1A]">*</span>
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+            District <span className="text-[color:var(--accent-hot)]">*</span>
           </label>
           <select
             value={districtId}
             onChange={e => setDistrictId(e.target.value)}
             required
-            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm focus:outline-none focus:border-[#D4A017]/50 transition"
+            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
           >
             <option value="">— Select your district —</option>
             {districts.map(d => (
@@ -358,7 +358,7 @@ export default function UploadForm() {
           {status === 'loading' ? '⏳ Submitting...' : '🎬 Submit Film for Review'}
         </button>
 
-        <p className="text-center text-xs text-[#4A3020]">
+        <p className="text-center text-xs text-[color:var(--faint)]">
           By submitting, you confirm this is your original work and you have rights to share it.
         </p>
 

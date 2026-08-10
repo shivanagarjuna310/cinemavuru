@@ -121,7 +121,7 @@ export default function CommentSection({ filmId, initialComments }: Props) {
   return (
     <div className="mt-8">
 
-      <h3 className="text-lg font-bold text-[#D4A017] mb-5">
+      <h3 className="text-lg font-bold text-[color:var(--accent)] mb-5">
         💬 Comments ({comments.length})
       </h3>
 
@@ -149,7 +149,7 @@ export default function CommentSection({ filmId, initialComments }: Props) {
             disabled={!userId}
             rows={2}
             maxLength={1000}
-            className="w-full bg-[#1A1208] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] resize-none focus:outline-none focus:border-[#D4A017]/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] resize-none focus:outline-none focus:border-[color:var(--accent)]/40 transition disabled:opacity-50 disabled:cursor-not-allowed"
           />
 
           {error && (
@@ -158,12 +158,12 @@ export default function CommentSection({ filmId, initialComments }: Props) {
 
           <div className="flex items-center justify-between mt-2">
             {userId ? (
-              <p className="text-xs text-[#4A3020]">
+              <p className="text-xs text-[color:var(--faint)]">
                 Enter to post · Shift+Enter for new line
               </p>
             ) : (
-              <p className="text-xs text-[#4A3020]">
-                <a href="/auth" className="text-[#D4A017] hover:underline">
+              <p className="text-xs text-[color:var(--faint)]">
+                <a href="/auth" className="text-[color:var(--accent)] hover:underline">
                   Login
                 </a>{' '}
                 to join the conversation
@@ -182,7 +182,7 @@ export default function CommentSection({ filmId, initialComments }: Props) {
 
       {/* Comments list */}
       {comments.length === 0 ? (
-        <div className="text-center py-10 text-[#4A3020]">
+        <div className="text-center py-10 text-[color:var(--faint)]">
           <p className="text-2xl mb-2">💬</p>
           <p className="text-sm">No comments yet. Be the first!</p>
         </div>
@@ -190,19 +190,19 @@ export default function CommentSection({ filmId, initialComments }: Props) {
         <div className="space-y-5">
           {comments.map(c => (
             <div key={c.id} className="flex gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#2E2010] flex items-center justify-center text-[#D4A017] font-bold text-sm flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-[color:var(--border)] flex items-center justify-center text-[color:var(--accent)] font-bold text-sm flex-shrink-0">
                 {getInitial(c.profiles?.name)}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-bold text-[#D4A017]">
+                  <span className="text-sm font-bold text-[color:var(--accent)]">
                     {c.profiles?.name ?? 'Anonymous'}
                   </span>
-                  <span className="text-xs text-[#4A3020]">
+                  <span className="text-xs text-[color:var(--faint)]">
                     {timeAgo(c.created_at)}
                   </span>
                 </div>
-                <p className="text-sm text-[#FDF6E3]/80 leading-relaxed">
+                <p className="text-sm text-[color:var(--text)]/80 leading-relaxed">
                   {c.text}
                 </p>
               </div>
