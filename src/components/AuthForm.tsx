@@ -10,7 +10,7 @@ type Status = 'idle' | 'loading' | 'success' | 'error'
 
 export default function AuthForm() {
   const router = useRouter()
-
+//routes
   const [tab,      setTab]      = useState<Tab>('login')
   const [name,     setName]     = useState('')
   const [email,    setEmail]    = useState('')
