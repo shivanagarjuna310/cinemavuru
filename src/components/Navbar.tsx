@@ -6,12 +6,23 @@ import Link                    from 'next/link'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
 import type { User }           from '@supabase/supabase-js'
+import ThemeToggle             from './ThemeToggle'
 
+type DistrictRel = { slug: string; states: { slug: string } | { slug: string }[] | null }
 type SearchResult = {
   id: string
   title_en: string
   genre: string | null
-  district_id: string
+  districts: DistrictRel | DistrictRel[] | null
+}
+
+// Build the correct film URL from its district/state (falls back gracefully)
+function filmHref(film: SearchResult) {
+  const d = Array.isArray(film.districts) ? film.districts[0] : film.districts
+  const s = d && (Array.isArray(d.states) ? d.states[0] : d.states)
+  const districtSlug = d?.slug ?? 'hyderabad'
+  const stateSlug = s?.slug ?? 'telangana'
+  return `/${stateSlug}/${districtSlug}/film/${film.id}`
 }
 
 export default function Navbar() {
@@ -26,6 +37,7 @@ export default function Navbar() {
   const searchRef                     = useRef<HTMLDivElement>(null)
   const contestRef = useRef<HTMLLIElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
+  const mobileRef                     = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -38,12 +50,17 @@ export default function Navbar() {
   // Close search when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      // Don't clear the search when the tap is inside the desktop search OR the
+      // mobile menu — otherwise the result <Link> unmounts before the tap lands.
+      const inSearch = searchRef.current?.contains(target)
+      const inMobile = mobileRef.current?.contains(target)
+      if (!inSearch && !inMobile) {
         setSearchOpen(false)
         setQuery('')
         setResults([])
       }
-      if (contestRef.current && !contestRef.current.contains(e.target as Node)) {
+      if (contestRef.current && !contestRef.current.contains(target)) {
         setContestOpen(false)
       }
     }
@@ -61,13 +78,15 @@ export default function Navbar() {
     if (!query.trim()) { setResults([]); return }
     const timer = setTimeout(async () => {
       setSearching(true)
+      // Strip characters that would break the PostgREST or() filter syntax
+      const term = query.trim().replace(/[,()%*]/g, ' ')
       const { data } = await supabase
         .from('films')
-        .select('id, title_en, genre, district_id')
+        .select('id, title_en, genre, districts(slug, states(slug))')
         .eq('status', 'active')
-        .or(`title_en.ilike.%${query}%,genre.ilike.%${query}%`)
+        .or(`title_en.ilike.%${term}%,genre.ilike.%${term}%`)
         .limit(6)
-      setResults(data ?? [])
+      setResults((data as unknown as SearchResult[]) ?? [])
       setSearching(false)
     }, 300)
     return () => clearTimeout(timer)
@@ -79,9 +98,9 @@ export default function Navbar() {
     router.refresh()
   }
 
-  function handleResultClick(filmId: string) {
-    router.push(`/telangana/hyderabad/film/${filmId}`)
+  function closeSearch() {
     setSearchOpen(false)
+    setOpen(false)
     setQuery('')
     setResults([])
   }
@@ -103,14 +122,14 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 h-16 bg-[#0D0A06]/90 backdrop-blur-md border-b border-[#2E2010]">
+    <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 h-16 bg-[color:var(--bg)]/90 backdrop-blur-md border-b border-[color:var(--border)]">
 
       {/* Logo */}
       <Link href="/" className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-base">🎬</div>
         <div className="flex flex-col leading-none">
-          <span className="text-[#D4A017] font-bold text-lg tracking-wide">CinemaVuru</span>
-          <span className="text-[#7A6040] text-[10px] uppercase tracking-widest">సినిమా ఊరు</span>
+          <span className="text-[color:var(--accent)] font-bold text-lg tracking-wide">CinemaVuru</span>
+          <span className="text-[color:var(--muted)] text-[10px] uppercase tracking-widest">సినిమా ఊరు</span>
         </div>
       </Link>
 
@@ -119,7 +138,7 @@ export default function Navbar() {
         {mainLinks.map(l => (
           <li key={l.href}>
             <Link href={l.href}
-              className="text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition">
+              className="text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition">
               {l.label}
             </Link>
           </li>
@@ -129,17 +148,17 @@ export default function Navbar() {
         <li ref={contestRef} className="relative">
           <button
             onClick={() => setContestOpen(o => !o)}
-            className="text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition flex items-center gap-1"
+            className="text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[#D4A017]/10 px-3 py-1.5 rounded text-sm font-semibold uppercase tracking-wide transition flex items-center gap-1"
           >
             🏆 Contest
             <span className="text-[10px] opacity-60">{contestOpen ? '▲' : '▼'}</span>
           </button>
           {contestOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-[#0D0A06] border border-[#2E2010] rounded-xl overflow-hidden shadow-xl min-w-[180px] z-50">
+            <div className="absolute top-full left-0 mt-1 bg-[color:var(--bg)] border border-[color:var(--border)] rounded-xl overflow-hidden shadow-xl min-w-[180px] z-50">
               {contestLinks.map(l => (
                 <Link key={l.href} href={l.href}
                   onClick={() => setContestOpen(false)}
-                  className="block px-4 py-3 text-sm text-[#7A6040] hover:text-[#D4A017] hover:bg-[#D4A017]/10 transition border-b border-[#2E2010] last:border-0">
+                  className="block px-4 py-3 text-sm text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:bg-[#D4A017]/10 transition border-b border-[color:var(--border)] last:border-0">
                   {l.label}
                 </Link>
               ))}
@@ -150,6 +169,9 @@ export default function Navbar() {
 
       {/* Desktop right side */}
       <div className="hidden md:flex items-center gap-2">
+
+        {/* Theme toggle */}
+        <ThemeToggle />
 
         {/* Search */}
         <div ref={searchRef} className="relative">
@@ -162,33 +184,33 @@ export default function Navbar() {
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Search films..."
-                  className="w-48 bg-[#1A1208] border border-[#D4A017]/40 text-[#FDF6E3] placeholder-[#7A6040] px-3 py-1.5 rounded text-sm outline-none focus:border-[#D4A017] transition"
+                  className="w-48 bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--text)] placeholder-[color:var(--muted)] px-3 py-1.5 rounded text-sm outline-none focus:border-[color:var(--accent)] transition"
                 />
                 {(results.length > 0 || searching) && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1208] border border-[#2E2010] rounded-lg overflow-hidden shadow-xl min-w-[280px]">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg overflow-hidden shadow-xl min-w-[280px]">
                     {searching ? (
-                      <div className="px-4 py-3 text-[#7A6040] text-sm">Searching...</div>
+                      <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching...</div>
                     ) : (
                       results.map(film => (
-                        <button key={film.id} onClick={() => handleResultClick(film.id)}
-                          className="w-full text-left px-4 py-3 hover:bg-[#2E2010] transition flex items-center justify-between gap-3 border-b border-[#2E2010] last:border-0">
-                          <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
-                          {film.genre && <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>}
-                        </button>
+                        <Link key={film.id} href={filmHref(film)} onClick={closeSearch}
+                          className="w-full text-left px-4 py-3 hover:bg-[color:var(--border)] transition flex items-center justify-between gap-3 border-b border-[color:var(--border)] last:border-0">
+                          <span className="text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
+                          {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
+                        </Link>
                       ))
                     )}
                     {!searching && results.length === 0 && query.trim() && (
-                      <div className="px-4 py-3 text-[#7A6040] text-sm">No films found</div>
+                      <div className="px-4 py-3 text-[color:var(--muted)] text-sm">No films found</div>
                     )}
                   </div>
                 )}
               </div>
               <button onClick={() => { setSearchOpen(false); setQuery(''); setResults([]) }}
-                className="text-[#7A6040] hover:text-[#FF6B1A] transition text-lg">✕</button>
+                className="text-[color:var(--muted)] hover:text-[color:var(--accent-hot)] transition text-lg">✕</button>
             </div>
           ) : (
             <button onClick={() => setSearchOpen(true)}
-              className="text-[#7A6040] hover:text-[#D4A017] transition p-2 rounded hover:bg-[#D4A017]/10"
+              className="text-[color:var(--muted)] hover:text-[color:var(--accent)] transition p-2 rounded hover:bg-[#D4A017]/10"
               title="Search films">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
@@ -204,49 +226,52 @@ export default function Navbar() {
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black font-bold text-sm group-hover:opacity-80 transition">
                 {initial}
               </div>
-              <span className="text-sm text-[#7A6040] max-w-[120px] truncate group-hover:text-[#D4A017] transition">
+              <span className="text-sm text-[color:var(--muted)] max-w-[120px] truncate group-hover:text-[color:var(--accent)] transition">
                 {user.user_metadata?.name ?? user.email}
               </span>
             </Link>
             <button onClick={handleLogout}
-              className="border border-[#2E2010] text-[#7A6040] px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide hover:text-[#FF6B1A] hover:border-[#FF6B1A]/30 transition">
+              className="border border-[color:var(--border)] text-[color:var(--muted)] px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide hover:text-[color:var(--accent-hot)] hover:border-[color:var(--accent-hot)]/30 transition">
               Logout
             </button>
           </div>
         ) : (
           <>
-            <Link href="/auth" className="border border-[#D4A017]/40 text-[#D4A017] px-4 py-1.5 rounded text-sm font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition">Login</Link>
+            <Link href="/auth" className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-1.5 rounded text-sm font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition">Login</Link>
             <Link href="/auth" className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-4 py-1.5 rounded text-sm font-bold uppercase tracking-wide hover:opacity-90 transition">Join Free</Link>
           </>
         )}
       </div>
 
-      {/* Mobile hamburger */}
-      <button className="md:hidden text-[#D4A017] text-2xl" onClick={() => setOpen(o => !o)}>
-        {open ? '✕' : '☰'}
-      </button>
+      {/* Mobile: theme toggle + hamburger */}
+      <div className="md:hidden flex items-center gap-1">
+        <ThemeToggle />
+        <button className="text-[color:var(--accent)] text-2xl" onClick={() => setOpen(o => !o)}>
+          {open ? '✕' : '☰'}
+        </button>
+      </div>
 
       {/* Mobile menu */}
       {open && (
-        <div className="absolute top-16 left-0 right-0 bg-[#0D0A06] border-b border-[#2E2010] flex flex-col p-4 gap-3 md:hidden">
+        <div ref={mobileRef} className="absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] flex flex-col p-4 gap-3 md:hidden">
           {/* Mobile search */}
           <div className="relative">
             <input type="text" value={query} onChange={e => setQuery(e.target.value)}
               placeholder="Search films..."
-              className="w-full bg-[#1A1208] border border-[#D4A017]/40 text-[#FDF6E3] placeholder-[#7A6040] px-3 py-2 rounded text-sm outline-none focus:border-[#D4A017] transition"
+              className="w-full bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--text)] placeholder-[color:var(--muted)] px-3 py-2 rounded text-sm outline-none focus:border-[color:var(--accent)] transition"
             />
             {(results.length > 0 || searching) && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-[#1A1208] border border-[#2E2010] rounded-lg overflow-hidden shadow-xl z-50">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg overflow-hidden shadow-xl z-50">
                 {searching ? (
-                  <div className="px-4 py-3 text-[#7A6040] text-sm">Searching...</div>
+                  <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching...</div>
                 ) : results.map(film => (
-                  <Link key={film.id} 
-                    href={`/telangana/hyderabad/film/${film.id}`}
-                    onClick={() => { setOpen(false); setQuery(''); setResults([]) }}
-                    className="block w-full px-4 py-3 hover:bg-[#2E2010] transition border-b border-[#2E2010] last:border-0">
+                  <Link key={film.id}
+                    href={filmHref(film)}
+                    onClick={closeSearch}
+                    className="block w-full px-4 py-3 hover:bg-[color:var(--border)] transition border-b border-[color:var(--border)] last:border-0">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-[#FDF6E3] text-sm font-medium truncate">{film.title_en}</span>
-                      {film.genre && <span className="text-[#7A6040] text-xs shrink-0">{film.genre}</span>}
+                      <span className="text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
+                      {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
                     </div>
                   </Link>
                 ))}
@@ -256,37 +281,37 @@ export default function Navbar() {
 
           {mainLinks.map(l => (
             <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
-              className="text-[#7A6040] hover:text-[#D4A017] text-sm uppercase tracking-wide font-semibold transition">
+              className="text-[color:var(--muted)] hover:text-[color:var(--accent)] text-sm uppercase tracking-wide font-semibold transition">
               {l.label}
             </Link>
           ))}
 
           {/* Mobile contest links */}
-          <div className="border-t border-[#2E2010] pt-3">
-            <p className="text-xs text-[#4A3020] uppercase tracking-widest mb-2">Contest</p>
+          <div className="border-t border-[color:var(--border)] pt-3">
+            <p className="text-xs text-[color:var(--faint)] uppercase tracking-widest mb-2">Contest</p>
             {contestLinks.map(l => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
-                className="block text-[#7A6040] hover:text-[#D4A017] text-sm tracking-wide font-semibold transition py-1.5">
+                className="block text-[color:var(--muted)] hover:text-[color:var(--accent)] text-sm tracking-wide font-semibold transition py-1.5">
                 {l.label}
               </Link>
             ))}
           </div>
 
-          <div className="flex gap-2 mt-2 border-t border-[#2E2010] pt-3">
+          <div className="flex gap-2 mt-2 border-t border-[color:var(--border)] pt-3">
             {user ? (
               <>
                 <Link href="/profile" onClick={() => setOpen(false)}
-                  className="flex-1 border border-[#D4A017]/40 text-[#D4A017] py-2 rounded text-sm font-bold uppercase text-center">
+                  className="flex-1 border border-[color:var(--accent)]/40 text-[color:var(--accent)] py-2 rounded text-sm font-bold uppercase text-center">
                   My Profile
                 </Link>
                 <button onClick={handleLogout}
-                  className="flex-1 border border-[#2E2010] text-[#7A6040] py-2 rounded text-sm font-bold uppercase">
+                  className="flex-1 border border-[color:var(--border)] text-[color:var(--muted)] py-2 rounded text-sm font-bold uppercase">
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link href="/auth" className="flex-1 border border-[#D4A017]/40 text-[#D4A017] py-2 rounded text-sm font-bold uppercase text-center">Login</Link>
+                <Link href="/auth" className="flex-1 border border-[color:var(--accent)]/40 text-[color:var(--accent)] py-2 rounded text-sm font-bold uppercase text-center">Login</Link>
                 <Link href="/auth" className="flex-1 bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black py-2 rounded text-sm font-bold uppercase text-center">Join Free</Link>
               </>
             )}

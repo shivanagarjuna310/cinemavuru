@@ -7,7 +7,7 @@ import Link     from 'next/link'
 
 export default function AuthPage() {
   return (
-    <main className="relative z-10 min-h-screen text-[#FDF6E3] flex items-center justify-center px-4 py-16">
+    <main className="relative z-10 min-h-screen text-[color:var(--text)] flex items-center justify-center px-4 py-16">
 
       {/* Background glow */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(255,107,26,0.08),transparent)]" />
@@ -21,11 +21,11 @@ export default function AuthPage() {
               🎬
             </div>
             <div className="text-left">
-              <div className="text-[#D4A017] font-bold text-xl">CinemaVuru</div>
-              <div className="text-[#7A6040] text-[10px] uppercase tracking-widest">సినిమా వూరు</div>
+              <div className="text-[color:var(--accent)] font-bold text-xl">CinemaVuru</div>
+              <div className="text-[color:var(--muted)] text-[10px] uppercase tracking-widest">సినిమా వూరు</div>
             </div>
           </Link>
-          <p className="text-[#7A6040] text-sm">
+          <p className="text-[color:var(--muted)] text-sm">
             Join the Hyderabad filmmaking community
           </p>
         </div>

@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="relative z-10 min-h-screen text-[#FDF6E3] flex items-center justify-center px-4 py-16">
+    <main className="relative z-10 min-h-screen text-[color:var(--text)] flex items-center justify-center px-4 py-16">
 
       {/* Background glow */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(255,107,26,0.08),transparent)]" />
@@ -63,24 +63,24 @@ export default function ResetPasswordPage() {
               🎬
             </div>
             <div className="text-left">
-              <div className="text-[#D4A017] font-bold text-xl">CinemaVuru</div>
-              <div className="text-[#7A6040] text-[10px] uppercase tracking-widest">సినిమా వూరు</div>
+              <div className="text-[color:var(--accent)] font-bold text-xl">CinemaVuru</div>
+              <div className="text-[color:var(--muted)] text-[10px] uppercase tracking-widest">సినిమా వూరు</div>
             </div>
           </Link>
         </div>
 
-        <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
+        <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8">
 
-          <h2 className="text-[#D4A017] font-bold text-lg mb-1">Set New Password</h2>
-          <p className="text-[#7A6040] text-sm mb-6">Choose a strong password for your account.</p>
+          <h2 className="text-[color:var(--accent)] font-bold text-lg mb-1">Set New Password</h2>
+          <p className="text-[color:var(--muted)] text-sm mb-6">Choose a strong password for your account.</p>
 
           {!validLink ? (
             <div className="text-center py-4">
-              <p className="text-[#7A6040] text-sm mb-4">
+              <p className="text-[color:var(--muted)] text-sm mb-4">
                 This link is invalid or has expired.
               </p>
               <Link href="/auth"
-                className="text-[#D4A017] hover:underline text-sm">
+                className="text-[color:var(--accent)] hover:underline text-sm">
                 ← Back to Login
               </Link>
             </div>
@@ -88,7 +88,7 @@ export default function ResetPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
 
               <div>
-                <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+                <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
                   New Password
                 </label>
                 <input
@@ -98,12 +98,12 @@ export default function ResetPasswordPage() {
                   placeholder="Min 6 characters"
                   required
                   minLength={6}
-                  className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+                  className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+                <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
                   Confirm Password
                 </label>
                 <input
@@ -113,7 +113,7 @@ export default function ResetPasswordPage() {
                   placeholder="Repeat your password"
                   required
                   minLength={6}
-                  className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+                  className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                 />
               </div>
 

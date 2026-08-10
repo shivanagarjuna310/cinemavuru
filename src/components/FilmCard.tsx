@@ -62,7 +62,7 @@ if (typeof window !== 'undefined') console.log('THUMB:', title, '|', videoUrl, '
   return (
     <div
       onClick={goToFilm}
-      className="bg-[#1A1208] rounded-xl overflow-hidden border border-[#2E2010] hover:-translate-y-1 hover:border-[#D4A017]/40 hover:shadow-xl hover:shadow-black/40 transition-all duration-300 cursor-pointer group"
+      className="bg-[color:var(--surface)] rounded-xl overflow-hidden border border-[color:var(--border)] hover:-translate-y-1 hover:border-[color:var(--accent)]/40 hover:shadow-xl hover:shadow-black/40 transition-all duration-300 cursor-pointer group"
     >
       {/* Thumbnail area */}
       <div className={`relative h-44 overflow-hidden ${showThumb ? '' : gradient} flex items-center justify-center text-5xl`}>
@@ -103,24 +103,24 @@ if (typeof window !== 'undefined') console.log('THUMB:', title, '|', videoUrl, '
 
       {/* Info */}
       <div className="p-4">
-        <h3 className="font-bold text-base text-[#FDF6E3] leading-snug mb-0.5 line-clamp-1">
+        <h3 className="font-bold text-base text-[color:var(--text)] leading-snug mb-0.5 line-clamp-1">
           {title}
         </h3>
         {titleTe && (
-          <p className="text-[11px] text-[#7A6040] mb-2">{titleTe}</p>
+          <p className="text-[11px] text-[color:var(--muted)] mb-2">{titleTe}</p>
         )}
-        <p className="text-sm text-[#7A6040] mb-3">{genre}</p>
+        <p className="text-sm text-[color:var(--muted)] mb-3">{genre}</p>
 
         <div className="flex items-center gap-4 text-sm">
           <button
             onClick={handleLike}
             className={`flex items-center gap-1 transition-colors ${
-              liked ? 'text-[#FF6B1A]' : 'text-[#7A6040] hover:text-[#FF6B1A]'
+              liked ? 'text-[color:var(--accent-hot)]' : 'text-[color:var(--muted)] hover:text-[color:var(--accent-hot)]'
             }`}
           >
             {liked ? '♥' : '♡'} {likeCount}
           </button>
-          <span className="text-[#7A6040]">👁 {views}</span>
+          <span className="text-[color:var(--muted)]">👁 {views}</span>
         </div>
       </div>
     </div>

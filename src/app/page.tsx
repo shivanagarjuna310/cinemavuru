@@ -107,7 +107,7 @@ export default async function Home() {
   return (
     <>
       <Navbar />
-      <main className="relative min-h-screen text-[#FDF6E3] bg-[#07080f]">
+      <main className="relative min-h-screen text-[color:var(--text)] bg-[color:var(--bg)]">
 
         {/* ── HERO SECTION ── */}
         <section className="relative min-h-[92vh] flex items-center overflow-hidden">
@@ -122,9 +122,10 @@ export default async function Home() {
               className="object-cover object-[70%_center] md:object-center"
               sizes="100vw"
             />
-            {/* Layered overlays for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#07080f] via-[#07080f60] to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#07080f] via-transparent to-transparent" />
+            {/* Layered overlays for text readability — dark in both themes so the
+                cinematic hero keeps light text legible over the image */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--scrim)] via-[color:var(--scrim)]/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--scrim)] via-transparent to-transparent" />
             {/* Film grain texture */}
             <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay"
               style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"}} />
@@ -132,16 +133,16 @@ export default async function Home() {
 
           {/* Contest banner */}
           {contest && (
-            <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#D4A017]/20 via-[#D4A017]/10 to-transparent border-b border-[#D4A017]/30 backdrop-blur-sm">
+            <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-r from-[#D4A017]/20 via-[#D4A017]/10 to-transparent border-b border-[color:var(--accent)]/30 backdrop-blur-sm">
               <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <span className="w-2 h-2 bg-[#FF6B1A] rounded-full animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#D4A017]">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                     🏆 Season {contest.season_number} is LIVE — {contest.title}
                   </span>
                 </div>
                 <div className="flex items-center gap-6">
-                  <div className="hidden sm:flex gap-4 text-xs text-[#7A6040]">
+                  <div className="hidden sm:flex gap-4 text-xs text-[color:var(--muted)]">
                     <span>🥇 ₹{contest.prize_1st?.toLocaleString('en-IN')}</span>
                     <span>🥈 ₹{contest.prize_2nd?.toLocaleString('en-IN')}</span>
                     <span>🥉 ₹{contest.prize_3rd?.toLocaleString('en-IN')}</span>
@@ -162,7 +163,7 @@ export default async function Home() {
               {/* Eyebrow */}
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-px bg-[#FF6B1A]" />
-                <span className="text-xs text-[#FF6B1A] uppercase tracking-[4px] font-semibold">
+                <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[4px] font-semibold">
                   Telugu Short Film Platform
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B1A] animate-pulse" />
@@ -205,7 +206,7 @@ export default async function Home() {
                   <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
                 </Link>
                 <Link href="/contest"
-                  className="border border-[#D4A017]/40 text-[#D4A017] px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:border-[#D4A017] hover:-translate-y-0.5 transition-all duration-300">
+                  className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-8 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:border-[color:var(--accent)] hover:-translate-y-0.5 transition-all duration-300">
                   🏆 Enter Contest
                 </Link>
               </div>
@@ -218,7 +219,7 @@ export default async function Home() {
                   { num: '2',                          label: 'Telugu States' },
                 ].map((s, i) => (
                   <div key={s.label} className="flex items-center gap-4">
-                    {i > 0 && <div className="w-px h-8 bg-[#1e2535]" />}
+                    {i > 0 && <div className="w-px h-8 bg-[color:var(--border-2)]" />}
                     <div>
                       <div className="text-2xl font-black text-[#FFC845]"
                         style={{fontFamily: "'Georgia', serif"}}>{s.num}</div>
@@ -231,17 +232,17 @@ export default async function Home() {
           </div>
 
           {/* Bottom fade */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#07080f] to-transparent z-10" />
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[color:var(--bg)] to-transparent z-10" />
         </section>
         {/* ── TOP 10 FILMS ── */}
         {topFilms.length > 0 && (
           <section className="max-w-6xl mx-auto px-6 py-12">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-px h-6 bg-[#FF6B1A]" />
-              <span className="text-xs text-[#FF6B1A] uppercase tracking-[3px] font-semibold">Trending Now</span>
+              <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Trending Now</span>
               <span className="w-2 h-2 rounded-full bg-[#FF6B1A] animate-pulse" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-6"
+            <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6"
               style={{fontFamily: "'Georgia', serif"}}>
               🔥 Top 10 Most Watched
             </h2>
@@ -272,7 +273,7 @@ export default async function Home() {
                     </div>
 
                     {/* Thumbnail */}
-                    <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#D4A017]/50 transition-all duration-300">
+                    <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[color:var(--accent)]/50 transition-all duration-300">
                       {thumbnail ? (
                         <img
                           src={thumbnail}
@@ -280,18 +281,18 @@ export default async function Home() {
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-full h-full bg-[#1A1208] flex items-center justify-center text-2xl">🎬</div>
+                        <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     </div>
 
                     {/* Film info */}
                     <div className="mt-2 ml-5">
-                      <p className="text-white text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#FFB830] transition-colors">
+                      <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[color:var(--accent)] transition-colors">
                         {film.title_en}
                       </p>
-                      <p className="text-[#A5A5A5] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
-                      <p className="text-[#FF6B1A] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
+                      <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
+                      <p className="text-[color:var(--accent-hot)] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
                     </div>
                   </Link>
                 )
@@ -308,7 +309,7 @@ export default async function Home() {
               <span className="text-xs text-[#E84393] uppercase tracking-[3px] font-semibold">Most Loved</span>
               <span className="w-2 h-2 rounded-full bg-[#E84393] animate-pulse" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-6"
+            <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6"
               style={{fontFamily: "'Georgia', serif"}}>
               ❤️ Most Loved Films
             </h2>
@@ -347,17 +348,17 @@ export default async function Home() {
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-full h-full bg-[#1A1208] flex items-center justify-center text-2xl">🎬</div>
+                        <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     </div>
 
                     {/* Film info */}
                     <div className="mt-2 ml-5">
-                      <p className="text-white text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#E84393] transition-colors">
+                      <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#E84393] transition-colors">
                         {film.title_en}
                       </p>
-                      <p className="text-[#A5A5A5] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
+                      <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
                       <p className="text-[#E84393] text-[10px] font-semibold mt-0.5">❤️ {film.like_count} likes</p>
                     </div>
                   </Link>
@@ -373,10 +374,10 @@ export default async function Home() {
           <div className="text-center mb-14">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="w-12 h-px bg-gradient-to-r from-transparent to-[#D4A017]" />
-              <span className="text-xs text-[#D4A017] uppercase tracking-[4px]">Simple Process</span>
+              <span className="text-xs text-[color:var(--accent)] uppercase tracking-[4px]">Simple Process</span>
               <div className="w-12 h-px bg-gradient-to-l from-transparent to-[#D4A017]" />
             </div>
-            <h2 className="text-3xl font-bold text-white mb-2"
+            <h2 className="text-3xl font-bold text-[color:var(--text)] mb-2"
               style={{fontFamily: "'Georgia', serif"}}>How It Works</h2>
             <p className="text-[#4A5A70] text-sm">మూడు సులభమైన దశలు · Three simple steps</p>
           </div>
@@ -389,7 +390,7 @@ export default async function Home() {
                 title: 'Enter the Contest',
                 desc: 'Enter the contest, pay a small season fee, and put your film in the race for prizes. Just uploading? You\'re still welcome — but only contest entries can win.',
                 color: 'from-[#FF6B1A]/20 to-transparent',
-                border: 'border-[#FF6B1A]/20',
+                border: 'border-[color:var(--accent-hot)]/20',
               },
               {
                 step: '02',
@@ -397,7 +398,7 @@ export default async function Home() {
                 title: 'Get Votes',
                 desc: 'Share your film with friends, family and fans. Every vote counts towards your contest ranking.',
                 color: 'from-[#D4A017]/20 to-transparent',
-                border: 'border-[#D4A017]/20',
+                border: 'border-[color:var(--accent)]/20',
               },
               {
                 step: '03',
@@ -409,11 +410,11 @@ export default async function Home() {
               },
             ].map(s => (
               <div key={s.step}
-                className={`relative bg-gradient-to-br ${s.color} bg-[#0d1020] border ${s.border} rounded-2xl p-8 overflow-hidden group hover:-translate-y-1 transition-all duration-300`}>
-                <div className="absolute top-4 right-5 text-5xl font-black text-white/5 select-none"
+                className={`relative bg-gradient-to-br ${s.color} bg-[color:var(--surface-2)] border ${s.border} rounded-2xl p-8 overflow-hidden group hover:-translate-y-1 transition-all duration-300`}>
+                <div className="absolute top-4 right-5 text-5xl font-black text-[color:var(--text)]/[0.06] select-none"
                   style={{fontFamily: "'Georgia', serif"}}>{s.step}</div>
                 <div className="text-4xl mb-5">{s.icon}</div>
-                <h3 className="font-bold text-white text-lg mb-3">{s.title}</h3>
+                <h3 className="font-bold text-[color:var(--text)] text-lg mb-3">{s.title}</h3>
                 <p className="text-[#4A5A70] text-sm leading-relaxed">{s.desc}</p>
               </div>
             ))}
@@ -426,9 +427,9 @@ export default async function Home() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <span className="w-px h-5 bg-[#FF6B1A]" />
-                <span className="text-xs text-[#FF6B1A] uppercase tracking-[3px] font-semibold">Telangana</span>
+                <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Telangana</span>
               </div>
-              <h2 className="text-2xl font-bold text-white"
+              <h2 className="text-2xl font-bold text-[color:var(--text)]"
                 style={{fontFamily: "'Georgia', serif"}}>Explore by District</h2>
             </div>
           </div>
@@ -468,12 +469,12 @@ export default async function Home() {
 
                   {/* Content */}
                   <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[#FFB830] transition-colors">
+                    <h3 className="font-bold text-white text-base leading-tight mb-0.5 group-hover:text-[color:var(--accent)] transition-colors">
                       {d.name_en}
                     </h3>
                     <p className="text-white/50 text-[10px] mb-1">{d.name_te}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#D4A017] font-semibold">
+                      <span className="text-[10px] text-[color:var(--accent)] font-semibold">
                         {d.filmCount} films
                       </span>
                       <span className="text-[9px] text-white/40">{config.landmark}</span>
@@ -481,7 +482,7 @@ export default async function Home() {
                   </div>
 
                   {/* Hover border glow -->*/}
-                  <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[#D4A017]/40 transition-all duration-300" />
+                  <div className="absolute inset-0 rounded-xl border border-transparent group-hover:border-[color:var(--accent)]/40 transition-all duration-300" />
                 </Link>
               )
             })}
@@ -494,7 +495,7 @@ export default async function Home() {
                 <span className="w-px h-5 bg-[#4A90E2]" />
                 <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">Andhra Pradesh</span>
               </div>
-              <h2 className="text-2xl font-bold text-white"
+              <h2 className="text-2xl font-bold text-[color:var(--text)]"
                 style={{fontFamily: "'Georgia', serif"}}>Andhra Districts</h2>
             </div>
           </div>
@@ -550,13 +551,13 @@ export default async function Home() {
         {/* ── BOTTOM CTA ── */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-[#FF6B1A]/10 via-[#D4A017]/5 to-[#FF6B1A]/10" />
-          <div className="absolute inset-0 border-t border-b border-[#D4A017]/20" />
+          <div className="absolute inset-0 border-t border-b border-[color:var(--accent)]/20" />
           <div className="relative max-w-6xl mx-auto px-6 py-20 text-center">
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-4"
+            <h2 className="text-3xl md:text-5xl font-black text-[color:var(--text)] mb-4"
               style={{fontFamily: "'Georgia', serif"}}>
               Ready to Tell Your Story?
             </h2>
-            <p className="text-[#D5D5D5] mb-10 max-w-lg mx-auto leading-relaxed">
+            <p className="text-[color:var(--muted)] mb-10 max-w-lg mx-auto leading-relaxed">
               Join Telugu filmmakers from across Telangana & Andhra Pradesh sharing their stories with the world.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
@@ -565,7 +566,7 @@ export default async function Home() {
                 📽️ Upload Free
               </Link>
               <Link href="/contest/enter"
-                className="border border-[#D4A017]/40 text-[#D4A017] px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all">
+                className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-10 py-4 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all">
                 🏆 Enter Contest
               </Link>
             </div>

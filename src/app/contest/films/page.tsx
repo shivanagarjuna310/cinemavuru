@@ -60,18 +60,18 @@ export default async function ContestFilmsPage() {
     return (
       <>
         <Navbar />
-        <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16 flex items-center justify-center">
+        <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16 flex items-center justify-center">
           <div className="text-center px-6">
             <div className="text-6xl mb-4">🎬</div>
-            <h1 className="text-2xl font-bold text-[#D4A017] mb-3">No Active Contest</h1>
-            <p className="text-[#7A6040] mb-6">Check back when the next contest opens!</p>
+            <h1 className="text-2xl font-bold text-[color:var(--accent)] mb-3">No Active Contest</h1>
+            <p className="text-[color:var(--muted)] mb-6">Check back when the next contest opens!</p>
             <div className="flex gap-3 justify-center flex-wrap">
               <Link href="/contest"
                 className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition text-sm">
                 View Contest →
               </Link>
               <Link href="/contest/winners"
-                className="border border-[#D4A017]/40 text-[#D4A017] px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition text-sm">
+                className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:bg-[#D4A017]/10 transition text-sm">
                 🏛️ Hall of Fame
               </Link>
             </div>
@@ -91,17 +91,17 @@ export default async function ContestFilmsPage() {
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
 
-        <div className="bg-gradient-to-b from-[#1A0A00] to-transparent border-b border-[#2E2010]">
+        <div className="bg-gradient-to-b from-[color:var(--surface)] to-transparent border-b border-[color:var(--border)]">
           <div className="max-w-5xl mx-auto px-6 py-10">
 
-            <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-4">
-              <Link href="/" className="hover:text-[#D4A017] transition">Home</Link>
+            <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] uppercase tracking-widest mb-4">
+              <Link href="/" className="hover:text-[color:var(--accent)] transition">Home</Link>
               <span>›</span>
-              <Link href="/contest" className="hover:text-[#D4A017] transition">Contest</Link>
+              <Link href="/contest" className="hover:text-[color:var(--accent)] transition">Contest</Link>
               <span>›</span>
-              <span className="text-[#D4A017]">Films</span>
+              <span className="text-[color:var(--accent)]">Films</span>
             </div>
 
             <div className="flex items-start justify-between flex-wrap gap-6">
@@ -109,7 +109,7 @@ export default async function ContestFilmsPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border ${
                     isVotingPhase
-                      ? 'text-[#D4A017] border-[#D4A017]/40 bg-[#D4A017]/10'
+                      ? 'text-[color:var(--accent)] border-[color:var(--accent)]/40 bg-[#D4A017]/10'
                       : 'text-green-400 border-green-700/40 bg-green-900/20'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
@@ -118,26 +118,26 @@ export default async function ContestFilmsPage() {
                     {isVotingPhase ? 'Voting Live' : 'Submissions Open'}
                   </span>
                   {timeLeft && (
-                    <span className="text-xs text-[#FF6B1A] font-bold">{timeLeft}</span>
+                    <span className="text-xs text-[color:var(--accent-hot)] font-bold">{timeLeft}</span>
                   )}
                 </div>
-                <h1 className="text-3xl font-bold text-[#FDF6E3] mb-1">
+                <h1 className="text-3xl font-bold text-[color:var(--text)] mb-1">
                   🎬 Contest Films
                 </h1>
-                <p className="text-[#7A6040] text-sm">{contest.title}</p>
+                <p className="text-[color:var(--muted)] text-sm">{contest.title}</p>
               </div>
 
               <div className="flex gap-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[#D4A017]">{entries.length}</div>
-                  <div className="text-xs text-[#7A6040] uppercase tracking-wide">Films</div>
+                  <div className="text-2xl font-bold text-[color:var(--accent)]">{entries.length}</div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Films</div>
                 </div>
               </div>
             </div>
 
             <div className="flex gap-3 mt-6 flex-wrap">
               <Link href="/contest"
-                className="border border-[#2E2010] text-[#7A6040] px-4 py-2 rounded-lg text-sm hover:text-[#D4A017] hover:border-[#D4A017]/40 transition">
+                className="border border-[color:var(--border)] text-[color:var(--muted)] px-4 py-2 rounded-lg text-sm hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]/40 transition">
                 ← Contest Info
               </Link>
               {isOpenPhase && (
@@ -147,7 +147,7 @@ export default async function ContestFilmsPage() {
                 </Link>
               )}
               <Link href="/contest/winners"
-                className="border border-[#D4A017]/40 text-[#D4A017] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#D4A017]/10 transition">
+                className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#D4A017]/10 transition">
                 🏛️ Hall of Fame
               </Link>
             </div>
@@ -158,8 +158,8 @@ export default async function ContestFilmsPage() {
           {entries.length === 0 ? (
             <div className="text-center py-24">
               <div className="text-5xl mb-4">🎬</div>
-              <p className="text-xl font-semibold text-[#D4A017] mb-2">No entries yet</p>
-              <p className="text-sm text-[#7A6040] mb-6">Be the first filmmaker to enter this contest!</p>
+              <p className="text-xl font-semibold text-[color:var(--accent)] mb-2">No entries yet</p>
+              <p className="text-sm text-[color:var(--muted)] mb-6">Be the first filmmaker to enter this contest!</p>
               {isOpenPhase && (
                 <Link href="/contest/enter"
                   className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition text-sm">
@@ -170,7 +170,7 @@ export default async function ContestFilmsPage() {
           ) : (
             <>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-[#D4A017]">
+                <h2 className="text-xl font-bold text-[color:var(--accent)]">
                   {isVotingPhase ? '🗳️ Vote for Your Favourite' : '🎬 Entered Films'}
                 </h2>
               </div>

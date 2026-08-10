@@ -115,19 +115,19 @@ export default function AuthForm() {
   }
 
   return (
-    <div className="bg-[#1A1208] border border-[#2E2010] rounded-2xl p-8">
+    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8">
 
       {/* Tabs — only Login and Register, Forgot is a sub-state */}
       {tab !== 'forgot' && (
-        <div className="flex border-b border-[#2E2010] mb-6">
+        <div className="flex border-b border-[color:var(--border)] mb-6">
           {(['login', 'register'] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => switchTab(t)}
               className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wide transition border-b-2 ${
                 tab === t
-                  ? 'text-[#D4A017] border-[#D4A017]'
-                  : 'text-[#7A6040] border-transparent hover:text-[#FDF6E3]'
+                  ? 'text-[color:var(--accent)] border-[color:var(--accent)]'
+                  : 'text-[color:var(--muted)] border-transparent hover:text-[color:var(--text)]'
               }`}
             >
               {t === 'login' ? 'Login' : 'Create Account'}
@@ -141,12 +141,12 @@ export default function AuthForm() {
         <div className="mb-6">
           <button
             onClick={() => switchTab('login')}
-            className="text-[#7A6040] hover:text-[#D4A017] text-xs uppercase tracking-widest transition flex items-center gap-1 mb-4"
+            className="text-[color:var(--muted)] hover:text-[color:var(--accent)] text-xs uppercase tracking-widest transition flex items-center gap-1 mb-4"
           >
             ← Back to Login
           </button>
-          <h2 className="text-[#D4A017] font-bold text-lg">Reset Password</h2>
-          <p className="text-[#7A6040] text-sm mt-1">
+          <h2 className="text-[color:var(--accent)] font-bold text-lg">Reset Password</h2>
+          <p className="text-[color:var(--muted)] text-sm mt-1">
             Enter your email and we'll send you a reset link.
           </p>
         </div>
@@ -156,7 +156,7 @@ export default function AuthForm() {
 
         {tab === 'register' && (
           <div>
-            <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+            <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
               Full Name
             </label>
             <input
@@ -165,13 +165,13 @@ export default function AuthForm() {
               onChange={e => setName(e.target.value)}
               placeholder="Your name"
               required
-              className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+              className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
             />
           </div>
         )}
 
         <div>
-          <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
             Email
           </label>
           <input
@@ -180,14 +180,14 @@ export default function AuthForm() {
             onChange={e => setEmail(e.target.value)}
             placeholder="your@email.com"
             required
-            className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
           />
         </div>
 
         {tab !== 'forgot' && (
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs text-[#7A6040] uppercase tracking-widest">
+              <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest">
                 Password
               </label>
               {/* Forgot password link — only on login tab */}
@@ -195,7 +195,7 @@ export default function AuthForm() {
                 <button
                   type="button"
                   onClick={() => switchTab('forgot')}
-                  className="text-xs text-[#7A6040] hover:text-[#D4A017] transition"
+                  className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] transition"
                 >
                   Forgot password?
                 </button>
@@ -208,7 +208,7 @@ export default function AuthForm() {
               placeholder={tab === 'register' ? 'Min 6 characters' : '••••••••'}
               required
               minLength={6}
-              className="w-full bg-[#0D0A06] border border-[#2E2010] rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none focus:border-[#D4A017]/50 transition"
+              className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
             />
           </div>
         )}
@@ -238,11 +238,11 @@ export default function AuthForm() {
       </form>
 
       {tab !== 'forgot' && (
-        <p className="text-center text-xs text-[#4A3020] mt-6">
+        <p className="text-center text-xs text-[color:var(--faint)] mt-6">
           {tab === 'login' ? "Don't have an account? " : 'Already have an account? '}
           <button
             onClick={() => switchTab(tab === 'login' ? 'register' : 'login')}
-            className="text-[#D4A017] hover:underline"
+            className="text-[color:var(--accent)] hover:underline"
           >
             {tab === 'login' ? 'Sign up free' : 'Login here'}
           </button>
@@ -251,15 +251,15 @@ export default function AuthForm() {
       {tab !== 'forgot' && (
   <>
     <div className="flex items-center gap-3 my-4">
-      <div className="flex-1 h-px bg-[#2E2010]" />
-      <span className="text-[#4A3020] text-xs uppercase tracking-widest">or</span>
-      <div className="flex-1 h-px bg-[#2E2010]" />
+      <div className="flex-1 h-px bg-[color:var(--border)]" />
+      <span className="text-[color:var(--faint)] text-xs uppercase tracking-widest">or</span>
+      <div className="flex-1 h-px bg-[color:var(--border)]" />
     </div>
 
     <button
       type="button"
       onClick={handleGoogleLogin}
-      className="w-full flex items-center justify-center gap-3 bg-[#0D0A06] border border-[#2E2010] hover:border-[#D4A017]/50 text-[#FDF6E3] py-3 rounded-lg font-medium text-sm transition"
+      className="w-full flex items-center justify-center gap-3 bg-[color:var(--bg)] border border-[color:var(--border)] hover:border-[color:var(--accent)]/50 text-[color:var(--text)] py-3 rounded-lg font-medium text-sm transition"
     >
       <svg width="18" height="18" viewBox="0 0 48 48">
         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>

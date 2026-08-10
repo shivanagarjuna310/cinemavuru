@@ -87,15 +87,15 @@ export default function UPIPayment({
     <div className="space-y-5">
 
       {/* Amount banner */}
-      <div className="bg-[#D4A017]/10 border border-[#D4A017]/30 rounded-xl p-4 text-center">
-        <p className="text-xs text-[#7A6040] uppercase tracking-widest mb-1">Amount to Pay</p>
-        <p className="text-3xl font-bold text-[#D4A017]">₹{entryFee}</p>
-        <p className="text-xs text-[#4A3020] mt-1">Contest Entry Fee — Non-refundable</p>
+      <div className="bg-[#D4A017]/10 border border-[color:var(--accent)]/30 rounded-xl p-4 text-center">
+        <p className="text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1">Amount to Pay</p>
+        <p className="text-3xl font-bold text-[color:var(--accent)]">₹{entryFee}</p>
+        <p className="text-xs text-[color:var(--faint)] mt-1">Contest Entry Fee — Non-refundable</p>
       </div>
 
       {/* QR Code */}
       <div className="flex flex-col items-center">
-        <p className="text-xs text-[#7A6040] uppercase tracking-widest mb-3">
+        <p className="text-xs text-[color:var(--muted)] uppercase tracking-widest mb-3">
           Scan QR to Pay
         </p>
         <div className="bg-white p-3 rounded-2xl shadow-lg">
@@ -107,29 +107,29 @@ export default function UPIPayment({
             className="rounded-lg"
           />
         </div>
-        <p className="text-xs text-[#7A6040] mt-3">
+        <p className="text-xs text-[color:var(--muted)] mt-3">
           Works with GPay, PhonePe, Paytm, any UPI app
         </p>
       </div>
 
       {/* UPI ID with copy */}
-      <div className="bg-[#0D0A06] border border-[#2E2010] rounded-xl p-4">
-        <p className="text-xs text-[#7A6040] uppercase tracking-widest mb-2">
+      <div className="bg-[color:var(--bg)] border border-[color:var(--border)] rounded-xl p-4">
+        <p className="text-xs text-[color:var(--muted)] uppercase tracking-widest mb-2">
           Or Pay using UPI ID
         </p>
         <div className="flex items-center justify-between gap-3">
-          <code className="text-[#FDF6E3] text-sm font-mono">{UPI_ID}</code>
+          <code className="text-[color:var(--text)] text-sm font-mono">{UPI_ID}</code>
           <button
             onClick={copyUPI}
-            className="text-xs bg-[#2E2010] hover:bg-[#3E3010] text-[#D4A017] px-3 py-1.5 rounded-lg transition whitespace-nowrap">
+            className="text-xs bg-[color:var(--border)] hover:bg-[color:var(--border)] text-[color:var(--accent)] px-3 py-1.5 rounded-lg transition whitespace-nowrap">
             {copied ? '✅ Copied!' : '📋 Copy'}
           </button>
         </div>
       </div>
 
       {/* Steps */}
-      <div className="bg-[#0D0A06] border border-[#2E2010] rounded-xl p-4 space-y-2">
-        <p className="text-xs text-[#D4A017] uppercase tracking-widest mb-3">How to Pay</p>
+      <div className="bg-[color:var(--bg)] border border-[color:var(--border)] rounded-xl p-4 space-y-2">
+        <p className="text-xs text-[color:var(--accent)] uppercase tracking-widest mb-3">How to Pay</p>
         {[
           'Open GPay, PhonePe, or any UPI app',
           `Scan QR or enter UPI ID: ${UPI_ID}`,
@@ -138,17 +138,17 @@ export default function UPIPayment({
           'Paste it below and submit',
         ].map((step, i) => (
           <div key={i} className="flex items-start gap-3">
-            <span className="w-5 h-5 rounded-full bg-[#D4A017]/20 text-[#D4A017] text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="w-5 h-5 rounded-full bg-[#D4A017]/20 text-[color:var(--accent)] text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
               {i + 1}
             </span>
-            <p className="text-[#7A6040] text-xs leading-relaxed">{step}</p>
+            <p className="text-[color:var(--muted)] text-xs leading-relaxed">{step}</p>
           </div>
         ))}
       </div>
 
       {/* UTR Input */}
       <div>
-        <label className="block text-xs text-[#7A6040] uppercase tracking-widest mb-1.5">
+        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
           UTR / Transaction ID *
         </label>
         <input
@@ -156,14 +156,14 @@ export default function UPIPayment({
           value={utrNumber}
           onChange={e => { setUtrNumber(e.target.value); setUtrError('') }}
           placeholder="e.g. 426813XXXXXXXX"
-          className={`w-full bg-[#0D0A06] border rounded-lg px-4 py-3 text-[#FDF6E3] text-sm placeholder-[#4A3020] focus:outline-none transition font-mono ${
-            utrError ? 'border-red-500/50 focus:border-red-500' : 'border-[#2E2010] focus:border-[#D4A017]/50'
+          className={`w-full bg-[color:var(--bg)] border rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none transition font-mono ${
+            utrError ? 'border-red-500/50 focus:border-red-500' : 'border-[color:var(--border)] focus:border-[color:var(--accent)]/50'
           }`}
         />
         {utrError && (
           <p className="text-xs text-red-400 mt-1">{utrError}</p>
         )}
-        <p className="text-xs text-[#4A3020] mt-1">
+        <p className="text-xs text-[color:var(--faint)] mt-1">
           Find this in your UPI app under payment history / transaction details
         </p>
       </div>
@@ -177,8 +177,8 @@ export default function UPIPayment({
       </button>
 
       {/* WhatsApp fallback */}
-      <div className="border border-[#2E2010] rounded-xl p-4 text-center">
-        <p className="text-xs text-[#7A6040] mb-3">
+      <div className="border border-[color:var(--border)] rounded-xl p-4 text-center">
+        <p className="text-xs text-[color:var(--muted)] mb-3">
           Made payment but facing issues? Contact us directly.
         </p>
         <button
@@ -186,12 +186,12 @@ export default function UPIPayment({
           className="flex items-center justify-center gap-2 w-full bg-green-700/20 border border-green-700/40 text-green-400 font-bold py-2.5 px-6 rounded-xl text-sm hover:bg-green-700/30 transition">
           <span>💬</span> Contact on WhatsApp
         </button>
-        <p className="text-xs text-[#4A3020] mt-2">
+        <p className="text-xs text-[color:var(--faint)] mt-2">
           We'll verify your payment and approve your entry manually.
         </p>
       </div>
 
-      <p className="text-center text-xs text-[#4A3020]">
+      <p className="text-center text-xs text-[color:var(--faint)]">
         Your entry will be confirmed after admin verifies your payment (usually within 24 hours)
       </p>
     </div>

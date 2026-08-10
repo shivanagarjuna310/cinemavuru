@@ -59,14 +59,14 @@ export default async function DistrictPage({
     return (
       <>
         <Navbar />
-        <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16 flex items-center justify-center">
+        <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16 flex items-center justify-center">
           <div className="text-center px-6">
             <div className="text-6xl mb-6">🎬</div>
-            <h1 className="text-3xl font-bold text-[#D4A017] mb-3">
+            <h1 className="text-3xl font-bold text-[color:var(--accent)] mb-3">
               {district.name_en} — Coming Soon
             </h1>
-            <p className="text-[#7A6040] mb-1">{district.name_te}</p>
-            <p className="text-[#7A6040] max-w-sm mx-auto leading-relaxed text-sm mt-2">
+            <p className="text-[color:var(--muted)] mb-1">{district.name_te}</p>
+            <p className="text-[color:var(--muted)] max-w-sm mx-auto leading-relaxed text-sm mt-2">
               We&apos;re bringing CinemaVuru to {district.name_en} soon.
               Be the first filmmaker to upload here!
             </p>
@@ -92,30 +92,30 @@ export default async function DistrictPage({
   return (
     <>
       <Navbar />
-      <main className="relative z-10 min-h-screen text-[#FDF6E3] pt-16">
+      <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
 
         {/* ── District Header ── */}
-        <div className="bg-gradient-to-b from-[#1A1208] to-transparent border-b border-[#2E2010]">
+        <div className="bg-gradient-to-b from-[color:var(--surface)] to-transparent border-b border-[color:var(--border)]">
           <div className="max-w-6xl mx-auto px-6 py-10">
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-[#7A6040] uppercase tracking-widest mb-4">
-              <a href="/" className="hover:text-[#D4A017] transition">Home</a>
+            <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] uppercase tracking-widest mb-4">
+              <a href="/" className="hover:text-[color:var(--accent)] transition">Home</a>
               <span>›</span>
-              <span className="capitalize hover:text-[#D4A017] transition">{stateSlug}</span>
+              <span className="capitalize hover:text-[color:var(--accent)] transition">{stateSlug}</span>
               <span>›</span>
-              <span className="text-[#D4A017]">{district.name_en}</span>
+              <span className="text-[color:var(--accent)]">{district.name_en}</span>
             </div>
 
             <div className="flex items-end justify-between flex-wrap gap-6">
               <div>
-                <h1 className="text-4xl font-bold text-[#FDF6E3] mb-1">
+                <h1 className="text-4xl font-bold text-[color:var(--text)] mb-1">
                   🎬 {district.name_en}
                 </h1>
-                <p className="text-[#7A6040] text-lg mb-3">{district.name_te}</p>
+                <p className="text-[color:var(--muted)] text-lg mb-3">{district.name_te}</p>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-[#FF6B1A] rounded-full animate-pulse" />
-                  <span className="text-[#D4A017] text-sm font-semibold uppercase tracking-wider">
+                  <span className="text-[color:var(--accent)] text-sm font-semibold uppercase tracking-wider">
                     Live · {films.length} Short Films
                   </span>
                 </div>
@@ -124,18 +124,18 @@ export default async function DistrictPage({
               {/* Stats */}
               <div className="flex gap-8">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[#D4A017]">{films.length}</div>
-                  <div className="text-xs text-[#7A6040] uppercase tracking-wide">Films</div>
+                  <div className="text-2xl font-bold text-[color:var(--accent)]">{films.length}</div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Films</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[#D4A017]">{totalLikes}</div>
-                  <div className="text-xs text-[#7A6040] uppercase tracking-wide">Likes</div>
+                  <div className="text-2xl font-bold text-[color:var(--accent)]">{totalLikes}</div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Likes</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[#D4A017]">
+                  <div className="text-2xl font-bold text-[color:var(--accent)]">
                     {totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}K` : totalViews}
                   </div>
-                  <div className="text-xs text-[#7A6040] uppercase tracking-wide">Views</div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
                 </div>
               </div>
             </div>

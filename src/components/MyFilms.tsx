@@ -20,7 +20,7 @@ type Film = {
 
 const STATUS_STYLE: Record<string, string> = {
   active:   'text-green-400 bg-green-900/20 border-green-700/30',
-  pending:  'text-[#D4A017] bg-[#D4A017]/10 border-[#D4A017]/30',
+  pending:  'text-[color:var(--accent)] bg-[#D4A017]/10 border-[color:var(--accent)]/30',
   rejected: 'text-red-400 bg-red-900/20 border-red-700/30',
 }
 
@@ -89,35 +89,35 @@ export default function MyFilms() {
   return (
     <div className="mt-12">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-[#D4A017]">Your Films</h2>
+        <h2 className="text-lg font-bold text-[color:var(--accent)]">Your Films</h2>
         <button onClick={() => userId && fetchMyFilms(userId)}
-          className="text-xs text-[#7A6040] hover:text-[#D4A017] transition">
+          className="text-xs text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
           ↻ Refresh
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-[#7A6040] text-sm">Loading your films...</div>
+        <div className="text-center py-8 text-[color:var(--muted)] text-sm">Loading your films...</div>
       ) : films.length === 0 ? (
-        <div className="text-center py-8 text-[#7A6040]">
+        <div className="text-center py-8 text-[color:var(--muted)]">
           <div className="text-3xl mb-2">🎬</div>
           <p className="text-sm">You haven&apos;t uploaded any films yet.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {films.map(film => (
-            <div key={film.id} className="bg-[#1A1208] border border-[#2E2010] rounded-xl p-4">
+            <div key={film.id} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="font-semibold text-[#FDF6E3] text-sm line-clamp-1">
+                    <h3 className="font-semibold text-[color:var(--text)] text-sm line-clamp-1">
                       {film.title_en}
                     </h3>
-                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border ${STATUS_STYLE[film.status] ?? 'text-[#7A6040]'}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border ${STATUS_STYLE[film.status] ?? 'text-[color:var(--muted)]'}`}>
                       {film.status === 'pending' ? '⏳ Under Review' : film.status === 'active' ? '✅ Live' : '❌ Rejected'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-[#7A6040]">
+                  <div className="flex items-center gap-3 text-xs text-[color:var(--muted)]">
                     <span>{film.genre}</span>
                     <span>·</span>
                     <span>👁 {film.view_count}</span>
@@ -127,7 +127,7 @@ export default function MyFilms() {
                     <span>{timeAgo(film.created_at)}</span>
                   </div>
                   {film.status === 'pending' && (
-                    <p className="text-[10px] text-[#7A6040] mt-1">
+                    <p className="text-[10px] text-[color:var(--muted)] mt-1">
                       Admin is reviewing your film. Usually approved within 24 hours.
                     </p>
                   )}
@@ -137,7 +137,7 @@ export default function MyFilms() {
                   {film.status === 'active' && (
                     <button
                       onClick={() => router.push(`/telangana/hyderabad/film/${film.id}`)}
-                      className="border border-[#D4A017]/30 text-[#D4A017] px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#D4A017]/10 transition"
+                      className="border border-[color:var(--accent)]/30 text-[color:var(--accent)] px-3 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#D4A017]/10 transition"
                     >
                       View
                     </button>
