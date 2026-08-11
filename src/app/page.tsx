@@ -390,7 +390,7 @@ export default async function Home() {
           <section className="max-w-6xl mx-auto px-6 pb-12">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-px h-6 bg-[#4A90E2]" />
-              <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">{monthName} 2026</span>
+              <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">{monthName} {new Date().getFullYear()}</span>
               <span className="w-2 h-2 rounded-full bg-[#4A90E2] animate-pulse" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-1"
