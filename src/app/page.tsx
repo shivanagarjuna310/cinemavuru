@@ -83,9 +83,26 @@ async function getData() {
     .order('like_count', { ascending: false })
     .limit(10)
 
+  // Current month films
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+  const monthName = now.toLocaleString('en-IN', { month: 'long' })
+
+  const { data: monthlyFilms } = await supabase
+    .from('films')
+    .select('id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))')
+    .eq('status', 'active')
+    .gte('created_at', monthStart)
+    .lte('created_at', monthEnd)
+    .order('view_count', { ascending: false })
+    .limit(10)
+
   return {
     topFilms: topFilms ?? [],
     mostLiked: mostLiked ?? [],
+    monthlyFilms: monthlyFilms ?? [],
+    monthName,
     districts: (districts ?? []).map(d => ({
       ...d,
       stateSlug: (d.states as { slug: string; name_en: string } | null)?.slug ?? 'telangana',
@@ -99,7 +116,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, contest, totalUsers, totalFilms, topFilms, mostLiked } = await getData()
+  const { districts, contest, totalUsers, totalFilms, topFilms, mostLiked, monthlyFilms, monthName } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -360,6 +377,82 @@ export default async function Home() {
                       </p>
                       <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
                       <p className="text-[#E84393] text-[10px] font-semibold mt-0.5">❤️ {film.like_count} likes</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── MONTHLY TOP FILMS ── */}
+        {monthlyFilms.length > 0 && (
+          <section className="max-w-6xl mx-auto px-6 pb-12">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-px h-6 bg-[#4A90E2]" />
+              <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">{monthName} 2026</span>
+              <span className="w-2 h-2 rounded-full bg-[#4A90E2] animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-1"
+              style={{fontFamily: "'Georgia', serif"}}>
+              🗓️ Top Films of {monthName}
+            </h2>
+            <p className="text-[#A5A5A5] text-xs mb-6">Films uploaded this month · Resets every month · Top film wins ₹2,000 + promo interview</p>
+
+            <div className="flex gap-6 overflow-x-auto pb-4"
+              style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+              {monthlyFilms.map((film: any, index: number) => {
+                const videoId = film.video_url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
+                const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null
+                const districtInfo = film.districts as any
+                const stateSlug = districtInfo?.states?.slug ?? 'telangana'
+                const districtSlug = districtInfo?.slug ?? 'hyderabad'
+
+                return (
+                  <Link
+                    key={film.id}
+                    href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
+                    className="relative flex-shrink-0 w-56 group"
+                  >
+                    {/* Rank badge for 1st only */}
+                    {index === 0 && (
+                      <div className="absolute top-0 right-5 z-20 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
+                        style={{background: '#FFD700', color: '#000'}}>
+                        🥇
+                      </div>
+                    )}
+
+                    {/* Big number */}
+                    <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
+                      style={{
+                        fontFamily: "'Georgia', serif",
+                        color: 'transparent',
+                        WebkitTextStroke: '2px rgba(74,144,226,0.5)',
+                      }}>
+                      {index + 1}
+                    </div>
+
+                    {/* Thumbnail */}
+                    <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#4A90E2]/50 transition-all duration-300">
+                      {thumbnail ? (
+                        <img
+                          src={thumbnail}
+                          alt={film.title_en}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[#1A1208] flex items-center justify-center text-2xl">🎬</div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </div>
+
+                    {/* Film info */}
+                    <div className="mt-2 ml-5">
+                      <p className="text-white text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#4A90E2] transition-colors">
+                        {film.title_en}
+                      </p>
+                      <p className="text-[#A5A5A5] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
+                      <p className="text-[#4A90E2] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
                     </div>
                   </Link>
                 )
