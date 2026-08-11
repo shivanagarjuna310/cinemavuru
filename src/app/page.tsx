@@ -106,7 +106,7 @@ function filmThumb(url?: string) {
 }
 
 export default async function Home() {
-  const { districts, contest, totalUsers, totalFilms, topFilms, mostLiked } = await getData()
+  const { districts, contest, totalFilms, topFilms, mostLiked } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -143,27 +143,11 @@ export default async function Home() {
           <div className="relative z-10 max-w-6xl mx-auto px-6 pt-24 pb-20 w-full">
             <div className="max-w-2xl">
 
-              {/* Contest pill (demoted — one line, optional) */}
-              <Link href="/contest"
-                className="anim-fade-up inline-flex items-center gap-2 rounded-full border border-[color:var(--accent)]/40 bg-[#D4A017]/10 backdrop-blur-sm px-3.5 py-1.5 text-xs font-semibold text-[#FFD98A] mb-7 hover:bg-[#D4A017]/20 transition"
-                style={{animationDelay: '.05s'}}>
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#FF6B1A]" style={{animation: 'cv-ring 1.8s ease-out infinite'}} />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#FF6B1A]" />
-                </span>
-                {contest ? `Season ${contest.season_number} contest is live` : 'Monthly filmmaking contest'}
-                <span aria-hidden>→</span>
-              </Link>
-
               {/* Headline — purpose first */}
               <h1 className="mb-5 leading-[1.02]" style={{fontFamily: "'Georgia', 'Times New Roman', serif"}}>
                 <span className="anim-fade-up block text-[2.75rem] sm:text-6xl md:text-7xl font-black text-white tracking-tight"
                   style={{animationDelay: '.14s', textShadow: '0 4px 32px rgba(0,0,0,0.75)'}}>
-                  The cinema of
-                </span>
-                <span className="anim-fade-up block text-[2.75rem] sm:text-6xl md:text-7xl font-black tracking-tight text-shimmer"
-                  style={{animationDelay: '.24s'}}>
-                  your district.
+                  Mana Oori Cinema
                 </span>
               </h1>
 
@@ -198,7 +182,7 @@ export default async function Home() {
                 {[
                   { value: totalFilms, suffix: '+', label: 'Short Films' },
                   { value: districts.length, suffix: '', label: 'Districts Live' },
-                  { value: totalUsers, suffix: '+', label: 'Storytellers' },
+                  { value: 2, suffix: '', label: 'Telugu States' },
                 ].map((s, i) => (
                   <div key={s.label} className="flex items-center gap-4">
                     {i > 0 && <div className="w-px h-9 bg-white/15" />}
