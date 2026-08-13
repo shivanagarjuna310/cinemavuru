@@ -53,12 +53,13 @@ async function getData() {
   const monthName = now.toLocaleString('en-IN', { month: 'long' })
 
   // Run all independent queries concurrently (was sequential → slow TTFB)
-  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes] = await Promise.all([
+  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes] = await Promise.all([
     supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
     supabase.from('films').select('district_id').eq('status', 'active'),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('like_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').gte('created_at', monthStart).lte('created_at', monthEnd).order('view_count', { ascending: false }).limit(10),
+    supabase.from('films').select(FILM_COLS).eq('status', 'active').order('created_at', { ascending: false }).limit(10),
   ])
 
   const districts = districtsRes.data
@@ -73,6 +74,7 @@ async function getData() {
     topFilms: topFilmsRes.data ?? [],
     mostLiked: mostLikedRes.data ?? [],
     monthlyFilms: monthlyFilmsRes.data ?? [],
+    recentFilms: recentFilmsRes.data ?? [],
     monthName,
     districts: (districts ?? []).map(d => ({
       ...d,
@@ -85,7 +87,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, monthName } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, recentFilms, monthName } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -191,6 +193,16 @@ export default async function Home() {
         </section>
 
         {/* ══════════ FILM ROWS ══════════ */}
+        {recentFilms.length > 0 && (
+            <FilmRow
+              films={recentFilms}
+              eyebrow="Just Uploaded"
+              title="🆕 Recently Added"
+              subtitle="Fresh films from across Telugu land — be the first to watch!"
+              accent="green"
+              metric={(f) => `👁 ${f.view_count} views`}
+            />
+        )}
         {monthlyFilms.length > 0 && (
           <Reveal>
             <FilmRow
