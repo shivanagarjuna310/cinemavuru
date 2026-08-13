@@ -196,8 +196,8 @@ export default async function Home() {
             <FilmRow
               films={monthlyFilms}
               eyebrow={`${monthName} ${new Date().getFullYear()}`}
-              title="🎬 Fresh Off the Reel"
-              subtitle="New short films from across Telugu land, uploaded this month."
+              title={`🗓️ Top Films of ${monthName}`}
+              subtitle="Films uploaded this month · Resets every month · Top film wins ₹2,000 + promo interview"
               accent="blue"
               showRankBadge
               metric={(f) => `👁 ${f.view_count} views`}
