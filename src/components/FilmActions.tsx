@@ -12,6 +12,35 @@ type Props = {
   districtSlug: string
 }
 
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
+    </svg>
+  )
+}
+
+function ShareIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
+      <path d="M16 6l-4-4-4 4" />
+      <path d="M12 2v13" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
 export default function FilmActions({ filmId, initialLikes, stateSlug, districtSlug }: Props) {
   const [liked,        setLiked]        = useState(false)
   const [likeCount,    setLikeCount]    = useState(initialLikes)
@@ -85,6 +114,40 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
     init()
   }, [filmId])
 
+  // Authoritative like count from the likes table (reflects everyone's likes)
+  async function refreshLikeCount() {
+    const { count } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('film_id', filmId)
+    if (typeof count === 'number') setLikeCount(count)
+  }
+
+  // Keep the count live: recount when anyone likes/unlikes this film (realtime),
+  // and when the tab regains focus (reliable fallback if realtime is off).
+  useEffect(() => {
+    refreshLikeCount()
+    const channel = supabase
+      .channel(`likes-${filmId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'likes', filter: `film_id=eq.${filmId}` },
+        () => refreshLikeCount(),
+      )
+      .subscribe()
+
+    const onFocus = () => { if (document.visibilityState === 'visible') refreshLikeCount() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+
+    return () => {
+      supabase.removeChannel(channel)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filmId])
+
   async function handleLike() {
     if (!userId) { window.location.href = '/auth'; return }
     if (loading) return
@@ -142,33 +205,48 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
     setVoting(false)
   }
 
-  function handleWhatsApp() {
-    const url  = encodeURIComponent(window.location.href)
-    const text = encodeURIComponent('Watch this short film on CinemaVuru 🎬')
-    window.open(`https://wa.me/?text=${text}%20${url}`, '_blank')
-  }
-
-  function handleCopy() {
-    navigator.clipboard.writeText(window.location.href).then(() => {
+  async function handleShare() {
+    const url = window.location.href
+    // Mobile: native share sheet (WhatsApp, Instagram, etc.)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: document.title,
+          text: 'Watch this short film on CinemaVuru 🎬',
+          url,
+        })
+      } catch {
+        // user dismissed the share sheet — nothing to do
+      }
+      return
+    }
+    // Desktop fallback: copy the link
+    try {
+      await navigator.clipboard.writeText(url)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    })
+    } catch {
+      setCopied(false)
+    }
   }
 
   const isMyVote = votedFilmId === filmId
 
+  const pill = 'inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold ring-1 transition-all'
+
   return (
-    <div className="flex items-center gap-3 py-4 border-t border-b border-[color:var(--border)] mb-6 flex-wrap">
+    <div className="flex items-center gap-2.5 py-4 border-t border-b border-[color:var(--border)] mb-6 flex-wrap">
 
       {/* Like */}
-      <button onClick={handleLike} disabled={loading}
-        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide transition-all disabled:opacity-60 ${
+      <button onClick={handleLike} disabled={loading} aria-pressed={liked}
+        className={`${pill} disabled:opacity-60 ${
           liked
-            ? 'bg-[#FF6B1A]/20 border border-[color:var(--accent-hot)]/50 text-[color:var(--accent-hot)]'
-            : 'bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent-hot)] hover:border-[color:var(--accent-hot)]/30'
+            ? 'bg-[#FF6B1A]/15 text-[color:var(--accent-hot)] ring-[color:var(--accent-hot)]/40'
+            : 'bg-[color:var(--surface)] text-[color:var(--muted)] ring-[color:var(--border)] hover:text-[color:var(--accent-hot)] hover:ring-[color:var(--accent-hot)]/40'
         }`}>
-        {liked ? '♥' : '♡'}
-        <span>{likeCount} {liked ? 'Liked!' : 'Like'}</span>
+        <HeartIcon filled={liked} />
+        <span className="tabular-nums">{likeCount}</span>
+        <span className="hidden sm:inline font-medium opacity-80">{likeCount === 1 ? 'Like' : 'Likes'}</span>
       </button>
 
       {/* Vote — only shows when film is in voting contest */}
@@ -177,34 +255,30 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
           onClick={handleVote}
           disabled={voting || hasVoted}
           title={hasVoted && !isMyVote ? 'You already voted for another film' : ''}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide transition-all ${
+          className={`${pill} ${
             isMyVote
-              ? 'bg-[#D4A017]/20 border border-[color:var(--accent)]/50 text-[color:var(--accent)] cursor-default'
+              ? 'bg-[#D4A017]/15 text-[color:var(--accent)] ring-[color:var(--accent)]/40 cursor-default'
               : hasVoted
-              ? 'bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--faint)] cursor-not-allowed opacity-40'
-              : 'bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]/30 cursor-pointer'
+              ? 'bg-[color:var(--surface)] text-[color:var(--faint)] ring-[color:var(--border)] cursor-not-allowed opacity-50'
+              : 'bg-[color:var(--surface)] text-[color:var(--muted)] ring-[color:var(--border)] hover:text-[color:var(--accent)] hover:ring-[color:var(--accent)]/40'
           }`}>
-          🗳️
-          <span>
-            {isMyVote
-              ? `✓ Your Vote · ${voteCount}`
-              : hasVoted
-              ? `Voted · ${voteCount}`
-              : `Vote · ${voteCount}`}
+          <span aria-hidden>🗳️</span>
+          <span className="tabular-nums">{voteCount}</span>
+          <span className="hidden sm:inline font-medium opacity-80">
+            {isMyVote ? 'Your vote' : hasVoted ? 'Voted' : 'Vote'}
           </span>
         </button>
       )}
 
-      {/* WhatsApp */}
-      <button onClick={handleWhatsApp}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[#25D366] hover:border-[#25D366]/30 transition-all">
-        📱 WhatsApp
-      </button>
-
-      {/* Copy */}
-      <button onClick={handleCopy}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]/30 transition-all">
-        {copied ? '✓ Copied!' : '🔗 Copy Link'}
+      {/* Share — native share sheet on mobile, copy-link fallback on desktop */}
+      <button onClick={handleShare} aria-label="Share this film" title="Share this film"
+        className={`${pill} sm:ml-auto ${
+          copied
+            ? 'bg-[#25D366]/10 text-[#25D366] ring-[#25D366]/40'
+            : 'bg-[color:var(--surface)] text-[color:var(--muted)] ring-[color:var(--border)] hover:text-[color:var(--accent)] hover:ring-[color:var(--accent)]/40'
+        }`}>
+        {copied ? <CheckIcon /> : <ShareIcon />}
+        <span>{copied ? 'Link copied' : 'Share'}</span>
       </button>
 
     </div>

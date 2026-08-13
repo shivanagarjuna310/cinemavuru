@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Navbar from '../components/Navbar'
 import Reveal from '../components/Reveal'
 import CountUp from '../components/CountUp'
+import FilmRow from '../components/FilmRow'
 
 export const revalidate = 60
 
@@ -42,68 +43,36 @@ const DISTRICT_CONFIG: Record<string, { image: string; overlay: string; landmark
   vizianagaram:  { image: '/districts/vizianagaram.png',  overlay: 'rgba(80,0,60,0.45)',     landmark: 'Vizianagaram Fort' },
 }
 
-async function getData() {
-  const { data: districts } = await supabase
-    .from('districts')
-    .select('*, states(slug, name_en)')
-    .eq('is_active', true)
-    .order('name_en', { ascending: true })
+const FILM_COLS =
+  'id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))'
 
-  const { data: filmRows } = await supabase
-    .from('films')
-    .select('district_id')
-    .eq('status', 'active')
+async function getData() {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+  const monthName = now.toLocaleString('en-IN', { month: 'long' })
+
+  // Run all independent queries concurrently (was sequential → slow TTFB)
+  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes] = await Promise.all([
+    supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
+    supabase.from('films').select('district_id').eq('status', 'active'),
+    supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
+    supabase.from('films').select(FILM_COLS).eq('status', 'active').order('like_count', { ascending: false }).limit(10),
+    supabase.from('films').select(FILM_COLS).eq('status', 'active').gte('created_at', monthStart).lte('created_at', monthEnd).order('view_count', { ascending: false }).limit(10),
+  ])
+
+  const districts = districtsRes.data
+  const filmRows = filmRowsRes.data
 
   const counts: Record<string, number> = {}
   filmRows?.forEach(f => {
     counts[f.district_id] = (counts[f.district_id] ?? 0) + 1
   })
 
-  const { data: contest } = await supabase
-    .from('contests')
-    .select('*')
-    .in('status', ['open', 'voting'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  const { count: totalUsers } = await supabase
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-
-  const { data: topFilms } = await supabase
-    .from('films')
-    .select('id, title_en, genre, video_url, view_count, district_id, districts(name_en, slug, states(slug))')
-    .eq('status', 'active')
-    .order('view_count', { ascending: false })
-    .limit(10)
-
-  const { data: mostLiked } = await supabase
-    .from('films')
-    .select('id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))')
-    .eq('status', 'active')
-    .order('like_count', { ascending: false })
-    .limit(10)
-
-  // Current month films
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
-  const monthName = now.toLocaleString('en-IN', { month: 'long' })
-
-  const { data: monthlyFilms } = await supabase
-    .from('films')
-    .select('id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))')
-    .eq('status', 'active')
-    .gte('created_at', monthStart)
-    .lte('created_at', monthEnd)
-    .order('view_count', { ascending: false })
-    .limit(10)
-
   return {
-    topFilms: topFilms ?? [],
-    mostLiked: mostLiked ?? [],
-    monthlyFilms: monthlyFilms ?? [],
+    topFilms: topFilmsRes.data ?? [],
+    mostLiked: mostLikedRes.data ?? [],
+    monthlyFilms: monthlyFilmsRes.data ?? [],
     monthName,
     districts: (districts ?? []).map(d => ({
       ...d,
@@ -111,19 +80,12 @@ async function getData() {
       stateName: (d.states as { slug: string; name_en: string } | null)?.name_en ?? 'Telangana',
       filmCount: counts[d.id] ?? 0,
     })),
-    contest,
-    totalUsers: totalUsers ?? 0,
     totalFilms: filmRows?.length ?? 0,
   }
 }
 
-function filmThumb(url?: string) {
-  const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
-  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
-}
-
 export default async function Home() {
-  const { districts, contest, totalFilms, topFilms, mostLiked, monthlyFilms, monthName } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, monthName } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -228,187 +190,40 @@ export default async function Home() {
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[color:var(--bg)] to-transparent z-[5]" />
         </section>
 
-        {/* ══════════ PURPOSE STRIP ══════════ */}
-        <section className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
-          <Reveal className="text-center mb-12">
-            <span className="text-xs text-[color:var(--accent)] uppercase tracking-[4px] font-semibold">Why CinemaVuru</span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[color:var(--text)] mt-3"
-              style={{fontFamily: "'Georgia', serif"}}>
-              A stage for every district
-            </h2>
-          </Reveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[
-              { icon: '📍', title: 'Hyperlocal by design', desc: 'Films are organised by district — so a story from your town reaches the people of your town first.' },
-              { icon: '🌱', title: 'Local talent, real spotlight', desc: 'A filmmaker from a small village gets the same stage as one from the big city. Talent, not location, wins.' },
-              { icon: '❤️', title: 'A community, not an algorithm', desc: 'Watch, like and comment. Every view is your district showing up to celebrate one of its own.' },
-            ].map((c, i) => (
-              <Reveal key={c.title} delay={i * 110}>
-                <div className="h-full bg-[color:var(--surface-2)] border border-[color:var(--border-2)] rounded-2xl p-7 hover:-translate-y-1 hover:border-[color:var(--accent)]/40 transition-all duration-300">
-                  <div className="text-4xl mb-4 anim-float" style={{animationDelay: `${i * 0.4}s`}}>{c.icon}</div>
-                  <h3 className="font-bold text-[color:var(--text)] text-lg mb-2">{c.title}</h3>
-                  <p className="text-[color:var(--muted)] text-sm leading-relaxed">{c.desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* ══════════ THIS MONTH'S TOP FILMS ══════════ */}
+        {/* ══════════ FILM ROWS ══════════ */}
         {monthlyFilms.length > 0 && (
           <Reveal>
-            <section className="max-w-6xl mx-auto px-6 pb-12 pt-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-px h-6 bg-[#4A90E2]" />
-                <span className="text-xs text-[#4A90E2] uppercase tracking-[3px] font-semibold">{monthName} {new Date().getFullYear()}</span>
-                <span className="w-2 h-2 rounded-full bg-[#4A90E2] animate-pulse" />
-              </div>
-              <h2 className="text-2xl font-bold text-[color:var(--text)] mb-1" style={{fontFamily: "'Georgia', serif"}}>
-                🗓️ Fresh This Month
-              </h2>
-              <p className="text-[color:var(--muted)] text-xs mb-6">
-                New films uploaded this month · resets monthly · this month&apos;s top film wins ₹2,000 + a promo interview
-              </p>
-
-              <div className="flex gap-6 overflow-x-auto pb-4" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-                {monthlyFilms.map((film: any, index: number) => {
-                  const thumbnail = filmThumb(film.video_url)
-                  const districtInfo = film.districts as any
-                  const stateSlug = districtInfo?.states?.slug ?? 'telangana'
-                  const districtSlug = districtInfo?.slug ?? 'hyderabad'
-                  return (
-                    <Link key={film.id} href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
-                      className="relative flex-shrink-0 w-56 group">
-                      {index === 0 && (
-                        <div className="absolute top-0 right-5 z-20 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
-                          style={{background: '#FFD700', color: '#000'}}>🥇</div>
-                      )}
-                      <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
-                        style={{fontFamily: "'Georgia', serif", color: 'transparent', WebkitTextStroke: '2px rgba(74,144,226,0.5)'}}>
-                        {index + 1}
-                      </div>
-                      <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#4A90E2]/50 transition-all duration-300">
-                        {thumbnail ? (
-                          <img src={thumbnail} alt={film.title_en}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                        ) : (
-                          <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      </div>
-                      <div className="mt-2 ml-5">
-                        <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#4A90E2] transition-colors">
-                          {film.title_en}
-                        </p>
-                        <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
-                        <p className="text-[#4A90E2] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </section>
+            <FilmRow
+              films={monthlyFilms}
+              eyebrow={`${monthName} ${new Date().getFullYear()}`}
+              title="🎬 Fresh Off the Reel"
+              subtitle="New short films from across Telugu land, uploaded this month."
+              accent="blue"
+              showRankBadge
+              metric={(f) => `👁 ${f.view_count} views`}
+            />
           </Reveal>
         )}
-
-        {/* ══════════ MOST WATCHED ══════════ */}
         {topFilms.length > 0 && (
           <Reveal>
-            <section className="max-w-6xl mx-auto px-6 pb-12">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-px h-6 bg-[#FF6B1A]" />
-                <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Trending Now</span>
-                <span className="w-2 h-2 rounded-full bg-[#FF6B1A] animate-pulse" />
-              </div>
-              <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6" style={{fontFamily: "'Georgia', serif"}}>
-                🔥 Most Watched
-              </h2>
-
-              <div className="flex gap-6 overflow-x-auto pb-4" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-                {topFilms.map((film: any, index: number) => {
-                  const thumbnail = filmThumb(film.video_url)
-                  const districtInfo = film.districts as any
-                  const stateSlug = districtInfo?.states?.slug ?? 'telangana'
-                  const districtSlug = districtInfo?.slug ?? 'hyderabad'
-                  return (
-                    <Link key={film.id} href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
-                      className="relative flex-shrink-0 w-56 group">
-                      <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
-                        style={{fontFamily: "'Georgia', serif", color: 'transparent', WebkitTextStroke: '2px rgba(212,160,23,0.5)'}}>
-                        {index + 1}
-                      </div>
-                      <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[color:var(--accent)]/50 transition-all duration-300">
-                        {thumbnail ? (
-                          <img src={thumbnail} alt={film.title_en}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                        ) : (
-                          <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      </div>
-                      <div className="mt-2 ml-5">
-                        <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[color:var(--accent)] transition-colors">
-                          {film.title_en}
-                        </p>
-                        <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
-                        <p className="text-[color:var(--accent-hot)] text-[10px] font-semibold mt-0.5">👁 {film.view_count} views</p>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </section>
+            <FilmRow
+              films={topFilms}
+              eyebrow="Trending Now"
+              title="🔥 Most Watched"
+              accent="gold"
+              metric={(f) => `👁 ${f.view_count} views`}
+            />
           </Reveal>
         )}
-
-        {/* ══════════ MOST LOVED ══════════ */}
         {mostLiked.length > 0 && (
           <Reveal>
-            <section className="max-w-6xl mx-auto px-6 pb-12">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-px h-6 bg-[#E84393]" />
-                <span className="text-xs text-[#E84393] uppercase tracking-[3px] font-semibold">Most Loved</span>
-                <span className="w-2 h-2 rounded-full bg-[#E84393] animate-pulse" />
-              </div>
-              <h2 className="text-2xl font-bold text-[color:var(--text)] mb-6" style={{fontFamily: "'Georgia', serif"}}>
-                ❤️ Most Loved Films
-              </h2>
-
-              <div className="flex gap-6 overflow-x-auto pb-4" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-                {mostLiked.map((film: any, index: number) => {
-                  const thumbnail = filmThumb(film.video_url)
-                  const districtInfo = film.districts as any
-                  const stateSlug = districtInfo?.states?.slug ?? 'telangana'
-                  const districtSlug = districtInfo?.slug ?? 'hyderabad'
-                  return (
-                    <Link key={film.id} href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
-                      className="relative flex-shrink-0 w-56 group">
-                      <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
-                        style={{fontFamily: "'Georgia', serif", color: 'transparent', WebkitTextStroke: '2px rgba(232,67,147,0.5)'}}>
-                        {index + 1}
-                      </div>
-                      <div className="relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 group-hover:border-[#E84393]/50 transition-all duration-300">
-                        {thumbnail ? (
-                          <img src={thumbnail} alt={film.title_en}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                        ) : (
-                          <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      </div>
-                      <div className="mt-2 ml-5">
-                        <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 group-hover:text-[#E84393] transition-colors">
-                          {film.title_en}
-                        </p>
-                        <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{districtInfo?.name_en}</p>
-                        <p className="text-[#E84393] text-[10px] font-semibold mt-0.5">❤️ {film.like_count} likes</p>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </section>
+            <FilmRow
+              films={mostLiked}
+              eyebrow="Most Loved"
+              title="❤️ Most Loved Films"
+              accent="pink"
+              metric={(f) => `❤️ ${f.like_count} likes`}
+            />
           </Reveal>
         )}
 
@@ -501,6 +316,33 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* ══════════ WHY CINEMAVURU ══════════ */}
+        <section className="max-w-6xl mx-auto px-6 py-16 sm:py-20">
+          <Reveal className="text-center mb-12">
+            <span className="text-xs text-[color:var(--accent)] uppercase tracking-[4px] font-semibold">Why CinemaVuru</span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[color:var(--text)] mt-3"
+              style={{fontFamily: "'Georgia', serif"}}>
+              A stage for every district
+            </h2>
+          </Reveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { icon: '📍', title: 'Hyperlocal by design', desc: 'Films are organised by district — so a story from your town reaches the people of your town first.' },
+              { icon: '🌱', title: 'Local talent, real spotlight', desc: 'A filmmaker from a small village gets the same stage as one from the big city. Talent, not location, wins.' },
+              { icon: '❤️', title: 'A community, not an algorithm', desc: 'Watch, like and comment. Every view is your district showing up to celebrate one of its own.' },
+            ].map((c, i) => (
+              <Reveal key={c.title} delay={i * 110}>
+                <div className="h-full bg-[color:var(--surface-2)] border border-[color:var(--border-2)] rounded-2xl p-7 hover:-translate-y-1 hover:border-[color:var(--accent)]/40 transition-all duration-300">
+                  <div className="text-4xl mb-4 anim-float" style={{animationDelay: `${i * 0.4}s`}}>{c.icon}</div>
+                  <h3 className="font-bold text-[color:var(--text)] text-lg mb-2">{c.title}</h3>
+                  <p className="text-[color:var(--muted)] text-sm leading-relaxed">{c.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
         {/* ══════════ HOW IT WORKS (generic) ══════════ */}
         <section className="relative max-w-6xl mx-auto px-6 py-16 sm:py-20">
           <Reveal className="text-center mb-14">
@@ -532,53 +374,7 @@ export default async function Home() {
             ))}
           </div>
 
-          <Reveal className="text-center mt-8">
-            <p className="text-sm text-[color:var(--muted)]">
-              Feeling competitive?{' '}
-              <Link href="/contest" className="text-[color:var(--accent)] font-semibold hover:underline">
-                Enter the monthly contest for real prizes →
-              </Link>
-            </p>
-          </Reveal>
         </section>
-
-        {/* ══════════ CONTEST BAND (demoted highlight) ══════════ */}
-        <Reveal>
-          <section className="max-w-6xl mx-auto px-6 pb-16">
-            <div className="relative overflow-hidden rounded-3xl border border-[color:var(--accent)]/30 bg-gradient-to-br from-[#D4A017]/12 via-[#FF6B1A]/6 to-transparent p-8 sm:p-12">
-              <div className="absolute -top-10 -right-10 text-[160px] leading-none select-none opacity-[0.06]" aria-hidden>🏆</div>
-              <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="max-w-xl">
-                  <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">The Monthly Contest</span>
-                  <h2 className="text-2xl sm:text-3xl font-black text-[color:var(--text)] mt-2 mb-3" style={{fontFamily: "'Georgia', serif"}}>
-                    {contest ? `Season ${contest.season_number} is live` : 'Put your film in the race'}
-                  </h2>
-                  <p className="text-[color:var(--muted)] text-sm leading-relaxed">
-                    Every season, filmmakers across both states compete for real prize money and a
-                    permanent place in the Hall of Fame. Your district rallies, your fans vote, the top films win.
-                  </p>
-                  {contest && (
-                    <div className="flex gap-5 mt-5 text-sm text-[color:var(--text)] font-semibold">
-                      <span>🥇 ₹{contest.prize_1st?.toLocaleString('en-IN')}</span>
-                      <span>🥈 ₹{contest.prize_2nd?.toLocaleString('en-IN')}</span>
-                      <span>🥉 ₹{contest.prize_3rd?.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-3 shrink-0">
-                  <Link href="/contest"
-                    className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3.5 rounded-xl font-bold uppercase tracking-wider text-sm text-center hover:opacity-90 hover:-translate-y-0.5 transition-all">
-                    🏆 View Contest
-                  </Link>
-                  <Link href="/contest/winners"
-                    className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-8 py-3.5 rounded-xl font-bold uppercase tracking-wider text-sm text-center hover:bg-[#D4A017]/10 transition-all">
-                    Hall of Fame
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-        </Reveal>
 
         {/* ══════════ FINAL CTA ══════════ */}
         <section className="relative overflow-hidden">

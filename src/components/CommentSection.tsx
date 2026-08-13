@@ -9,6 +9,7 @@ type Comment = {
   id:         string
   text:       string
   created_at: string
+  user_id:    string
   profiles:   { name: string | null } | null
 }
 
@@ -53,20 +54,14 @@ export default function CommentSection({ filmId, initialComments }: Props) {
     })
   }, [])
 
-  // Real-time: subscribe to new comments on this film
+  // Real-time: reflect other people's comments (and deletions) as they happen
   useEffect(() => {
     const channel = supabase
       .channel(`comments-${filmId}`)
       .on(
         'postgres_changes',
-        {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'comments',
-          filter: `film_id=eq.${filmId}`,
-        },
+        { event: 'INSERT', schema: 'public', table: 'comments', filter: `film_id=eq.${filmId}` },
         async (payload) => {
-          // Fetch the profile for the new comment
           const { data: profile } = await supabase
             .from('profiles')
             .select('name')
@@ -77,10 +72,20 @@ export default function CommentSection({ filmId, initialComments }: Props) {
             id:         payload.new.id,
             text:       payload.new.text,
             created_at: payload.new.created_at,
+            user_id:    payload.new.user_id,
             profiles:   profile ?? { name: 'Anonymous' },
           }
-
-          setComments(prev => [newComment, ...prev])
+          // Dedupe: our own optimistic insert may already be in the list
+          setComments(prev => (prev.some(c => c.id === newComment.id) ? prev : [newComment, ...prev]))
+        }
+      )
+      .on(
+        // DELETE payloads only carry the primary key, so we don't filter by film_id
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'comments' },
+        (payload) => {
+          const delId = (payload.old as { id?: string })?.id
+          if (delId) setComments(prev => prev.filter(c => c.id !== delId))
         }
       )
       .subscribe()
@@ -100,22 +105,51 @@ export default function CommentSection({ filmId, initialComments }: Props) {
     setPosting(true)
     setError('')
 
-    const { error: err } = await supabase.from('comments').insert({
-      film_id: filmId,
-      user_id: userId,
-      text:    trimmed,
-    })
+    const { data: row, error: err } = await supabase
+      .from('comments')
+      .insert({ film_id: filmId, user_id: userId, text: trimmed })
+      .select('id, text, created_at, user_id')
+      .single()
 
-    if (err) {
+    if (err || !row) {
       setError('Could not post comment. Please try again.')
       setPosting(false)
       return
     }
 
-    // Clear input — real-time subscription adds comment to list
+    // Optimistic: show it instantly (realtime dedupes against this)
+    const mine: Comment = {
+      id:         row.id,
+      text:       row.text,
+      created_at: row.created_at,
+      user_id:    row.user_id,
+      profiles:   { name: userName },
+    }
+    setComments(prev => (prev.some(c => c.id === mine.id) ? prev : [mine, ...prev]))
     setText('')
     setPosting(false)
     textareaRef.current?.focus()
+  }
+
+  async function handleDelete(commentId: string) {
+    if (!userId) return
+    const snapshot = comments
+    setComments(cs => cs.filter(c => c.id !== commentId)) // optimistic
+
+    // .select() returns the rows actually deleted. If RLS blocks the delete,
+    // Supabase removes 0 rows and returns NO error — so we must check the count,
+    // otherwise the comment would silently reappear on refresh.
+    const { data, error: err } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', userId)
+      .select('id')
+
+    if (err || !data || data.length === 0) {
+      setComments(snapshot) // roll back — nothing was actually deleted
+      setError('Could not delete comment. Please try again.')
+    }
   }
 
   return (
@@ -189,7 +223,7 @@ export default function CommentSection({ filmId, initialComments }: Props) {
       ) : (
         <div className="space-y-5">
           {comments.map(c => (
-            <div key={c.id} className="flex gap-3">
+            <div key={c.id} className="flex gap-3 group">
               <div className="w-9 h-9 rounded-full bg-[color:var(--border)] flex items-center justify-center text-[color:var(--accent)] font-bold text-sm flex-shrink-0">
                 {getInitial(c.profiles?.name)}
               </div>
@@ -201,8 +235,17 @@ export default function CommentSection({ filmId, initialComments }: Props) {
                   <span className="text-xs text-[color:var(--faint)]">
                     {timeAgo(c.created_at)}
                   </span>
+                  {userId && c.user_id === userId && (
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      title="Delete comment"
+                      className="ml-auto text-[color:var(--faint)] hover:text-[color:var(--accent-hot)] text-xs opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-                <p className="text-sm text-[color:var(--text)]/80 leading-relaxed">
+                <p className="text-sm text-[color:var(--text)]/80 leading-relaxed whitespace-pre-wrap break-words">
                   {c.text}
                 </p>
               </div>
