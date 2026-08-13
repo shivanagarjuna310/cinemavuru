@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import PWARegister from '@/components/PWARegister'
 import FloatingUploadButton from '@/components/FloatingUploadButton'
+import { Analytics } from '@vercel/analytics/next'
 const rajdhani = Rajdhani({
   variable: "--font-rajdhani",
   subsets: ["latin"],
@@ -99,6 +100,8 @@ export default function RootLayout({
 
         {/* Global "Share Your Film" floating action button */}
         <FloatingUploadButton />
+
+        <Analytics />
 
       </body>
     </html>

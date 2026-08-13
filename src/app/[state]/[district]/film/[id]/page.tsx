@@ -1,11 +1,12 @@
 // src/app/[state]/[district]/film/[id]/page.tsx
 
 import { createClient } from '@supabase/supabase-js'
-import { notFound }     from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link             from 'next/link'
 import { headers }      from 'next/headers'
 import Navbar           from '@/components/Navbar'
 import FilmActions      from '@/components/FilmActions'
+import FilmPlayer       from '@/components/FilmPlayer'
 import CommentSection   from '@/components/CommentSection'
 import type { Metadata } from 'next'
 
@@ -14,14 +15,24 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
+
 async function getFilm(id: string) {
   const { data } = await supabase
     .from('films')
-    .select('*, profiles!films_creator_id_fkey(id, name)')
+    .select('*, profiles!films_creator_id_fkey(id, name), districts(slug, states(slug))')
     .eq('id', id)
     .eq('status', 'active')
     .single()
   return data
+}
+
+// Supabase may return a to-one relation as an object or a 1-element array —
+// normalise so canonical URL + redirect work regardless of shape.
+function filmLocation(film: any): { state?: string; district?: string } {
+  const d = Array.isArray(film?.districts) ? film.districts[0] : film?.districts
+  const s = d && (Array.isArray(d.states) ? d.states[0] : d.states)
+  return { state: s?.slug, district: d?.slug }
 }
 
 async function getComments(filmId: string) {
@@ -32,6 +43,15 @@ async function getComments(filmId: string) {
     .order('created_at', { ascending: false })
     .limit(50)
   return data ?? []
+}
+
+// Real like count straight from the likes table (not the denormalised column)
+async function getLikeCount(filmId: string) {
+  const { count } = await supabase
+    .from('likes')
+    .select('*', { count: 'exact', head: true })
+    .eq('film_id', filmId)
+  return count ?? 0
 }
 
 // Unique view per IP per day — not per refresh
@@ -59,23 +79,33 @@ export async function generateMetadata({
 }: {
   params: Promise<{ state: string; district: string; id: string }>
 }): Promise<Metadata> {
-  const { id, district } = await params
+  const { id, state, district } = await params
   const film = await getFilm(id)
 
   if (!film) {
     return { title: 'Film Not Found — CinemaVuru' }
   }
 
+  // Canonical points at the film's real district (a film is reachable under any
+  // /state/district, so pin one canonical URL to avoid duplicate content).
+  const loc = filmLocation(film)
+  const realState = loc.state ?? state ?? 'telangana'
+  const realDistrict = loc.district ?? district
+
   const description = film.description
     ? film.description.slice(0, 150) + '...'
-    : `Watch "${film.title_en}" — a short film from ${district} on CinemaVuru.`
+    : `Watch "${film.title_en}" — a short film from ${realDistrict} on CinemaVuru.`
 
-  const url = `https://www.cinemavuru.com/telangana/${district}/film/${id}`
-  const image = film.thumbnail_url ?? 'https://www.cinemavuru.com/og-default.png'
+  const url = `${SITE}/${realState}/${realDistrict}/film/${id}`
+  const vid = film.video_url?.match(/embed\/([^?]+)/)?.[1]
+  const image = vid
+    ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg`
+    : (film.thumbnail_url ?? `${SITE}/og-default.png`)
 
   return {
     title: `${film.title_en} — CinemaVuru`,
     description,
+    alternates: { canonical: url },
     openGraph: {
       title:       `${film.title_en} — CinemaVuru`,
       description,
@@ -124,18 +154,40 @@ export default async function FilmPage({
 }) {
   const { state: stateSlug, district: districtSlug, id } = await params
 
-  const [film, comments] = await Promise.all([
+  const [film, comments, , likeCount] = await Promise.all([
     getFilm(id),
     getComments(id),
     incrementView(id),  // unique per IP per day
+    getLikeCount(id),
   ])
 
   if (!film) notFound()
 
+  // Redirect to the canonical district URL if the film is opened under a
+  // different /state/district than where it actually belongs.
+  const loc = filmLocation(film)
+  if (loc.state && loc.district && (loc.state !== stateSlug || loc.district !== districtSlug)) {
+    redirect(`/${loc.state}/${loc.district}/film/${id}`)
+  }
+
   const style = GENRE_STYLE[film.genre ?? ''] ?? GENRE_STYLE.Default
+
+  // SEO: VideoObject structured data so films can surface in Google video results
+  const videoId = film.video_url?.match(/embed\/([^?]+)/)?.[1]
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    name: film.title_en,
+    description: film.description || `A short film from ${districtSlug} on CinemaVuru.`,
+    thumbnailUrl: videoId ? [`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`] : undefined,
+    uploadDate: film.created_at,
+    embedUrl: film.video_url || undefined,
+    contentUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : undefined,
+  }
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Navbar />
       <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
         <div className="max-w-4xl mx-auto px-6 py-8">
@@ -152,21 +204,9 @@ export default async function FilmPage({
             <span className="text-[color:var(--accent)] line-clamp-1">{film.title_en}</span>
           </div>
 
-          {/* Video player */}
+          {/* Video player (metered soft wall for anonymous viewers) */}
           <div className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br ${style.gradient} mb-6 border border-[color:var(--border)]`}>
-            {film.video_url ? (
-              <iframe
-                src={`${film.video_url}?rel=0`}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-4">
-                <div className="text-8xl">{style.emoji}</div>
-                <p className="text-[color:var(--text)]/60 text-sm">Video coming soon</p>
-              </div>
-            )}
+            <FilmPlayer videoUrl={film.video_url} filmId={film.id} emoji={style.emoji} />
           </div>
 
           {/* Film info */}
@@ -212,7 +252,7 @@ export default async function FilmPage({
           {/* Like + Share */}
           <FilmActions
             filmId={film.id}
-            initialLikes={film.like_count ?? 0}
+            initialLikes={likeCount}
             stateSlug={stateSlug}
             districtSlug={districtSlug}
           />
