@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
+import { useAuth }             from '@/components/AuthProvider'
 import CashfreeButton          from '@/components/CashfreeButton'
 import UPIPayment from '@/components/UPIPayment'
 // ── Types ─────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ type UserInfo = {
 
 export default function ContestEntryForm() {
   const router = useRouter()
+  const { user } = useAuth()
 
   const [userInfo,       setUserInfo]       = useState<UserInfo | null>(null)
   const [contest,        setContest]        = useState<Contest | null>(null)
@@ -47,10 +49,9 @@ export default function ContestEntryForm() {
   const [submittedEntryId, setSubmittedEntryId] = useState('') // ← NEW: contest_entry row ID
 
   useEffect(() => {
+    if (!user) return
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
       const { data: profile } = await supabase
         .from('profiles')
         .select('name')
@@ -108,7 +109,7 @@ export default function ContestEntryForm() {
       }
     }
     init()
-  }, [])
+  }, [user])
 
   function toEmbedUrl(url: string): string | null {
     try {

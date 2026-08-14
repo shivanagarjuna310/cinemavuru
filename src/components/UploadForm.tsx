@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
+import { useAuth }             from './AuthProvider'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
@@ -44,9 +45,9 @@ function toEmbedUrl(url: string): string | null {
 export default function UploadForm() {
   const router = useRouter()
 
-  // Auth state
-  const [userId,     setUserId]     = useState<string | null>(null)
-  const [checkingAuth, setCheckingAuth] = useState(true)
+  // Auth state (shared context — single session source)
+  const { user, loading: checkingAuth } = useAuth()
+  const userId = user?.id ?? null
 
   // Form fields
   const [titleEn,      setTitleEn]      = useState('')
@@ -61,13 +62,6 @@ export default function UploadForm() {
   const [message, setMessage] = useState('')
   const [urlError, setUrlError] = useState('')
 
-  // Check if user is logged in
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null)
-      setCheckingAuth(false)
-    })
-  }, [])
 
   // Load all active districts
   const [districts, setDistricts] = useState<{ id: string; name_en: string; state_id: string }[]>([])

@@ -1,10 +1,11 @@
 'use client'
 // Homepage "My List" rail — the signed-in viewer's saved films from the
-// Supabase `watchlist` table (no local storage). Hidden when empty / signed out.
+// Supabase `watchlist` table. Uses the shared auth context; hidden when empty.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './AuthProvider'
 import { WATCHLIST_EVENT } from '@/lib/watchlist'
 
 function thumb(url: string | null) {
@@ -13,30 +14,25 @@ function thumb(url: string | null) {
 }
 
 export default function MyListRail() {
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const [items, setItems] = useState<any[]>([])
-  const [userId, setUserId] = useState<string | null>(null)
 
-  async function load() {
-    const { data: { user } } = await supabase.auth.getUser()
-    setUserId(user?.id ?? null)
-    if (!user) { setItems([]); return }
+  const load = useCallback(async () => {
+    if (!userId) { setItems([]); return }
     const { data } = await supabase
       .from('watchlist')
       .select('film_id, created_at, films(id, title_en, video_url, districts(name_en, slug, states(slug)))')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
     setItems((data ?? []).filter((r: any) => r.films))
-  }
+  }, [userId])
 
   useEffect(() => {
     load()
     window.addEventListener(WATCHLIST_EVENT, load)
-    const { data: authSub } = supabase.auth.onAuthStateChange(() => load())
-    return () => {
-      window.removeEventListener(WATCHLIST_EVENT, load)
-      authSub.subscription.unsubscribe()
-    }
-  }, [])
+    return () => window.removeEventListener(WATCHLIST_EVENT, load)
+  }, [load])
 
   async function remove(filmId: string) {
     if (!userId) return

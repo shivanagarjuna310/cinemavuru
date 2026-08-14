@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase }                     from '@/lib/supabase'
+import { useAuth }                       from './AuthProvider'
 
 type Comment = {
   id:         string
@@ -38,22 +39,13 @@ export default function CommentSection({ filmId, initialComments }: Props) {
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [text,     setText]     = useState('')
   const [posting,  setPosting]  = useState(false)
-  const [userId,   setUserId]   = useState<string | null>(null)
-  const [userName, setUserName] = useState<string>('You')
   const [error,    setError]    = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Track the current user — reactive to login/logout (no refresh needed)
-  useEffect(() => {
-    function sync(session: { user: { id: string; email?: string; user_metadata?: { name?: string } } } | null) {
-      const u = session?.user ?? null
-      setUserId(u?.id ?? null)
-      setUserName(u?.user_metadata?.name ?? u?.email ?? 'You')
-    }
-    supabase.auth.getSession().then(({ data }) => sync(data.session as never))
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => sync(session as never))
-    return () => sub.subscription.unsubscribe()
-  }, [])
+  // Current user from the shared auth context (reactive to login/logout)
+  const { user } = useAuth()
+  const userId = user?.id ?? null
+  const userName = user?.user_metadata?.name ?? user?.email ?? 'You'
 
   // Real-time: reflect other people's comments (and deletions) as they happen
   useEffect(() => {

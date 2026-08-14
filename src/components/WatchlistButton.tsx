@@ -1,39 +1,33 @@
 'use client'
 // "＋ My List" / "✓ Saved" toggle — persisted per-user in the Supabase
-// `watchlist` table (no local storage). Signed-out users are sent to sign in.
+// `watchlist` table. Uses the shared auth context (no session reads here).
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './AuthProvider'
 import { WATCHLIST_EVENT, notifyWatchlistChange } from '@/lib/watchlist'
 
 export default function WatchlistButton({ filmId, className = '' }: { filmId: string; className?: string }) {
   const router = useRouter()
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const [saved, setSaved] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     async function sync() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (cancelled) return
-      setUserId(user?.id ?? null)
-      if (!user) { setSaved(false); return }
+      if (!userId) { setSaved(false); return }
       const { data } = await supabase
         .from('watchlist').select('film_id')
-        .eq('user_id', user.id).eq('film_id', filmId).maybeSingle()
+        .eq('user_id', userId).eq('film_id', filmId).maybeSingle()
       if (!cancelled) setSaved(!!data)
     }
     sync()
     window.addEventListener(WATCHLIST_EVENT, sync)
-    const { data: authSub } = supabase.auth.onAuthStateChange(() => sync())
-    return () => {
-      cancelled = true
-      window.removeEventListener(WATCHLIST_EVENT, sync)
-      authSub.subscription.unsubscribe()
-    }
-  }, [filmId])
+    return () => { cancelled = true; window.removeEventListener(WATCHLIST_EVENT, sync) }
+  }, [filmId, userId])
 
   async function onClick() {
     if (busy) return

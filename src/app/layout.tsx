@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import PWARegister from '@/components/PWARegister'
 import FloatingUploadButton from '@/components/FloatingUploadButton'
+import { AuthProvider } from '@/components/AuthProvider'
 import { Analytics } from '@vercel/analytics/next'
 const rajdhani = Rajdhani({
   variable: "--font-rajdhani",
@@ -66,6 +67,7 @@ export default function RootLayout({
       </head>
       <body className={`${rajdhani.variable} ${notoTelugu.variable} antialiased`}>
         <PWARegister />
+        <AuthProvider>
         {children}
 
         {/* ── Site Footer ── */}
@@ -100,6 +102,7 @@ export default function RootLayout({
 
         {/* Global "Share Your Film" floating action button */}
         <FloatingUploadButton />
+        </AuthProvider>
 
         <Analytics />
 
