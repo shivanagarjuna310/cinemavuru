@@ -5,7 +5,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 
-type Accent = 'gold' | 'pink' | 'blue'
+type Accent = 'gold' | 'pink' | 'blue' | 'green'
 
 // Static class strings per accent (Tailwind can't see runtime-built classes)
 const ACCENT: Record<Accent, {
@@ -25,6 +25,11 @@ const ACCENT: Record<Accent, {
     bar: 'bg-[#4A90E2]', text: 'text-[#4A90E2]', dot: 'bg-[#4A90E2]',
     hoverText: 'group-hover:text-[#4A90E2]', hoverBorder: 'group-hover:border-[#4A90E2]/50',
     stroke: 'rgba(74,144,226,0.5)',
+  },
+  green: {
+    bar: 'bg-[#22C55E]', text: 'text-[#22C55E]', dot: 'bg-[#22C55E]',
+    hoverText: 'group-hover:text-[#22C55E]', hoverBorder: 'group-hover:border-[#22C55E]/50',
+    stroke: 'rgba(34,197,94,0.5)',
   },
 }
 
