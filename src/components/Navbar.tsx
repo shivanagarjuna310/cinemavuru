@@ -94,8 +94,9 @@ export default function Navbar() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
+    // Hard reload so every client component (navbar, My List, etc.) re-reads
+    // the now signed-out session — router.refresh() alone leaves stale state.
+    window.location.href = '/'
   }
 
   function closeSearch() {

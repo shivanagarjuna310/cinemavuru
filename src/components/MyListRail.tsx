@@ -1,12 +1,11 @@
 'use client'
-// Homepage "My List" rail — the signed-in viewer's saved films, from the
-// Supabase `watchlist` table (real per-user data). Renders nothing when empty
-// or signed out, so it only appears once someone has saved a film.
+// Homepage "My List" rail — reads the hybrid watchlist (Supabase when
+// available, else localStorage). Renders nothing when empty.
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { WATCHLIST_EVENT, notifyWatchlistChange } from '@/lib/watchlist'
+import { type SavedFilm, getWatchlist, removeFromWatchlist, WATCHLIST_EVENT } from '@/lib/watchlist'
 
 function thumb(url: string | null) {
   const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
@@ -14,37 +13,30 @@ function thumb(url: string | null) {
 }
 
 export default function MyListRail() {
-  const [items, setItems] = useState<any[]>([])
-  const [userId, setUserId] = useState<string | null>(null)
-
-  async function load() {
-    const { data: { user } } = await supabase.auth.getUser()
-    setUserId(user?.id ?? null)
-    if (!user) { setItems([]); return }
-    const { data } = await supabase
-      .from('watchlist')
-      .select('film_id, created_at, films(id, title_en, video_url, districts(name_en, slug, states(slug)))')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-    setItems((data ?? []).filter((r: any) => r.films))
-  }
+  const [items, setItems] = useState<SavedFilm[]>([])
 
   useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      const list = await getWatchlist()
+      if (!cancelled) setItems(list)
+    }
     load()
-    const sync = () => load()
-    window.addEventListener(WATCHLIST_EVENT, sync)
+    window.addEventListener(WATCHLIST_EVENT, load)
+    window.addEventListener('storage', load)
+    // Re-load when auth state changes (sign in/out swaps cloud ↔ local list)
     const { data: authListener } = supabase.auth.onAuthStateChange(() => load())
     return () => {
-      window.removeEventListener(WATCHLIST_EVENT, sync)
+      cancelled = true
+      window.removeEventListener(WATCHLIST_EVENT, load)
+      window.removeEventListener('storage', load)
       authListener.subscription.unsubscribe()
     }
   }, [])
 
-  async function remove(filmId: string) {
-    if (!userId) return
-    setItems(prev => prev.filter((r: any) => r.film_id !== filmId)) // optimistic
-    await supabase.from('watchlist').delete().eq('user_id', userId).eq('film_id', filmId)
-    notifyWatchlistChange()
+  async function remove(id: string) {
+    setItems(prev => prev.filter(f => f.id !== id)) // optimistic
+    await removeFromWatchlist(id)
   }
 
   if (items.length === 0) return null
@@ -60,12 +52,7 @@ export default function MyListRail() {
       </h2>
 
       <div className="flex gap-6 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        {items.map((r: any) => {
-          const f = r.films
-          const d = Array.isArray(f.districts) ? f.districts[0] : f.districts
-          const s = d && (Array.isArray(d.states) ? d.states[0] : d.states)
-          const stateSlug = s?.slug ?? 'telangana'
-          const districtSlug = d?.slug ?? 'hyderabad'
+        {items.map(f => {
           const t = thumb(f.video_url)
           return (
             <div key={f.id} className="relative flex-shrink-0 w-56 group">
@@ -76,7 +63,7 @@ export default function MyListRail() {
               >
                 ✕
               </button>
-              <Link href={`/${stateSlug}/${districtSlug}/film/${f.id}`}>
+              <Link href={`/${f.stateSlug}/${f.districtSlug}/film/${f.id}`}>
                 <div className="relative aspect-video rounded-lg overflow-hidden border border-white/10 group-hover:border-[color:var(--accent)]/50 transition-all duration-300">
                   {t ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -89,7 +76,7 @@ export default function MyListRail() {
                 <p className="text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 mt-2 group-hover:text-[color:var(--accent)] transition-colors">
                   {f.title_en}
                 </p>
-                <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{d?.name_en}</p>
+                {f.districtName && <p className="text-[color:var(--muted)] text-[10px] mt-0.5">{f.districtName}</p>}
               </Link>
             </div>
           )
