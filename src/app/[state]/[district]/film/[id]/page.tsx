@@ -271,7 +271,16 @@ export default async function FilmPage({
                   </div>
                   <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
                 </div>
-                <WatchlistButton filmId={film.id} />
+                <WatchlistButton
+                  film={{
+                    id: film.id,
+                    title_en: film.title_en,
+                    video_url: film.video_url,
+                    stateSlug,
+                    districtSlug,
+                    districtName,
+                  }}
+                />
               </div>
             </div>
           </div>
