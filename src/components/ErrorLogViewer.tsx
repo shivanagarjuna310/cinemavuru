@@ -133,30 +133,30 @@ export default function ErrorLogViewer() {
             <div key={log.id}>
               <div
                 onClick={() => setExpanded(expanded === log.id ? null : log.id)}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-white/[0.02] ${i !== 0 ? 'border-t border-[color:var(--surface)]' : ''}`}
+                className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 cursor-pointer hover:bg-white/[0.02] ${i !== 0 ? 'border-t border-[color:var(--surface)]' : ''}`}
               >
                 {/* Level badge */}
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0 w-14 text-center ${LEVEL_STYLE[log.level] ?? 'text-gray-400'}`}>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0 w-12 sm:w-14 text-center ${LEVEL_STYLE[log.level] ?? 'text-gray-400'}`}>
                   {log.level}
                 </span>
 
-                {/* Source.function */}
-                <span className="text-[color:var(--accent)] flex-shrink-0 w-48 truncate">
+                {/* Source.function — hidden on small screens (shown in expanded view) */}
+                <span className="text-[color:var(--accent)] flex-shrink-0 w-48 truncate hidden md:block">
                   {log.source}{log.function_name ? `.${log.function_name}` : ''}
                 </span>
 
                 {/* Message */}
-                <span className="text-[color:var(--text)]/70 flex-1 truncate">{log.message}</span>
+                <span className="text-[color:var(--text)]/70 flex-1 min-w-0 truncate">{log.message}</span>
 
                 {/* Duration */}
                 {log.duration_ms != null && (
-                  <span className={`flex-shrink-0 w-16 text-right ${log.duration_ms > 2000 ? 'text-yellow-400' : 'text-[color:var(--faint)]'}`}>
+                  <span className={`flex-shrink-0 w-16 text-right hidden sm:block ${log.duration_ms > 2000 ? 'text-yellow-400' : 'text-[color:var(--faint)]'}`}>
                     {log.duration_ms}ms
                   </span>
                 )}
 
                 {/* Time */}
-                <span className="text-[color:var(--faint)] flex-shrink-0 w-16 text-right">
+                <span className="text-[color:var(--faint)] flex-shrink-0 w-12 sm:w-16 text-right">
                   {timeAgo(log.created_at)}
                 </span>
 
@@ -168,7 +168,11 @@ export default function ErrorLogViewer() {
 
               {/* Expanded detail */}
               {expanded === log.id && (
-                <div className="bg-[color:var(--bg)] border-t border-[color:var(--border)] px-6 py-4 space-y-2">
+                <div className="bg-[color:var(--bg)] border-t border-[color:var(--border)] px-4 sm:px-6 py-4 space-y-2">
+                  <div className="md:hidden">
+                    <span className="text-[color:var(--muted)]">Source: </span>
+                    <span className="text-[color:var(--accent)]">{log.source}{log.function_name ? `.${log.function_name}` : ''}</span>
+                  </div>
                   {log.error_code && (
                     <div><span className="text-red-400">Error code: </span><span className="text-[color:var(--text)]">{log.error_code}</span></div>
                   )}

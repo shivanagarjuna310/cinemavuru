@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar'
 import Reveal from '../components/Reveal'
 import CountUp from '../components/CountUp'
 import FilmRow from '../components/FilmRow'
+import MyListRail from '../components/MyListRail'
 
 export const revalidate = 60
 
@@ -55,7 +56,7 @@ async function getData() {
   // Run all independent queries concurrently (was sequential → slow TTFB)
   const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes] = await Promise.all([
     supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
-    supabase.from('films').select('district_id').eq('status', 'active'),
+    supabase.from('films').select('district_id, genre').eq('status', 'active'),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('like_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').gte('created_at', monthStart).lte('created_at', monthEnd).order('view_count', { ascending: false }).limit(10),
@@ -66,14 +67,20 @@ async function getData() {
   const filmRows = filmRowsRes.data
 
   const counts: Record<string, number> = {}
+  const genreCounts: Record<string, number> = {}
   filmRows?.forEach(f => {
     counts[f.district_id] = (counts[f.district_id] ?? 0) + 1
+    if (f.genre) genreCounts[f.genre] = (genreCounts[f.genre] ?? 0) + 1
   })
+  const genres = Object.entries(genreCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([genre, count]) => ({ genre, count }))
 
   return {
     topFilms: topFilmsRes.data ?? [],
     mostLiked: mostLikedRes.data ?? [],
     monthlyFilms: monthlyFilmsRes.data ?? [],
+    genres,
     recentFilms: recentFilmsRes.data ?? [],
     monthName,
     districts: (districts ?? []).map(d => ({
@@ -87,7 +94,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, recentFilms, monthName } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, genres, recentFilms, monthName } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -192,6 +199,9 @@ export default async function Home() {
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[color:var(--bg)] to-transparent z-[5]" />
         </section>
 
+        {/* ══════════ MY LIST (client — shows once you save a film) ══════════ */}
+        <MyListRail />
+
         {/* ══════════ FILM ROWS ══════════ */}
         {recentFilms.length > 0 && (
             <FilmRow
@@ -236,6 +246,27 @@ export default async function Home() {
               accent="pink"
               metric={(f) => `❤️ ${f.like_count} likes`}
             />
+          </Reveal>
+        )}
+
+        {/* ══════════ BROWSE BY GENRE ══════════ */}
+        {genres.length > 0 && (
+          <Reveal>
+            <section className="max-w-6xl mx-auto px-6 py-8">
+              <div className="flex items-center gap-3 mb-5">
+                <span className="w-px h-5 bg-[#FF6B1A]" />
+                <span className="text-xs text-[color:var(--accent-hot)] uppercase tracking-[3px] font-semibold">Browse by Genre</span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {genres.map(g => (
+                  <Link key={g.genre} href={`/genre/${encodeURIComponent(g.genre)}`}
+                    className="group inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[color:var(--border)] bg-[color:var(--surface)] text-sm font-medium text-[color:var(--text)] hover:border-[color:var(--accent)]/50 hover:text-[color:var(--accent)] transition">
+                    {g.genre}
+                    <span className="text-[color:var(--muted)] text-xs group-hover:text-[color:var(--accent)]/70">{g.count}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
           </Reveal>
         )}
 

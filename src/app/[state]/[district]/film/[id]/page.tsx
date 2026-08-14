@@ -8,6 +8,8 @@ import Navbar           from '@/components/Navbar'
 import FilmActions      from '@/components/FilmActions'
 import FilmPlayer       from '@/components/FilmPlayer'
 import CommentSection   from '@/components/CommentSection'
+import FilmRow          from '@/components/FilmRow'
+import WatchlistButton  from '@/components/WatchlistButton'
 import type { Metadata } from 'next'
 
 const supabase = createClient(
@@ -20,11 +22,29 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
 async function getFilm(id: string) {
   const { data } = await supabase
     .from('films')
-    .select('*, profiles!films_creator_id_fkey(id, name), districts(slug, states(slug))')
+    .select('*, profiles!films_creator_id_fkey(id, name), districts(slug, name_en, states(slug))')
     .eq('id', id)
     .eq('status', 'active')
     .single()
   return data
+}
+
+const RELATED_COLS =
+  'id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))'
+
+// "More to watch" — same district first (hyperlocal), fall back to trending.
+async function getMoreToWatch(districtId: string, excludeId: string) {
+  const { data: same } = await supabase
+    .from('films').select(RELATED_COLS)
+    .eq('status', 'active').eq('district_id', districtId).neq('id', excludeId)
+    .order('view_count', { ascending: false }).limit(12)
+  if (same && same.length > 0) return { films: same, fromDistrict: true }
+
+  const { data: trending } = await supabase
+    .from('films').select(RELATED_COLS)
+    .eq('status', 'active').neq('id', excludeId)
+    .order('view_count', { ascending: false }).limit(12)
+  return { films: trending ?? [], fromDistrict: false }
 }
 
 // Supabase may return a to-one relation as an object or a 1-element array —
@@ -172,6 +192,10 @@ export default async function FilmPage({
 
   const style = GENRE_STYLE[film.genre ?? ''] ?? GENRE_STYLE.Default
 
+  const drel: any = Array.isArray((film as any).districts) ? (film as any).districts[0] : (film as any).districts
+  const districtName: string = drel?.name_en ?? districtSlug
+  const { films: moreToWatch, fromDistrict } = await getMoreToWatch(film.district_id, film.id)
+
   // SEO: VideoObject structured data so films can surface in Google video results
   const videoId = film.video_url?.match(/embed\/([^?]+)/)?.[1]
   const jsonLd = {
@@ -238,13 +262,16 @@ export default async function FilmPage({
                   <span className="text-[color:var(--accent-hot)] font-semibold capitalize">{districtSlug}</span>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-[color:var(--accent)]">
-                  {film.view_count >= 1000
-                    ? `${(film.view_count / 1000).toFixed(1)}K`
-                    : film.view_count}
+              <div className="flex flex-col items-end gap-3">
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-[color:var(--accent)]">
+                    {film.view_count >= 1000
+                      ? `${(film.view_count / 1000).toFixed(1)}K`
+                      : film.view_count}
+                  </div>
+                  <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
                 </div>
-                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
+                <WatchlistButton filmId={film.id} />
               </div>
             </div>
           </div>
@@ -271,6 +298,17 @@ export default async function FilmPage({
           <CommentSection filmId={film.id} initialComments={comments} />
 
         </div>
+
+        {/* More to watch — keep the binge going */}
+        {moreToWatch.length > 0 && (
+          <FilmRow
+            films={moreToWatch}
+            eyebrow={fromDistrict ? `More from ${districtName}` : 'Trending now'}
+            title="🎬 More to watch"
+            accent="gold"
+            metric={(f) => `👁 ${f.view_count} views`}
+          />
+        )}
       </main>
     </>
   )

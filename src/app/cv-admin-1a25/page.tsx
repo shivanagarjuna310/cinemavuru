@@ -494,20 +494,23 @@ export default function AdminPage() {
 
       {/* Sticky top bar */}
       <header className="sticky top-0 z-30 bg-[color:var(--bg)]/85 backdrop-blur-md border-b border-[color:var(--border)]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black text-lg shrink-0">🎬</div>
             <div className="leading-none min-w-0">
-              <h1 className="text-base font-bold text-[color:var(--text)] truncate">CinemaVuru Admin</h1>
-              <p className="text-[color:var(--muted)] text-[11px] mt-1">Platform management</p>
+              <h1 className="text-sm sm:text-base font-bold text-[color:var(--text)] truncate">CinemaVuru Admin</h1>
+              <p className="text-[color:var(--muted)] text-[11px] mt-1 hidden sm:block">Platform management</p>
             </div>
-            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider bg-[#D4A017]/15 text-[color:var(--accent)] px-2 py-0.5 rounded-full border border-[color:var(--accent)]/30 shrink-0">Admin</span>
+            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider bg-[#D4A017]/15 text-[color:var(--accent)] px-2 py-0.5 rounded-full border border-[color:var(--accent)]/30 shrink-0 hidden sm:inline-block">Admin</span>
           </div>
-          <a href="/" className="text-[color:var(--muted)] hover:text-[color:var(--accent)] text-sm transition shrink-0">← Back to site</a>
+          <a href="/" className="text-[color:var(--muted)] hover:text-[color:var(--accent)] text-sm transition shrink-0">
+            <span className="hidden sm:inline">← Back to site</span>
+            <span className="sm:hidden">← Back</span>
+          </a>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
@@ -529,7 +532,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="sticky top-16 z-20 -mx-6 px-6 py-3 mb-5 bg-[color:var(--bg)]/95 backdrop-blur border-b border-[color:var(--border)] flex gap-2 flex-wrap">
+        <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 sm:py-3 mb-5 bg-[color:var(--bg)]/95 backdrop-blur border-b border-[color:var(--border)] flex gap-2 flex-wrap">
           {([
             { key: 'films',    label: '🎬 Films'    },
             { key: 'activity', label: '📋 Activity' },
@@ -537,7 +540,7 @@ export default function AdminPage() {
             { key: 'contest',  label: '🏆 Contest'  },
           ] as { key: MainTab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setMainTab(t.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[color:var(--accent)] border border-[color:var(--accent)]/40' : 'bg-[color:var(--surface)] text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[color:var(--accent)] border border-[color:var(--accent)]/40' : 'bg-[color:var(--surface)] text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
               {t.label}
             </button>
           ))}
@@ -546,8 +549,8 @@ export default function AdminPage() {
             if (mainTab === 'films')    fetchFilms()
             else if (mainTab === 'activity') fetchLogs()
             else if (mainTab === 'contest')  fetchContestEntries()
-          }} className="ml-auto px-4 py-2 rounded-lg text-sm border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
-            ↻ Refresh
+          }} className="ml-auto px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
+            ↻ <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
 
@@ -654,7 +657,7 @@ export default function AdminPage() {
                         </div>
                       </a>
 
-                      <div className="flex-1 min-w-0 flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-[color:var(--text)] mb-1 truncate">{film.title_en}</h3>
                           {film.title_te && <p className="text-[color:var(--muted)] text-sm mb-1 truncate">{film.title_te}</p>}
@@ -677,7 +680,7 @@ export default function AdminPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col gap-2 shrink-0">
+                        <div className="flex flex-row sm:flex-col gap-2 shrink-0 flex-wrap">
                           {filmFilter === 'pending' && <>
                             <button onClick={() => updateFilmStatus(film.id,'active')} className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">✅ Approve</button>
                             <button onClick={() => updateFilmStatus(film.id,'rejected')} className="bg-red-900/60 hover:bg-red-800 text-red-300 px-4 py-1.5 rounded text-xs font-bold uppercase transition">❌ Reject</button>
@@ -735,11 +738,11 @@ export default function AdminPage() {
                 {visibleLogs.map((log, i) => {
                   const style = EVENT_STYLE[log.event_type] ?? { color: 'text-[color:var(--muted)]', label: log.event_type }
                   return (
-                    <div key={log.id} className={`flex items-center gap-4 px-5 py-3 text-sm ${i !== 0 ? 'border-t border-[color:var(--border)]' : ''}`}>
-                      <span className={`font-semibold text-xs uppercase tracking-wide w-28 flex-shrink-0 ${style.color}`}>{style.label}</span>
-                      <span className="text-[color:var(--text)] flex-1 line-clamp-1">{log.films?.title_en ?? log.metadata?.title ?? log.metadata?.name ?? '—'}</span>
-                      <span className="text-[color:var(--muted)] text-xs flex-shrink-0">{log.profiles?.name ?? 'system'}</span>
-                      <span className="text-[color:var(--faint)] text-xs flex-shrink-0 w-20 text-right">{timeAgo(log.created_at)}</span>
+                    <div key={log.id} className={`flex items-center gap-2.5 sm:gap-4 px-3 sm:px-5 py-3 text-sm ${i !== 0 ? 'border-t border-[color:var(--border)]' : ''}`}>
+                      <span className={`font-semibold text-[10px] sm:text-xs uppercase tracking-wide w-16 sm:w-28 flex-shrink-0 ${style.color}`}>{style.label}</span>
+                      <span className="text-[color:var(--text)] flex-1 min-w-0 line-clamp-1">{log.films?.title_en ?? log.metadata?.title ?? log.metadata?.name ?? '—'}</span>
+                      <span className="text-[color:var(--muted)] text-xs flex-shrink-0 hidden sm:block">{log.profiles?.name ?? 'system'}</span>
+                      <span className="text-[color:var(--faint)] text-xs flex-shrink-0 w-14 sm:w-20 text-right">{timeAgo(log.created_at)}</span>
                     </div>
                   )
                 })}
@@ -1034,8 +1037,8 @@ export default function AdminPage() {
                     const i = contestEntries.indexOf(entry)
                     return (
                     <div key={entry.id} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4">
-                      <div className="flex items-start justify-between gap-4 flex-wrap">
-                        <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             {activeContest?.status === 'voting' && i === 0 && <span className="text-sm">🥇</span>}
                             {activeContest?.status === 'voting' && i === 1 && <span className="text-sm">🥈</span>}
@@ -1075,7 +1078,7 @@ export default function AdminPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-row sm:flex-col gap-2 flex-wrap shrink-0">
                           {!entry.is_approved && entry.payment_status === 'paid' && (
                             <button onClick={() => approveForContestAndFeed(entry.id, entry.films?.id ?? '')}
                               className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">
