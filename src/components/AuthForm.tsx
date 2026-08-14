@@ -8,6 +8,17 @@ import { supabase }  from '@/lib/supabase'
 type Tab    = 'login' | 'register' | 'forgot'
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
+// Map raw Supabase auth errors to friendly, human messages
+function friendlyError(msg: string): string {
+  const m = msg.toLowerCase()
+  if (m.includes('invalid login')) return 'Incorrect email or password.'
+  if (m.includes('email not confirmed')) return 'Please confirm your email — check your inbox for the link.'
+  if (m.includes('already registered') || m.includes('already exists')) return 'An account with this email already exists. Please log in instead.'
+  if (m.includes('rate') || m.includes('too many')) return 'Too many attempts. Please wait a moment and try again.'
+  if (m.includes('password') && m.includes('6')) return 'Password must be at least 6 characters.'
+  return msg
+}
+
 export default function AuthForm() {
   const router = useRouter()
 //routes
@@ -31,14 +42,17 @@ export default function AuthForm() {
     setStatus('loading')
     setMessage('')
 
+    const cleanEmail = email.trim().toLowerCase()
+    const cleanName  = name.trim()
+
     // ── Forgot Password ──────────────────────────────────────
     if (tab === 'forgot') {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: `${window.location.origin}/auth/reset`,
       })
       if (error) {
         setStatus('error')
-        setMessage(error.message)
+        setMessage(friendlyError(error.message))
       } else {
         setStatus('success')
         setMessage('✅ Password reset link sent! Check your email inbox.')
@@ -50,58 +64,59 @@ export default function AuthForm() {
 
       // Step 1 — create the auth user
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
-        options: { data: { name } },
+        options: { data: { name: cleanName } },
       })
 
       if (signUpError) {
         setStatus('error')
-        setMessage(signUpError.message)
+        setMessage(friendlyError(signUpError.message))
         return
       }
 
       // Supabase silently "succeeds" for existing emails
-      // identities array is empty when email already registered
+      // (identities array is empty when the email is already registered)
       if (data.user && data.user.identities && data.user.identities.length === 0) {
         setStatus('error')
-        setMessage('An account with this email already exists. Please login instead.')
+        setMessage('An account with this email already exists. Please log in instead.')
         setTab('login')
         return
       }
 
-      // Step 2 — manually create the profile row
-      // (more reliable than trigger)
+      // Step 2 — create the profile row (best-effort; runs while the
+      // fresh session is active when email confirmation is disabled)
       if (data.user) {
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert({
-            id:   data.user.id,
-            name: name,
-          })
-
-        if (profileError) {
-          // Profile insert failed — but auth user was created
-          // Not a blocker, just log it
-          console.warn('Profile creation warning:', profileError.message)
-        }
+          .upsert({ id: data.user.id, name: cleanName })
+        if (profileError) console.warn('Profile creation warning:', profileError.message)
       }
 
+      // Step 3 — if a session was created, the user is already signed in
+      // (email confirmation disabled) → take them straight into the app.
+      if (data.session) {
+        router.push('/')
+        router.refresh()
+        return
+      }
+
+      // Otherwise email confirmation is required — tell them to check inbox.
       setStatus('success')
-      setMessage('✅ Account created! You can now login.')
+      setMessage('✅ Account created! Check your email to confirm, then log in.')
       setTab('login')
 
     } else {
 
       // Login
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       })
 
       if (error) {
         setStatus('error')
-        setMessage(error.message)
+        setMessage(friendlyError(error.message))
       } else {
         router.push('/')
         router.refresh()
@@ -157,14 +172,16 @@ export default function AuthForm() {
 
         {tab === 'register' && (
           <div>
-            <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+            <label htmlFor="auth-name" className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
               Full Name
             </label>
             <input
+              id="auth-name"
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Your name"
+              autoComplete="name"
               required
               className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
             />
@@ -172,14 +189,17 @@ export default function AuthForm() {
         )}
 
         <div>
-          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+          <label htmlFor="auth-email" className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
             Email
           </label>
           <input
+            id="auth-email"
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="your@email.com"
+            autoComplete="email"
+            inputMode="email"
             required
             className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
           />
@@ -188,7 +208,7 @@ export default function AuthForm() {
         {tab !== 'forgot' && (
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest">
+              <label htmlFor="auth-password" className="block text-xs text-[color:var(--muted)] uppercase tracking-widest">
                 Password
               </label>
               {/* Forgot password link — only on login tab */}
@@ -204,10 +224,12 @@ export default function AuthForm() {
             </div>
             <div className="relative">
               <input
+                id="auth-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder={tab === 'register' ? 'Min 6 characters' : '••••••••'}
+                autoComplete={tab === 'register' ? 'new-password' : 'current-password'}
                 required
                 minLength={6}
                 className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg pl-4 pr-11 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
