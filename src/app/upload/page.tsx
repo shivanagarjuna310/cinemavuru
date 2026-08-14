@@ -31,13 +31,13 @@ export default function UploadPage() {
           </div>
 
           {/* How it works */}
-          <div className="grid grid-cols-3 gap-4 mb-10">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-10">
             {[
               { step: '1', icon: '📤', label: 'Upload to YouTube', desc: 'As Unlisted' },
               { step: '2', icon: '📝', label: 'Fill this form',    desc: 'Paste your link' },
               { step: '3', icon: '✅', label: 'We review & publish', desc: 'Within 24hrs' },
             ].map(s => (
-              <div key={s.step} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 text-center">
+              <div key={s.step} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-3 sm:p-4 text-center">
                 <div className="text-2xl mb-2">{s.icon}</div>
                 <div className="text-xs font-bold text-[color:var(--accent)] uppercase tracking-wide mb-1">{s.label}</div>
                 <div className="text-xs text-[color:var(--muted)]">{s.desc}</div>
