@@ -6,6 +6,7 @@ import { useRouter }           from 'next/navigation'
 import Link                    from 'next/link'
 import { supabase }            from '@/lib/supabase'
 import Navbar                  from '@/components/Navbar'
+import { useAuth }             from '@/components/AuthProvider'
 
 type Profile = {
   id:   string
@@ -52,24 +53,28 @@ export default function MyProfilePage() {
   const [saving,   setSaving]   = useState(false)
   const [saved,    setSaved]    = useState(false)
 
+  const { user, loading: authLoading } = useAuth()
+  const uid = user?.id ?? null
+
   useEffect(() => {
-    async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth'); return }
-
+    if (authLoading) return
+    if (!uid) { router.push('/auth'); return }
+    let cancelled = false
+    async function load() {
       const [{ data: prof }, { data: filmData }] = await Promise.all([
-        supabase.from('profiles').select('id, name, bio').eq('id', user.id).single(),
-        supabase.from('films').select('*').eq('creator_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('profiles').select('id, name, bio').eq('id', uid).single(),
+        supabase.from('films').select('*').eq('creator_id', uid).order('created_at', { ascending: false }),
       ])
-
+      if (cancelled) return
       setProfile(prof)
       setEditName(prof?.name ?? '')
       setEditBio(prof?.bio ?? '')
       setFilms(filmData ?? [])
       setLoading(false)
     }
-    init()
-  }, [router])
+    load()
+    return () => { cancelled = true }
+  }, [uid, authLoading, router])
 
   async function handleSave() {
     if (!profile) return

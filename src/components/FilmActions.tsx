@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { supabase }            from '@/lib/supabase'
 import { logger }              from '@/lib/logger'
+import { useAuth }             from './AuthProvider'
 
 type Props = {
   filmId:       string
@@ -44,7 +45,8 @@ function CheckIcon() {
 export default function FilmActions({ filmId, initialLikes, stateSlug, districtSlug }: Props) {
   const [liked,        setLiked]        = useState(false)
   const [likeCount,    setLikeCount]    = useState(initialLikes)
-  const [userId,       setUserId]       = useState<string | null>(null)
+  const { user }                        = useAuth()
+  const userId = user?.id ?? null
   const [loading,      setLoading]      = useState(false)
   const [copied,       setCopied]       = useState(false)
   // ── Voting state ─────────────────────────────────────────
@@ -55,69 +57,50 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
   const [voting,       setVoting]       = useState(false)
   const [isContestFilm, setIsContestFilm] = useState(false)
 
+  // Reacts to the shared auth user — re-runs on login/logout automatically.
   useEffect(() => {
+    let cancelled = false
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUserId(user?.id ?? null)
+      // Reset user-specific state (also handles logout)
       setLiked(false)
-      if (user) {
-        // Check if user liked this film
+      setHasVoted(false)
+      setVotedFilmId(null)
+
+      if (userId) {
         const { data: likeData } = await supabase
-          .from('likes')
-          .select('film_id')
-          .eq('user_id', user.id)
-          .eq('film_id', filmId)
-          .maybeSingle()
-        if (likeData) setLiked(true)
+          .from('likes').select('film_id')
+          .eq('user_id', userId).eq('film_id', filmId).maybeSingle()
+        if (!cancelled && likeData) setLiked(true)
       }
 
-      // Check if this film is in an active voting contest
+      // Is this film in an active voting contest?
       const { data: contest } = await supabase
-        .from('contests')
-        .select('id')
-        .eq('status', 'voting')
-        .limit(1)
-        .single()
+        .from('contests').select('id').eq('status', 'voting').limit(1).single()
+      if (cancelled || !contest) return
 
-      if (!contest) return
-
-      // Check if this film is an approved entry in that contest
       const { data: entry } = await supabase
-        .from('contest_entries')
-        .select('id, contest_score')
-        .eq('contest_id', contest.id)
-        .eq('film_id', filmId)
-        .eq('is_approved', true)
-        .eq('payment_status', 'paid')
-        .maybeSingle()
-
-      if (!entry) return
+        .from('contest_entries').select('id, contest_score')
+        .eq('contest_id', contest.id).eq('film_id', filmId)
+        .eq('is_approved', true).eq('payment_status', 'paid').maybeSingle()
+      if (cancelled || !entry) return
 
       setIsContestFilm(true)
       setContestId(contest.id)
       setVoteCount(entry.contest_score)
 
-      // Check if user already voted in this contest
-      if (user) {
+      if (userId) {
         const { data: vote } = await supabase
-          .from('contest_votes')
-          .select('film_id')
-          .eq('contest_id', contest.id)
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (vote) {
+          .from('contest_votes').select('film_id')
+          .eq('contest_id', contest.id).eq('user_id', userId).maybeSingle()
+        if (!cancelled && vote) {
           setHasVoted(true)
           setVotedFilmId(vote.film_id)
         }
       }
     }
     init()
-    // Stay in sync with login/logout without needing a page refresh
-    const { data: authSub } = supabase.auth.onAuthStateChange(() => init())
-    return () => authSub.subscription.unsubscribe()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filmId])
+    return () => { cancelled = true }
+  }, [filmId, userId])
 
   // Authoritative like count from the likes table (reflects everyone's likes)
   async function refreshLikeCount() {

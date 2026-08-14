@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter }  from 'next/navigation'
 import { supabase }   from '@/lib/supabase'
+import { useAuth }    from './AuthProvider'
 
 type Film = {
   id:         string
@@ -34,9 +35,10 @@ function timeAgo(d: string) {
 
 export default function MyFilms() {
   const router = useRouter()
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const [films,    setFilms]    = useState<Film[]>([])
   const [loading,  setLoading]  = useState(true)
-  const [userId,   setUserId]   = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const fetchMyFilms = useCallback(async (uid: string) => {
@@ -51,12 +53,8 @@ export default function MyFilms() {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return
-      setUserId(data.user.id)
-      fetchMyFilms(data.user.id)
-    })
-  }, [fetchMyFilms])
+    if (userId) fetchMyFilms(userId)
+  }, [userId, fetchMyFilms])
 
   async function handleDelete(film: Film) {
     const confirmed = window.confirm(

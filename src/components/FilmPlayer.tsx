@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from './AuthProvider'
 
 const FREE_LIMIT = 2
 const STORAGE_KEY = 'cv_watched'
@@ -24,35 +24,30 @@ export default function FilmPlayer({
   filmId: string
   emoji: string
 }) {
+  const { user, loading } = useAuth()
   const [gated, setGated] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    async function check() {
-      // Logged-in → unlimited (read local session, no network round-trip)
-      const { data } = await supabase.auth.getSession()
-      if (cancelled) return
-      if (data.session) return
+    if (loading) return          // wait for the shared auth to resolve
+    if (user) { setGated(false); return }  // logged-in → unlimited
 
-      // Anonymous → meter distinct films via localStorage
-      let watched: string[] = []
-      try {
-        watched = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-      } catch {
-        watched = []
-      }
-      if (watched.includes(filmId)) return // already unlocked this one
-
-      if (watched.length < FREE_LIMIT) {
-        watched.push(filmId)
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(watched)) } catch {}
-        return
-      }
-      setGated(true)
+    // Anonymous → meter distinct films via localStorage
+    let watched: string[] = []
+    try {
+      watched = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    } catch {
+      watched = []
     }
-    check()
-    return () => { cancelled = true }
-  }, [filmId])
+    if (watched.includes(filmId)) { setGated(false); return } // already unlocked
+
+    if (watched.length < FREE_LIMIT) {
+      watched.push(filmId)
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(watched)) } catch {}
+      setGated(false)
+      return
+    }
+    setGated(true)
+  }, [filmId, user, loading])
 
   // No video uploaded yet
   if (!videoUrl) {

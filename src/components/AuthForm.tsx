@@ -30,12 +30,22 @@ export default function AuthForm() {
   const [status,   setStatus]   = useState<Status>('idle')
   const [message,  setMessage]  = useState('')
   async function handleGoogleLogin() {
-  await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/`,
-    },
-  })
+    setStatus('loading')
+    setMessage('')
+    // Redirect back to the site root — the browser client (detectSessionInUrl)
+    // exchanges the code there and establishes the session client-side.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/` },
+    })
+    if (error) {
+      setStatus('error')
+      setMessage(
+        /provider is not enabled|unsupported provider/i.test(error.message)
+          ? 'Google sign-in isn’t enabled yet. Enable the Google provider in Supabase → Authentication → Providers.'
+          : friendlyError(error.message),
+      )
+    }
   }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

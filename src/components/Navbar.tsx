@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link                    from 'next/link'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
-import type { User }           from '@supabase/supabase-js'
+import { useAuth }             from './AuthProvider'
 import ThemeToggle             from './ThemeToggle'
 
 type DistrictRel = { slug: string; states: { slug: string } | { slug: string }[] | null }
@@ -28,7 +28,7 @@ function filmHref(film: SearchResult) {
 export default function Navbar() {
   const router = useRouter()
   const [open, setOpen]               = useState(false)
-  const [user, setUser]               = useState<User | null>(null)
+  const { user }                      = useAuth()
   const [searchOpen, setSearchOpen]   = useState(false)
   const [query, setQuery]             = useState('')
   const [results, setResults]         = useState<SearchResult[]>([])
@@ -38,14 +38,6 @@ export default function Navbar() {
   const contestRef = useRef<HTMLLIElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
   const mobileRef                     = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null)
-    })
-    return () => listener.subscription.unsubscribe()
-  }, [])
 
   // Close search when clicking outside
   useEffect(() => {

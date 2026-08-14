@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
+import { useAuth }             from './AuthProvider'
 
 type Entry = {
   id:            string
@@ -54,33 +55,25 @@ const RANK_STYLE = [
 
 export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Props) {
   const router = useRouter()
-  const [userId,        setUserId]        = useState<string | null>(null)
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const [votedFilmId,   setVotedFilmId]   = useState<string | null>(null)
   const [hasVoted,      setHasVoted]      = useState(false) // ← locked once true
   const [voting,        setVoting]        = useState(false)
   const [localEntries,  setLocalEntries]  = useState(entries)
 
-  // Get user + their existing vote
+  // Load this user's existing vote (reactive to the shared auth user)
   useEffect(() => {
-    async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUserId(user.id)
-
-      const { data: vote } = await supabase
-        .from('contest_votes')
-        .select('film_id')
-        .eq('contest_id', contestId)
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (vote) {
-        setVotedFilmId(vote.film_id)
-        setHasVoted(true) // ← already voted, lock it
-      }
-    }
-    init()
-  }, [contestId])
+    if (!userId) { setVotedFilmId(null); setHasVoted(false); return }
+    let cancelled = false
+    supabase
+      .from('contest_votes').select('film_id')
+      .eq('contest_id', contestId).eq('user_id', userId).maybeSingle()
+      .then(({ data: vote }) => {
+        if (!cancelled && vote) { setVotedFilmId(vote.film_id); setHasVoted(true) }
+      })
+    return () => { cancelled = true }
+  }, [contestId, userId])
 
   async function handleVote(filmId: string) {
     if (!userId)  { router.push('/auth'); return }
