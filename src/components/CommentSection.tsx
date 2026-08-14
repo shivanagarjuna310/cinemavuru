@@ -43,15 +43,16 @@ export default function CommentSection({ filmId, initialComments }: Props) {
   const [error,    setError]    = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Get current user on mount
+  // Track the current user — reactive to login/logout (no refresh needed)
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return
-      setUserId(data.user.id)
-      setUserName(
-        data.user.user_metadata?.name ?? data.user.email ?? 'You'
-      )
-    })
+    function sync(session: { user: { id: string; email?: string; user_metadata?: { name?: string } } } | null) {
+      const u = session?.user ?? null
+      setUserId(u?.id ?? null)
+      setUserName(u?.user_metadata?.name ?? u?.email ?? 'You')
+    }
+    supabase.auth.getSession().then(({ data }) => sync(data.session as never))
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => sync(session as never))
+    return () => sub.subscription.unsubscribe()
   }, [])
 
   // Real-time: reflect other people's comments (and deletions) as they happen

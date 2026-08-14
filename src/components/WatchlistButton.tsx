@@ -1,41 +1,51 @@
 'use client'
-// "＋ My List" / "✓ Saved" toggle. My List is account-bound: signed-out users
-// are sent to sign in; signed-in users save via Supabase (or a per-user local
-// fallback until the watchlist table is migrated).
+// "＋ My List" / "✓ Saved" toggle — persisted per-user in the Supabase
+// `watchlist` table (no local storage). Signed-out users are sent to sign in.
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { type SavedFilm, isSaved, toggleWatchlist, WATCHLIST_EVENT } from '@/lib/watchlist'
+import { WATCHLIST_EVENT, notifyWatchlistChange } from '@/lib/watchlist'
 
-export default function WatchlistButton({ film, className = '' }: { film: SavedFilm; className?: string }) {
+export default function WatchlistButton({ filmId, className = '' }: { filmId: string; className?: string }) {
   const router = useRouter()
   const [saved, setSaved] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    const sync = async () => {
-      const s = await isSaved(film.id)
-      if (!cancelled) setSaved(s)
+    async function sync() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled) return
+      setUserId(user?.id ?? null)
+      if (!user) { setSaved(false); return }
+      const { data } = await supabase
+        .from('watchlist').select('film_id')
+        .eq('user_id', user.id).eq('film_id', filmId).maybeSingle()
+      if (!cancelled) setSaved(!!data)
     }
     sync()
     window.addEventListener(WATCHLIST_EVENT, sync)
-    // Reflect saved state when auth changes (logout clears it)
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => sync())
+    const { data: authSub } = supabase.auth.onAuthStateChange(() => sync())
     return () => {
       cancelled = true
       window.removeEventListener(WATCHLIST_EVENT, sync)
-      authListener.subscription.unsubscribe()
+      authSub.subscription.unsubscribe()
     }
-  }, [film.id])
+  }, [filmId])
 
   async function onClick() {
     if (busy) return
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/auth'); return }
+    if (!userId) { router.push('/auth'); return }
     setBusy(true)
-    setSaved(await toggleWatchlist(film))
+    if (saved) {
+      const { error } = await supabase.from('watchlist').delete().eq('user_id', userId).eq('film_id', filmId)
+      if (!error) { setSaved(false); notifyWatchlistChange() }
+    } else {
+      const { error } = await supabase.from('watchlist').insert({ user_id: userId, film_id: filmId })
+      if (!error) { setSaved(true); notifyWatchlistChange() }
+    }
     setBusy(false)
   }
 
