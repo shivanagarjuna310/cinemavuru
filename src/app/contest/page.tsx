@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
+import CountdownTimer    from '@/components/CountdownTimer'
 export const revalidate = 30
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,15 +42,6 @@ async function getVoteCount(contestId: string) {
   return count ?? 0
 }
 
-function daysLeft(dateStr: string | null) {
-  if (!dateStr) return null
-  const diff = new Date(dateStr).getTime() - Date.now()
-  const days = Math.ceil(diff / 86400000)
-  if (days <= 0) return 'Ended'
-  if (days === 1) return '1 day left'
-  return `${days} days left`
-}
-
 function formatPrize(amount: number) {
   return `₹${amount.toLocaleString('en-IN')}`
 }
@@ -81,8 +73,6 @@ export default async function ContestPage() {
   ])
 
   const district = contest.districts as { name_en: string; name_te: string } | null
-  const submissionsLeft = daysLeft(contest.submissions_close_at)
-  const votingLeft      = daysLeft(contest.voting_close_at)
   const isVotingPhase   = contest.status === 'voting'
   const isOpenPhase     = contest.status === 'open'
 
@@ -131,14 +121,14 @@ export default async function ContestPage() {
                 <div className="text-2xl font-bold text-[color:var(--accent)]">{voteCount}</div>
                 <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Total Votes</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[color:var(--accent-hot)]">
-                  {isOpenPhase ? submissionsLeft : votingLeft}
-                </div>
-                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">
-                  {isOpenPhase ? 'To Submit' : 'To Vote'}
-                </div>
-              </div>
+            </div>
+
+            {/* Live countdown to the current phase deadline */}
+            <div className="mb-6">
+              <CountdownTimer
+                target={isVotingPhase ? contest.voting_close_at : contest.submissions_close_at}
+                label={isVotingPhase ? '🗳 Voting closes in' : '🎬 Submissions close in'}
+              />
             </div>
 
             {/* Prize money */}

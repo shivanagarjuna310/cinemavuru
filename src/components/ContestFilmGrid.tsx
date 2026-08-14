@@ -82,6 +82,36 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
     init()
   }, [contestId])
 
+  // Live leaderboard — poll the (readable) entry scores and re-rank. Keeps the
+  // board moving without needing realtime on the locked-down votes table.
+  useEffect(() => {
+    if (!isVotingOpen) return
+    async function refresh() {
+      const { data } = await supabase
+        .from('contest_entries')
+        .select('id, contest_score')
+        .eq('contest_id', contestId)
+        .eq('is_approved', true)
+        .eq('payment_status', 'paid')
+      if (!data) return
+      const scoreById = new Map(data.map(d => [d.id, d.contest_score]))
+      setLocalEntries(prev =>
+        prev
+          .map(e => ({ ...e, contest_score: scoreById.get(e.id) ?? e.contest_score }))
+          .sort((a, b) => b.contest_score - a.contest_score),
+      )
+    }
+    const iv = setInterval(refresh, 15000)
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus', onVisible)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(iv)
+      window.removeEventListener('focus', onVisible)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [isVotingOpen, contestId])
+
   async function handleVote(filmId: string) {
     if (!userId)  { router.push('/auth'); return }
     if (voting)   return
@@ -94,6 +124,8 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
       .insert({ contest_id: contestId, user_id: userId, film_id: filmId })
 
     if (!error) {
+      // Persist the score bump (no trigger — RPC updates contest_entries)
+      await supabase.rpc('increment_contest_score', { p_contest_id: contestId, p_film_id: filmId })
       setVotedFilmId(filmId)
       setHasVoted(true) // ← lock the vote immediately
 
@@ -103,6 +135,9 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
           ? { ...e, contest_score: e.contest_score + 1 }
           : e
       ).sort((a, b) => b.contest_score - a.contest_score))
+    } else if ((error as { code?: string }).code === '23505') {
+      // Unique violation — already voted; just lock the UI
+      setHasVoted(true)
     }
 
     setVoting(false)
@@ -189,13 +224,27 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
                 <div className="text-[10px] text-[color:var(--muted)] uppercase tracking-wide">Votes</div>
               </div>
 
-              {/* Watch & Vote link */}
+              {/* Inline vote (1 per contest, locked once cast) + watch link */}
               {isVotingOpen && (
-                <button
-                  onClick={() => goToFilm(film.id)}
-                  className="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--accent)] hover:bg-[#D4A017]/10 transition-all">
-                  Watch & Vote →
-                </button>
+                <div className="flex flex-col gap-2 flex-shrink-0 w-24">
+                  <button
+                    onClick={() => handleVote(entry.film_id)}
+                    disabled={voting || hasVoted}
+                    className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all ${
+                      isMyVote
+                        ? 'bg-[#D4A017]/20 border border-[color:var(--accent)]/50 text-[color:var(--accent)] cursor-default'
+                        : hasVoted
+                        ? 'bg-[color:var(--surface)] border border-[color:var(--border)] text-[color:var(--faint)] opacity-50 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black hover:opacity-90'
+                    }`}>
+                    {isMyVote ? '✓ Voted' : hasVoted ? 'Voted' : '🗳 Vote'}
+                  </button>
+                  <button
+                    onClick={() => goToFilm(film.id)}
+                    className="px-3 py-1 rounded-lg text-xs font-semibold text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
+                    ▶ Watch
+                  </button>
+                </div>
               )}
 
             </div>
