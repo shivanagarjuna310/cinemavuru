@@ -58,8 +58,9 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
+      setUserId(user?.id ?? null)
+      setLiked(false)
       if (user) {
-        setUserId(user.id)
         // Check if user liked this film
         const { data: likeData } = await supabase
           .from('likes')
@@ -112,6 +113,10 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
       }
     }
     init()
+    // Stay in sync with login/logout without needing a page refresh
+    const { data: authSub } = supabase.auth.onAuthStateChange(() => init())
+    return () => authSub.subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filmId])
 
   // Authoritative like count from the likes table (reflects everyone's likes)
