@@ -41,6 +41,7 @@ export default function ErrorLogViewer() {
   const [logs,       setLogs]       = useState<ErrorLog[]>([])
   const [loading,    setLoading]    = useState(true)
   const [filter,     setFilter]     = useState<string>('all')
+  const [search,     setSearch]     = useState('')
   const [expanded,   setExpanded]   = useState<string | null>(null)
 
   const fetchLogs = useCallback(async () => {
@@ -72,6 +73,14 @@ export default function ErrorLogViewer() {
     return acc
   }, {} as Record<string, number>)
 
+  const q = search.trim().toLowerCase()
+  const visible = q
+    ? logs.filter(l =>
+        (l.message?.toLowerCase().includes(q)) ||
+        (l.source?.toLowerCase().includes(q)) ||
+        (l.function_name?.toLowerCase().includes(q) ?? false))
+    : logs
+
   return (
     <div>
       {/* Summary row */}
@@ -86,8 +95,15 @@ export default function ErrorLogViewer() {
             {f} {f !== 'all' && counts[f] ? `(${counts[f]})` : f === 'all' ? `(${logs.length})` : ''}
           </button>
         ))}
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Search message / source..."
+          className="ml-auto w-52 bg-[color:var(--surface)] border border-[color:var(--border)] rounded px-3 py-1 text-xs text-[color:var(--text)] placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50"
+        />
         <button onClick={fetchLogs}
-          className="ml-auto px-3 py-1 rounded text-xs border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
+          className="px-3 py-1 rounded text-xs border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
           ↻ Refresh
         </button>
         <button onClick={cleanLogs}
@@ -106,14 +122,14 @@ export default function ErrorLogViewer() {
 
       {loading ? (
         <div className="text-center py-12 text-[color:var(--muted)] text-sm">Loading logs...</div>
-      ) : logs.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="text-center py-12 text-[color:var(--muted)]">
-          <p className="text-3xl mb-2">✅</p>
-          <p className="text-sm">No {filter === 'all' ? '' : filter} logs</p>
+          <p className="text-3xl mb-2">{q ? '🔍' : '✅'}</p>
+          <p className="text-sm">{q ? 'No logs match your search' : `No ${filter === 'all' ? '' : filter} logs`}</p>
         </div>
       ) : (
         <div className="bg-[color:var(--bg)] border border-[color:var(--border)] rounded-xl overflow-hidden font-mono text-xs">
-          {logs.map((log, i) => (
+          {visible.map((log, i) => (
             <div key={log.id}>
               <div
                 onClick={() => setExpanded(expanded === log.id ? null : log.id)}

@@ -1,12 +1,14 @@
 'use client'
-// Global floating action button — "Share Your Film" is always one tap away.
-// Icon-only circle on mobile, labelled pill on larger screens. Hidden on
-// routes where it would be redundant (the upload flow and auth).
+// Floating "Share Your Film" action button. Shown only on discovery / content
+// pages where inspiring a viewer to upload makes sense (home, district browse,
+// film watch, creator, about). Hidden on utility / transactional pages below.
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const HIDDEN_PREFIXES = ['/upload', '/auth']
+// Hidden on: the upload flow itself, auth, admin, the user's profile, the
+// contest (paid) flow, and legal pages — where the FAB is redundant or noise.
+const HIDDEN_PREFIXES = ['/upload', '/auth', '/cv-admin-1a25', '/profile', '/contest', '/terms', '/privacy']
 
 export default function FloatingUploadButton() {
   const pathname = usePathname()

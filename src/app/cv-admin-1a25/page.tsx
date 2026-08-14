@@ -62,6 +62,13 @@ function formatPrize(amount: number) {
   return `₹${amount.toLocaleString('en-IN')}`
 }
 
+function filmThumb(url: string | null) {
+  const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
+  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null
+}
+
+type Toast = { msg: string; type: 'success' | 'error' }
+
 const EVENT_STYLE: Record<string, { color: string; label: string }> = {
   film_uploaded:   { color: 'text-blue-400',   label: '📤 Uploaded'   },
   film_approved:   { color: 'text-green-400',  label: '✅ Approved'   },
@@ -75,6 +82,14 @@ export default function AdminPage() {
   const [mainTab,    setMainTab]    = useState<MainTab>('films')
   const [filmFilter, setFilmFilter] = useState<FilmFilter>('pending')
   const [films,      setFilms]      = useState<Film[]>([])
+  const [filmSearch,  setFilmSearch]  = useState('')
+  const [genreFilter, setGenreFilter] = useState('all')
+  const [entrySearch, setEntrySearch] = useState('')
+  const [entryFilter, setEntryFilter] = useState<'all' | 'paid' | 'unpaid' | 'approved' | 'pending'>('all')
+  const [selected,    setSelected]    = useState<Set<string>>(new Set())
+  const [activitySearch, setActivitySearch] = useState('')
+  const [activityType,   setActivityType]   = useState('all')
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null)
   const [logs,       setLogs]       = useState<Log[]>([])
   const [loading,    setLoading]    = useState(false)
   const [stats,      setStats]      = useState({ pending: 0, active: 0, users: 0, views: 0, errors: 0 })
@@ -99,6 +114,12 @@ export default function AdminPage() {
   const [newSubsCloseAt,  setNewSubsCloseAt]  = useState('')
   const [creating,        setCreating]        = useState(false)
   const [newMinVotes,     setNewMinVotes]     = useState(100)
+  const [toast,           setToast]           = useState<Toast | null>(null)
+
+  function showToast(msg: string, type: Toast['type'] = 'success') {
+    setToast({ msg, type })
+    window.setTimeout(() => setToast(null), 3200)
+  }
 
   useEffect(() => {
     async function checkAccess() {
@@ -178,7 +199,7 @@ export default function AdminPage() {
 
   async function updateFilmStatus(filmId: string, newStatus: 'active' | 'rejected') {
     const { error } = await supabase.from('films').update({ status: newStatus }).eq('id', filmId)
-    if (error) { alert(`Error: ${error.message}`); return }
+    if (error) { showToast(`Error: ${error.message}`, 'error'); return }
 
     try {
       const film = films.find(f => f.id === filmId)
@@ -206,12 +227,13 @@ export default function AdminPage() {
 
     setFilms(prev => prev.filter(f => f.id !== filmId))
     loadStats()
+    showToast(newStatus === 'active' ? '✅ Film approved & creator notified' : '❌ Film rejected')
   }
 
   async function updateContestEntry(entryId: string, isApproved: boolean) {
     const { error } = await supabase
       .from('contest_entries').update({ is_approved: isApproved }).eq('id', entryId)
-    if (error) { alert(`Error: ${error.message}`); return }
+    if (error) { showToast(`Error: ${error.message}`, 'error'); return }
     setContestEntries(prev => prev.map(e =>
       e.id === entryId ? { ...e, is_approved: isApproved } : e
     ))
@@ -222,22 +244,23 @@ export default function AdminPage() {
     // 1. Approve contest entry
     const { error: entryError } = await supabase
       .from('contest_entries').update({ is_approved: true }).eq('id', entryId)
-    if (entryError) { alert(`Error approving entry: ${entryError.message}`); return }
+    if (entryError) { showToast(`Error approving entry: ${entryError.message}`, 'error'); return }
 
     // 2. Approve film on main feed
     const { error: filmError } = await supabase
       .from('films').update({ status: 'active' }).eq('id', filmId)
-    if (filmError) { alert(`Error approving film: ${filmError.message}`); return }
+    if (filmError) { showToast(`Error approving film: ${filmError.message}`, 'error'); return }
 
     // 3. Update local state
     setContestEntries(prev => prev.map(e =>
       e.id === entryId ? { ...e, is_approved: true } : e
     ))
+    showToast('✅ Approved for contest & published to feed')
   }
 
   async function closeContest() {
     if (!activeContest) return
-    if (!winner1) { alert('Please select at least the 1st place winner.'); return }
+    if (!winner1) { showToast('Please select at least the 1st place winner.', 'error'); return }
 
     // ── Minimum vote threshold check ─────────────────────────
     const MIN_VOTES = activeContest.min_votes
@@ -272,7 +295,7 @@ export default function AdminPage() {
       .eq('id', activeContest.id)
 
     if (error) {
-      alert(`Error closing contest: ${error.message}`)
+      showToast(`Error closing contest: ${error.message}`, 'error')
       setClosing(false)
       return
     }
@@ -280,12 +303,12 @@ export default function AdminPage() {
     setClosing(false)
     setShowClosePanel(false)
     setActiveContest(null)
-    alert(`✅ Season ${activeContest.season_number} closed! Winners saved to Hall of Fame.`)
+    showToast(`✅ Season ${activeContest.season_number} closed! Winners saved to Hall of Fame.`)
     fetchContestEntries()
   }
   async function createContest() {
-    if (!newContestTitle.trim()) { alert('Please enter a contest title.'); return }
-    if (!newSubsCloseAt)         { alert('Please set a submissions close date.'); return }
+    if (!newContestTitle.trim()) { showToast('Please enter a contest title.', 'error'); return }
+    if (!newSubsCloseAt)         { showToast('Please set a submissions close date.', 'error'); return }
 
     setCreating(true)
     const { error } = await supabase.from('contests').insert({
@@ -301,7 +324,7 @@ export default function AdminPage() {
     })
 
     if (error) {
-      alert(`Error creating contest: ${error.message}`)
+      showToast(`Error creating contest: ${error.message}`, 'error')
       setCreating(false)
       return
     }
@@ -309,24 +332,76 @@ export default function AdminPage() {
     setCreating(false)
     setShowCreatePanel(false)
     setNewContestTitle('')
-    alert(`✅ Season ${newSeasonNumber} created and is now LIVE!`)
+    showToast(`✅ Season ${newSeasonNumber} created and is now LIVE!`)
     fetchContestEntries()
   }
-  async function deleteFilm(film: Film) {
-    const confirmed = window.confirm(
-      `⚠️ PERMANENTLY DELETE "${film.title_en}"?\n\nThis will also delete all likes, comments and views. Cannot be undone.`
-    )
-    if (!confirmed) return
-    setDeleting(film.id)
-    await supabase.from('likes').delete().eq('film_id', film.id)
-    await supabase.from('comments').delete().eq('film_id', film.id)
-    await supabase.from('film_views').delete().eq('film_id', film.id)
-    await supabase.from('contest_entries').delete().eq('film_id', film.id)
-    const { error: filmErr } = await supabase.from('films').delete().eq('id', film.id)
-    if (filmErr) { alert(`❌ Delete failed: ${filmErr.message}`); setDeleting(null); return }
-    setFilms(prev => prev.filter(f => f.id !== film.id))
+  // ── Delete (single) — opens the confirmation modal ──
+  function deleteFilm(film: Film) {
+    setConfirmModal({
+      title: 'Delete film permanently?',
+      message: `"${film.title_en}"\n\nThis also removes its likes, comments and views. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: () => doDeleteFilm(film.id),
+    })
+  }
+
+  async function doDeleteFilm(id: string) {
+    setDeleting(id)
+    await supabase.from('likes').delete().eq('film_id', id)
+    await supabase.from('comments').delete().eq('film_id', id)
+    await supabase.from('film_views').delete().eq('film_id', id)
+    await supabase.from('contest_entries').delete().eq('film_id', id)
+    const { error: filmErr } = await supabase.from('films').delete().eq('id', id)
+    if (filmErr) { showToast(`Delete failed: ${filmErr.message}`, 'error'); setDeleting(null); return }
+    setFilms(prev => prev.filter(f => f.id !== id))
+    setSelected(prev => { const n = new Set(prev); n.delete(id); return n })
     loadStats()
     setDeleting(null)
+    showToast('🗑 Film permanently deleted')
+  }
+
+  // ── Multi-select + bulk actions ──
+  function toggleSelect(id: string) {
+    setSelected(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+  }
+  function clearSelection() { setSelected(new Set()) }
+
+  async function bulkSetStatus(newStatus: 'active' | 'rejected') {
+    const ids = [...selected]
+    if (!ids.length) return
+    const { error } = await supabase.from('films').update({ status: newStatus }).in('id', ids)
+    if (error) { showToast(`Error: ${error.message}`, 'error'); return }
+    setFilms(prev => prev.filter(f => !selected.has(f.id)))
+    clearSelection()
+    loadStats()
+    showToast(`${ids.length} film${ids.length > 1 ? 's' : ''} ${newStatus === 'active' ? 'approved' : 'rejected'}`)
+  }
+
+  function bulkDelete() {
+    const ids = [...selected]
+    if (!ids.length) return
+    setConfirmModal({
+      title: `Delete ${ids.length} film${ids.length > 1 ? 's' : ''} permanently?`,
+      message: 'This also removes their likes, comments and views. This cannot be undone.',
+      confirmLabel: `Delete ${ids.length}`,
+      onConfirm: () => doBulkDelete(ids),
+    })
+  }
+  async function doBulkDelete(ids: string[]) {
+    await supabase.from('likes').delete().in('film_id', ids)
+    await supabase.from('comments').delete().in('film_id', ids)
+    await supabase.from('film_views').delete().in('film_id', ids)
+    await supabase.from('contest_entries').delete().in('film_id', ids)
+    const { error } = await supabase.from('films').delete().in('id', ids)
+    if (error) { showToast(`Delete failed: ${error.message}`, 'error'); return }
+    setFilms(prev => prev.filter(f => !ids.includes(f.id)))
+    clearSelection()
+    loadStats()
+    showToast(`🗑 ${ids.length} film${ids.length > 1 ? 's' : ''} deleted`)
   }
 
   if (access === 'checking') return (
@@ -346,36 +421,115 @@ export default function AdminPage() {
   // Approved entries sorted by score — for winner dropdowns
   const approvedEntries = contestEntries.filter(e => e.is_approved && e.payment_status === 'paid')
 
-  return (
-    <div className="min-h-screen bg-[color:var(--bg)] text-[color:var(--text)] p-6">
-      <div className="max-w-5xl mx-auto">
+  // ── Client-side filters (data is already fetched, so filtering is instant) ──
+  const genres = Array.from(new Set(films.map(f => f.genre).filter(Boolean))) as string[]
+  const fq = filmSearch.trim().toLowerCase()
+  const visibleFilms = films.filter(f => {
+    const matchGenre = genreFilter === 'all' || f.genre === genreFilter
+    const matchSearch = !fq
+      || f.title_en?.toLowerCase().includes(fq)
+      || f.title_te?.toLowerCase().includes(fq)
+    return matchGenre && matchSearch
+  })
 
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-[color:var(--accent)]">🎬 CinemaVuru Admin</h1>
-            <p className="text-[color:var(--muted)] text-sm mt-0.5">Platform management dashboard</p>
-          </div>
-          <a href="/" className="text-[color:var(--muted)] hover:text-[color:var(--accent)] text-sm transition">← Back to site</a>
+  const aq = activitySearch.trim().toLowerCase()
+  const visibleLogs = logs.filter(l => {
+    const matchType = activityType === 'all' || l.event_type === activityType
+    const text = `${l.films?.title_en ?? ''} ${l.metadata?.title ?? ''} ${l.metadata?.name ?? ''} ${l.profiles?.name ?? ''}`.toLowerCase()
+    const matchSearch = !aq || text.includes(aq)
+    return matchType && matchSearch
+  })
+
+  const eq = entrySearch.trim().toLowerCase()
+  const visibleEntries = contestEntries.filter(e => {
+    const matchStatus =
+      entryFilter === 'all'      ? true :
+      entryFilter === 'paid'     ? e.payment_status === 'paid' :
+      entryFilter === 'unpaid'   ? e.payment_status !== 'paid' :
+      entryFilter === 'approved' ? e.is_approved :
+      entryFilter === 'pending'  ? !e.is_approved : true
+    const matchSearch = !eq
+      || e.films?.title_en?.toLowerCase().includes(eq)
+      || e.profiles?.name?.toLowerCase().includes(eq)
+    return matchStatus && matchSearch
+  })
+
+  return (
+    <div className="min-h-screen bg-[color:var(--bg)] text-[color:var(--text)]">
+
+      {/* Toast notifications */}
+      {toast && (
+        <div className={`fixed bottom-5 right-5 z-50 anim-pop flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl text-sm font-semibold text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          <span>{toast.type === 'success' ? '✓' : '⚠'}</span>
+          <span>{toast.msg}</span>
         </div>
+      )}
+
+      {/* Confirmation modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setConfirmModal(null)}>
+          <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-6 max-w-md w-full shadow-2xl anim-pop"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 text-red-400 flex items-center justify-center text-lg shrink-0">⚠️</div>
+              <div>
+                <h3 className="text-lg font-bold text-[color:var(--text)]">{confirmModal.title}</h3>
+                <p className="text-sm text-[color:var(--muted)] whitespace-pre-line mt-1 leading-relaxed">{confirmModal.message}</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirmModal(null)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--text)] transition">
+                Cancel
+              </button>
+              <button onClick={() => { const cb = confirmModal.onConfirm; setConfirmModal(null); cb() }}
+                className="px-5 py-2 rounded-lg text-sm font-bold bg-red-600 hover:bg-red-500 text-white transition">
+                {confirmModal.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky top bar */}
+      <header className="sticky top-0 z-30 bg-[color:var(--bg)]/85 backdrop-blur-md border-b border-[color:var(--border)]">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#FF6B1A] to-[#D4A017] flex items-center justify-center text-black text-lg shrink-0">🎬</div>
+            <div className="leading-none min-w-0">
+              <h1 className="text-base font-bold text-[color:var(--text)] truncate">CinemaVuru Admin</h1>
+              <p className="text-[color:var(--muted)] text-[11px] mt-1">Platform management</p>
+            </div>
+            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider bg-[#D4A017]/15 text-[color:var(--accent)] px-2 py-0.5 rounded-full border border-[color:var(--accent)]/30 shrink-0">Admin</span>
+          </div>
+          <a href="/" className="text-[color:var(--muted)] hover:text-[color:var(--accent)] text-sm transition shrink-0">← Back to site</a>
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-6 py-6">
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           {[
-            { label: 'Pending',    value: stats.pending, color: 'text-[color:var(--accent-hot)]' },
-            { label: 'Live Films', value: stats.active,  color: 'text-green-400'  },
-            { label: 'Users',      value: stats.users,   color: 'text-[color:var(--accent)]'  },
-            { label: 'Views',      value: stats.views >= 1000 ? `${(stats.views/1000).toFixed(1)}K` : stats.views, color: 'text-blue-400' },
-            { label: 'Errors',     value: stats.errors,  color: stats.errors > 0 ? 'text-red-400' : 'text-green-400' },
+            { label: 'Pending review', value: stats.pending, icon: '⏳', color: 'text-[color:var(--accent-hot)]' },
+            { label: 'Live films',     value: stats.active,  icon: '🎬', color: 'text-green-400'  },
+            { label: 'Users',          value: stats.users,   icon: '👥', color: 'text-[color:var(--accent)]'  },
+            { label: 'Total views',    value: stats.views >= 1000 ? `${(stats.views/1000).toFixed(1)}K` : stats.views, icon: '👁', color: 'text-blue-400' },
+            { label: 'Errors',         value: stats.errors,  icon: '🐛', color: stats.errors > 0 ? 'text-red-400' : 'text-green-400' },
           ].map(s => (
-            <div key={s.label} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-3 text-center">
-              <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-[10px] text-[color:var(--muted)] uppercase tracking-wide mt-0.5">{s.label}</div>
+            <div key={s.label} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 hover:border-[color:var(--accent)]/30 transition-colors">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-base opacity-80">{s.icon}</span>
+                <span className={`text-2xl font-black tabular-nums ${s.color}`}>{s.value}</span>
+              </div>
+              <div className="text-[11px] text-[color:var(--muted)] uppercase tracking-wide mt-2">{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-5 flex-wrap">
+        <div className="sticky top-16 z-20 -mx-6 px-6 py-3 mb-5 bg-[color:var(--bg)]/95 backdrop-blur border-b border-[color:var(--border)] flex gap-2 flex-wrap">
           {([
             { key: 'films',    label: '🎬 Films'    },
             { key: 'activity', label: '📋 Activity' },
@@ -400,75 +554,150 @@ export default function AdminPage() {
         {/* FILMS TAB */}
         {mainTab === 'films' && (
           <>
-            <div className="flex gap-2 mb-4">
-              {(['pending','active','rejected'] as FilmFilter[]).map(s => (
-                <button key={s} onClick={() => setFilmFilter(s)}
-                  className={`px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wide transition capitalize ${filmFilter === s ? 'bg-[#D4A017]/15 text-[color:var(--accent)] border border-[color:var(--accent)]/30' : 'text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
-                  {s} {filmFilter === s && `(${films.length})`}
-                </button>
-              ))}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <div className="flex gap-2">
+                {(['pending','active','rejected'] as FilmFilter[]).map(s => (
+                  <button key={s} onClick={() => { setFilmFilter(s); clearSelection() }}
+                    className={`px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wide transition capitalize ${filmFilter === s ? 'bg-[#D4A017]/15 text-[color:var(--accent)] border border-[color:var(--accent)]/30' : 'text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
+                    {s} {filmFilter === s && `(${films.length})`}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+                <input
+                  type="text"
+                  value={filmSearch}
+                  onChange={e => setFilmSearch(e.target.value)}
+                  placeholder="🔍 Search title..."
+                  className="flex-1 sm:w-56 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-3 py-1.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+                />
+                <select
+                  value={genreFilter}
+                  onChange={e => setGenreFilter(e.target.value)}
+                  className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-3 py-1.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition">
+                  <option value="all">All genres</option>
+                  {genres.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
             </div>
-            {loading ? <div className="text-center py-16 text-[color:var(--muted)]">Loading...</div>
-            : films.length === 0 ? (
-              <div className="text-center py-16 text-[color:var(--muted)]"><div className="text-4xl mb-2">✅</div><p>No {filmFilter} films</p></div>
-            ) : (
+
+            {/* Bulk action bar */}
+            {!loading && visibleFilms.length > 0 && (
+              <div className="flex items-center gap-3 mb-3 flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-[color:var(--muted)] select-none">
+                  <input type="checkbox"
+                    checked={visibleFilms.length > 0 && visibleFilms.every(f => selected.has(f.id))}
+                    onChange={e => setSelected(prev => {
+                      const n = new Set(prev)
+                      if (e.target.checked) visibleFilms.forEach(f => n.add(f.id))
+                      else visibleFilms.forEach(f => n.delete(f.id))
+                      return n
+                    })}
+                    className="w-4 h-4 accent-[#D4A017] cursor-pointer" />
+                  Select all ({visibleFilms.length})
+                </label>
+                {selected.size > 0 && (
+                  <div className="flex items-center gap-2 ml-auto flex-wrap">
+                    <span className="text-xs font-bold text-[color:var(--accent)]">{selected.size} selected</span>
+                    {filmFilter !== 'active' && (
+                      <button onClick={() => bulkSetStatus('active')} className="bg-green-700/80 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold uppercase transition">✅ Approve</button>
+                    )}
+                    {filmFilter !== 'rejected' && (
+                      <button onClick={() => bulkSetStatus('rejected')} className="bg-red-900/60 hover:bg-red-800 text-red-300 px-3 py-1.5 rounded text-xs font-bold uppercase transition">❌ Reject</button>
+                    )}
+                    <button onClick={bulkDelete} className="border border-red-900/60 text-red-500 hover:bg-red-900/30 px-3 py-1.5 rounded text-xs font-bold uppercase transition">🗑 Delete</button>
+                    <button onClick={clearSelection} className="text-[color:var(--muted)] hover:text-[color:var(--text)] px-2 py-1.5 rounded text-xs transition">Clear</button>
+                  </div>
+                )}
+              </div>
+            )}
+            {loading ? (
               <div className="space-y-3">
-                {films.map(film => (
-                  <div key={film.id} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-[color:var(--text)] mb-1">{film.title_en}</h3>
-                        {film.title_te && <p className="text-[color:var(--muted)] text-sm mb-1">{film.title_te}</p>}
-                        <div className="flex gap-2 text-xs text-[color:var(--muted)] flex-wrap mb-2">
-                          <span className="bg-[color:var(--border)] px-2 py-0.5 rounded">{film.genre}</span>
-                          <span>{timeAgo(film.created_at)}</span>
-                          <span>👁 {film.view_count}</span>
-                          <span>♥ {film.like_count}</span>
-                          {film.contest_entries && film.contest_entries.length > 0 && (
-                            <span className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-2 py-0.5 rounded font-bold">
-                              🏆 Contest
-                            </span>
-                          )}
-                          {film.contest_entries?.[0]?.payment_ref && (
-                            <span className="bg-green-900/30 border border-green-700/40 text-green-400 px-2 py-0.5 rounded">
-                              UTR: {film.contest_entries[0].payment_ref}
-                            </span>
-                          )}
-                          {film.contest_entries?.[0]?.payment_status === 'pending_verification' && (
-                            <span className="bg-yellow-900/30 border border-yellow-700/40 text-yellow-400 px-2 py-0.5 rounded">
-                              ⏳ Payment Pending Verify
-                            </span>
-                          )}
-                          {film.contest_entries?.[0]?.payment_status === 'paid' && (
-                            <span className="bg-green-900/30 border border-green-700/40 text-green-400 px-2 py-0.5 rounded">
-                              ✅ Payment Verified
-                            </span>
-                          )}
-                        </div>
-                        {film.video_url && (
-                          <a href={film.video_url.replace('/embed/','/watch?v=')} target="_blank" rel="noopener noreferrer"
-                            className="text-[color:var(--accent)] text-xs hover:underline">▶ Preview →</a>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {filmFilter === 'pending' && <>
-                          <button onClick={() => updateFilmStatus(film.id,'active')} className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">✅ Approve</button>
-                          <button onClick={() => updateFilmStatus(film.id,'rejected')} className="bg-red-900/60 hover:bg-red-800 text-red-300 px-4 py-1.5 rounded text-xs font-bold uppercase transition">❌ Reject</button>
-                        </>}
-                        {filmFilter === 'rejected' && (
-                          <button onClick={() => updateFilmStatus(film.id,'active')} className="border border-green-700/40 text-green-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-green-700/20 transition">↩ Approve</button>
-                        )}
-                        {filmFilter === 'active' && (
-                          <button onClick={() => updateFilmStatus(film.id,'rejected')} className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">Hide</button>
-                        )}
-                        <button onClick={() => deleteFilm(film)} disabled={deleting === film.id}
-                          className="border border-red-900/60 text-red-600 hover:bg-red-900/30 hover:text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase transition disabled:opacity-40">
-                          {deleting === film.id ? '⏳ Deleting...' : '🗑 Delete'}
-                        </button>
-                      </div>
+                {[0,1,2].map(i => (
+                  <div key={i} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4 flex items-start gap-4 animate-pulse">
+                    <div className="w-28 sm:w-44 aspect-video rounded-lg bg-[color:var(--border)] shrink-0" />
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="h-4 w-1/2 bg-[color:var(--border)] rounded" />
+                      <div className="h-3 w-1/3 bg-[color:var(--border)] rounded" />
+                      <div className="h-3 w-2/3 bg-[color:var(--border)] rounded" />
                     </div>
                   </div>
                 ))}
+              </div>
+            )
+            : films.length === 0 ? (
+              <div className="text-center py-16 text-[color:var(--muted)]"><div className="text-4xl mb-2">✅</div><p>No {filmFilter} films</p></div>
+            ) : visibleFilms.length === 0 ? (
+              <div className="text-center py-16 text-[color:var(--muted)]"><div className="text-4xl mb-2">🔍</div><p>No films match your filters</p></div>
+            ) : (
+              <div className="space-y-3">
+                {visibleFilms.map(film => {
+                  const thumb = filmThumb(film.video_url)
+                  const watch = film.video_url ? film.video_url.replace('/embed/','/watch?v=') : '#'
+                  return (
+                  <div key={film.id} className={`bg-[color:var(--surface)] border rounded-xl p-4 transition-colors ${selected.has(film.id) ? 'border-[color:var(--accent)]/60 ring-1 ring-[color:var(--accent)]/30' : 'border-[color:var(--border)] hover:border-[color:var(--accent)]/30'}`}>
+                    <div className="flex items-start gap-4">
+                      {/* Select for bulk actions */}
+                      <input type="checkbox"
+                        checked={selected.has(film.id)}
+                        onChange={() => toggleSelect(film.id)}
+                        aria-label={`Select ${film.title_en}`}
+                        className="mt-1 w-4 h-4 accent-[#D4A017] cursor-pointer shrink-0" />
+                      {/* Thumbnail — click to preview on YouTube */}
+                      <a href={watch} target="_blank" rel="noopener noreferrer"
+                        className="relative w-28 sm:w-44 aspect-video rounded-lg overflow-hidden bg-[color:var(--bg)] border border-[color:var(--border)] shrink-0 group">
+                        {thumb
+                          ? <img src={thumb} alt={film.title_en} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-2xl">🎬</div>}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition text-white text-xs font-bold">
+                          ▶ Preview
+                        </div>
+                      </a>
+
+                      <div className="flex-1 min-w-0 flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-[color:var(--text)] mb-1 truncate">{film.title_en}</h3>
+                          {film.title_te && <p className="text-[color:var(--muted)] text-sm mb-1 truncate">{film.title_te}</p>}
+                          <div className="flex gap-2 text-xs text-[color:var(--muted)] flex-wrap">
+                            <span className="bg-[color:var(--border)] px-2 py-0.5 rounded">{film.genre}</span>
+                            <span>{timeAgo(film.created_at)}</span>
+                            <span>👁 {film.view_count}</span>
+                            <span>♥ {film.like_count}</span>
+                            {film.contest_entries && film.contest_entries.length > 0 && (
+                              <span className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-2 py-0.5 rounded font-bold">🏆 Contest</span>
+                            )}
+                            {film.contest_entries?.[0]?.payment_ref && (
+                              <span className="bg-green-900/30 border border-green-700/40 text-green-400 px-2 py-0.5 rounded">UTR: {film.contest_entries[0].payment_ref}</span>
+                            )}
+                            {film.contest_entries?.[0]?.payment_status === 'pending_verification' && (
+                              <span className="bg-yellow-900/30 border border-yellow-700/40 text-yellow-400 px-2 py-0.5 rounded">⏳ Payment Pending Verify</span>
+                            )}
+                            {film.contest_entries?.[0]?.payment_status === 'paid' && (
+                              <span className="bg-green-900/30 border border-green-700/40 text-green-400 px-2 py-0.5 rounded">✅ Payment Verified</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {filmFilter === 'pending' && <>
+                            <button onClick={() => updateFilmStatus(film.id,'active')} className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">✅ Approve</button>
+                            <button onClick={() => updateFilmStatus(film.id,'rejected')} className="bg-red-900/60 hover:bg-red-800 text-red-300 px-4 py-1.5 rounded text-xs font-bold uppercase transition">❌ Reject</button>
+                          </>}
+                          {filmFilter === 'rejected' && (
+                            <button onClick={() => updateFilmStatus(film.id,'active')} className="border border-green-700/40 text-green-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-green-700/20 transition">↩ Approve</button>
+                          )}
+                          {filmFilter === 'active' && (
+                            <button onClick={() => updateFilmStatus(film.id,'rejected')} className="border border-red-700/40 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">Hide</button>
+                          )}
+                          <button onClick={() => deleteFilm(film)} disabled={deleting === film.id}
+                            className="border border-red-900/60 text-red-600 hover:bg-red-900/30 hover:text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase transition disabled:opacity-40">
+                            {deleting === film.id ? '⏳ Deleting...' : '🗑 Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  )
+                })}
               </div>
             )}
           </>
@@ -477,12 +706,33 @@ export default function AdminPage() {
         {/* ACTIVITY TAB */}
         {mainTab === 'activity' && (
           <>
-            <p className="text-xs text-[color:var(--muted)] mb-4">Last 100 business events</p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <p className="text-xs text-[color:var(--muted)]">Last 100 business events</p>
+              <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+                <input
+                  type="text"
+                  value={activitySearch}
+                  onChange={e => setActivitySearch(e.target.value)}
+                  placeholder="🔍 Search..."
+                  className="flex-1 sm:w-48 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-3 py-1.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+                />
+                <select
+                  value={activityType}
+                  onChange={e => setActivityType(e.target.value)}
+                  className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-3 py-1.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition">
+                  <option value="all">All events</option>
+                  {Object.entries(EVENT_STYLE).map(([key, v]) => (
+                    <option key={key} value={key}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             {loading ? <div className="text-center py-16 text-[color:var(--muted)]">Loading...</div>
             : logs.length === 0 ? <div className="text-center py-16 text-[color:var(--muted)]"><p className="text-3xl mb-2">📋</p><p className="text-sm">No activity yet</p></div>
+            : visibleLogs.length === 0 ? <div className="text-center py-16 text-[color:var(--muted)]"><p className="text-3xl mb-2">🔍</p><p className="text-sm">No events match your filters</p></div>
             : (
               <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl overflow-hidden">
-                {logs.map((log, i) => {
+                {visibleLogs.map((log, i) => {
                   const style = EVENT_STYLE[log.event_type] ?? { color: 'text-[color:var(--muted)]', label: log.event_type }
                   return (
                     <div key={log.id} className={`flex items-center gap-4 px-5 py-3 text-sm ${i !== 0 ? 'border-t border-[color:var(--border)]' : ''}`}>
@@ -537,9 +787,9 @@ export default function AdminPage() {
                             .from('contests')
                             .update({ status: 'voting' })
                             .eq('id', activeContest.id)
-                          if (error) { alert(`Error: ${error.message}`); return }
+                          if (error) { showToast(`Error: ${error.message}`, 'error'); return }
                           setActiveContest(prev => prev ? { ...prev, status: 'voting' } : null)
-                          alert('✅ Contest is now in Voting phase! Vote buttons are live.')
+                          showToast('✅ Contest is now in Voting phase! Vote buttons are live.')
                         }}
                         className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-[#D4A017]/30 transition">
                         🗳️ Switch to Voting Phase
@@ -561,9 +811,9 @@ export default function AdminPage() {
                             .from('contests')
                             .update({ status: 'closed', ended_at: new Date().toISOString() })
                             .eq('id', activeContest.id)
-                          if (error) { alert(`Error: ${error.message}`); return }
+                          if (error) { showToast(`Error: ${error.message}`, 'error'); return }
                           setActiveContest(null)
-                          alert(`✅ Season ${activeContest.season_number} cancelled (no entries).`)
+                          showToast(`✅ Season ${activeContest.season_number} cancelled (no entries).`)
                           fetchContestEntries()
                         }}
                         className="border border-red-700/40 text-red-400 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-red-700/20 transition">
@@ -746,16 +996,43 @@ export default function AdminPage() {
               </div>
             )}
 
-            <p className="text-xs text-[color:var(--muted)] mb-4">
+            <p className="text-xs text-[color:var(--muted)] mb-3">
               Contest entries — approve after verifying payment is confirmed.
             </p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <div className="flex gap-1.5 flex-wrap">
+                {([
+                  { key: 'all',      label: 'All' },
+                  { key: 'paid',     label: '💳 Paid' },
+                  { key: 'unpaid',   label: '⏳ Unpaid' },
+                  { key: 'approved', label: '✅ Approved' },
+                  { key: 'pending',  label: '🔸 Needs approval' },
+                ] as { key: typeof entryFilter; label: string }[]).map(f => (
+                  <button key={f.key} onClick={() => setEntryFilter(f.key)}
+                    className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide transition ${entryFilter === f.key ? 'bg-[#D4A017]/15 text-[color:var(--accent)] border border-[color:var(--accent)]/30' : 'text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={entrySearch}
+                onChange={e => setEntrySearch(e.target.value)}
+                placeholder="🔍 Film or creator..."
+                className="w-full sm:w-56 sm:ml-auto bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-3 py-1.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+              />
+            </div>
             {contestLoading
               ? <div className="text-center py-16 text-[color:var(--muted)]">Loading...</div>
               : contestEntries.length === 0
               ? <div className="text-center py-16 text-[color:var(--muted)]"><div className="text-4xl mb-2">🏆</div><p>No contest entries yet</p></div>
+              : visibleEntries.length === 0
+              ? <div className="text-center py-16 text-[color:var(--muted)]"><div className="text-4xl mb-2">🔍</div><p>No entries match your filters</p></div>
               : (
                 <div className="space-y-3">
-                  {contestEntries.map((entry, i) => (
+                  {visibleEntries.map((entry) => {
+                    const i = contestEntries.indexOf(entry)
+                    return (
                     <div key={entry.id} className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-xl p-4">
                       <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div className="flex-1">
@@ -821,10 +1098,11 @@ export default function AdminPage() {
                                 .from('contest_entries')
                                 .update({ payment_status: 'paid' })
                                 .eq('id', entry.id)
-                              if (error) { alert(`Error: ${error.message}`); return }
+                              if (error) { showToast(`Error: ${error.message}`, 'error'); return }
                               setContestEntries(prev => prev.map(e =>
                                 e.id === entry.id ? { ...e, payment_status: 'paid' } : e
                               ))
+                              showToast('💳 Payment marked verified')
                             }}
                             className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-[#D4A017]/30 transition">
                               💳 Verify & Mark Paid
@@ -836,7 +1114,8 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
           </>
