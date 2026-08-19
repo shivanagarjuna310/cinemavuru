@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound }     from 'next/navigation'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
+import FollowButton     from '@/components/FollowButton'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -122,6 +123,9 @@ export default async function CreatorPage({
                   {creator.bio}
                 </p>
               )}
+              <div className="mt-3">
+                <FollowButton creatorId={creator.id} />
+              </div>
             </div>
             <div className="hidden md:flex gap-6 flex-shrink-0">
               <div className="text-center">

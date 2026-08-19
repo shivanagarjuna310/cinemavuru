@@ -27,6 +27,10 @@
   /* Media scrim — always dark so hero/card text stays legible over images */
   --scrim: #08060F;
 
+  /* Netflix-style ranked numerals — monochrome digits beside the poster */
+  --rank-fill: #34281A;   /* warm graphite, clearly visible on near-black */
+  --rank-stroke: #7A6040; /* muted warm-gray outline for definition */
+
   /* Back-compat aliases */
   --background: var(--bg);
   --foreground: var(--text);
@@ -48,6 +52,10 @@ html.light {
   /* Deepened accents so they read as rich gold/orange, not washed out */
   --accent: #9A6100;      /* deep goldenrod */
   --accent-hot: #C2410C;  /* burnt saffron */
+
+  /* Ranked numerals — warm-gray digits on ivory */
+  --rank-fill: #DED0B2;
+  --rank-stroke: #B29A6A;
 }
 
 html, body {

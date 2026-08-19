@@ -103,6 +103,7 @@ export default function Navbar() {
 
   const mainLinks = [
   { href: '/',       label: 'Home'   },
+  { href: '/reels',  label: 'Reels'  },
   { href: '/upload', label: 'Upload' },
   { href: '/about',  label: 'About'  },
 ]

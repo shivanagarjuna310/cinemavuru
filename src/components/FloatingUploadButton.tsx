@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation'
 
 // Hidden on: the upload flow itself, auth, admin, the user's profile, the
 // contest (paid) flow, and legal pages — where the FAB is redundant or noise.
-const HIDDEN_PREFIXES = ['/upload', '/auth', '/cv-admin-1a25', '/profile', '/contest', '/terms', '/privacy']
+const HIDDEN_PREFIXES = ['/upload', '/auth', '/cv-admin-1a25', '/profile', '/contest', '/terms', '/privacy', '/reels']
 
 export default function FloatingUploadButton() {
   const pathname = usePathname()

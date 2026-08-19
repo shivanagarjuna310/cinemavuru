@@ -7,6 +7,12 @@ import Reveal from '../components/Reveal'
 import CountUp from '../components/CountUp'
 import FilmRow from '../components/FilmRow'
 import MyListRail from '../components/MyListRail'
+import BillboardHero from '../components/BillboardHero'
+import BrandIntro from '../components/BrandIntro'
+import ContinueWatchingRail from '../components/ContinueWatchingRail'
+import ForYouRail from '../components/ForYouRail'
+import FollowingRail from '../components/FollowingRail'
+import OnboardingGenres from '../components/OnboardingGenres'
 
 export const revalidate = 60
 
@@ -47,6 +53,9 @@ const DISTRICT_CONFIG: Record<string, { image: string; overlay: string; landmark
 const FILM_COLS =
   'id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))'
 
+const SPOTLIGHT_COLS =
+  'id, title_en, title_te, description, genre, video_url, view_count, districts(name_en, slug, states(slug))'
+
 async function getData() {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
@@ -54,13 +63,14 @@ async function getData() {
   const monthName = now.toLocaleString('en-IN', { month: 'long' })
 
   // Run all independent queries concurrently (was sequential → slow TTFB)
-  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes] = await Promise.all([
+  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes] = await Promise.all([
     supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
     supabase.from('films').select('district_id, genre').eq('status', 'active'),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('like_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').gte('created_at', monthStart).lte('created_at', monthEnd).order('view_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('created_at', { ascending: false }).limit(10),
+    supabase.from('films').select(SPOTLIGHT_COLS).eq('status', 'active').not('video_url', 'is', null).order('view_count', { ascending: false }).limit(6),
   ])
 
   const districts = districtsRes.data
@@ -80,6 +90,7 @@ async function getData() {
     topFilms: topFilmsRes.data ?? [],
     mostLiked: mostLikedRes.data ?? [],
     monthlyFilms: monthlyFilmsRes.data ?? [],
+    spotlight: spotlightRes.data ?? [],
     genres,
     recentFilms: recentFilmsRes.data ?? [],
     monthName,
@@ -94,7 +105,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, genres, recentFilms, monthName } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, genres, recentFilms, monthName } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -102,9 +113,19 @@ export default async function Home() {
   return (
     <>
       <Navbar />
+      <OnboardingGenres />
       <main className="relative min-h-screen text-[color:var(--text)] bg-[color:var(--bg)] overflow-x-hidden">
 
-        {/* ══════════ HERO ══════════ */}
+        {/* ══════════ BILLBOARD (OTT spotlight) ══════════ */}
+        {spotlight.length > 0 && <BillboardHero films={spotlight} />}
+
+        {/* ══════════ BRAND / PURPOSE (keeps the mission front-and-centre) ══════════ */}
+        {spotlight.length > 0 && (
+          <BrandIntro totalFilms={totalFilms} districtCount={districts.length} />
+        )}
+
+        {/* ══════════ HERO (fallback when no films yet) ══════════ */}
+        {spotlight.length === 0 && (
         <section className="relative min-h-[90vh] flex items-center overflow-hidden">
 
           {/* Background image (slow ken-burns) */}
@@ -198,9 +219,15 @@ export default async function Home() {
           {/* Fade into page */}
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[color:var(--bg)] to-transparent z-[5]" />
         </section>
+        )}
 
-        {/* ══════════ MY LIST (client — shows once you save a film) ══════════ */}
-        <MyListRail />
+        {/* ══════════ PERSONALIZED RAILS (client — shown when relevant) ══════════ */}
+        <div className="pt-10">
+          <ContinueWatchingRail />
+          <MyListRail />
+          <ForYouRail />
+          <FollowingRail />
+        </div>
 
         {/* ══════════ FILM ROWS ══════════ */}
         {recentFilms.length > 0 && (

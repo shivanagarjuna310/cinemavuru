@@ -10,6 +10,7 @@ import FilmPlayer       from '@/components/FilmPlayer'
 import CommentSection   from '@/components/CommentSection'
 import FilmRow          from '@/components/FilmRow'
 import WatchlistButton  from '@/components/WatchlistButton'
+import FollowButton     from '@/components/FollowButton'
 import type { Metadata } from 'next'
 
 const supabase = createClient(
@@ -45,6 +46,30 @@ async function getMoreToWatch(districtId: string, excludeId: string) {
     .eq('status', 'active').neq('id', excludeId)
     .order('view_count', { ascending: false }).limit(12)
   return { films: trending ?? [], fromDistrict: false }
+}
+
+// "More like this" — same genre, excluding films already shown elsewhere.
+async function getMoreLikeThis(genre: string | null, excludeIds: string[]) {
+  if (!genre) return []
+  const { data } = await supabase
+    .from('films').select(RELATED_COLS)
+    .eq('status', 'active').eq('genre', genre)
+    .not('id', 'in', `(${excludeIds.join(',')})`)
+    .order('view_count', { ascending: false }).limit(12)
+  return data ?? []
+}
+
+// Build the autoplay-next payload from the top "more to watch" pick.
+function nextFilmFrom(f: any, fallbackState: string, fallbackDistrict: string) {
+  if (!f) return null
+  const d = Array.isArray(f.districts) ? f.districts[0] : f.districts
+  const s = d && (Array.isArray(d.states) ? d.states[0] : d.states)
+  const vid = f.video_url?.match(/embed\/([^?]+)/)?.[1]
+  return {
+    href: `/${s?.slug ?? fallbackState}/${d?.slug ?? fallbackDistrict}/film/${f.id}`,
+    title: f.title_en as string,
+    thumb: vid ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg` : null,
+  }
 }
 
 // Supabase may return a to-one relation as an object or a 1-element array —
@@ -117,11 +142,9 @@ export async function generateMetadata({
     : `Watch "${film.title_en}" — a short film from ${realDistrict} on CinemaVuru.`
 
   const url = `${SITE}/${realState}/${realDistrict}/film/${id}`
-  const vid = film.video_url?.match(/embed\/([^?]+)/)?.[1]
-  const image = vid
-    ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg`
-    : (film.thumbnail_url ?? `${SITE}/og-default.png`)
 
+  // Note: no explicit images here — the branded card is supplied by the
+  // colocated opengraph-image.tsx (removing this lets that take over).
   return {
     title: `${film.title_en} — CinemaVuru`,
     description,
@@ -132,13 +155,11 @@ export async function generateMetadata({
       url,
       siteName:    'CinemaVuru',
       type:        'video.other',
-      images: [{ url: image, width: 1200, height: 630, alt: film.title_en }],
     },
     twitter: {
       card:        'summary_large_image',
       title:       `${film.title_en} — CinemaVuru`,
       description,
-      images:      [image],
     },
   }
 }
@@ -195,6 +216,8 @@ export default async function FilmPage({
   const drel: any = Array.isArray((film as any).districts) ? (film as any).districts[0] : (film as any).districts
   const districtName: string = drel?.name_en ?? districtSlug
   const { films: moreToWatch, fromDistrict } = await getMoreToWatch(film.district_id, film.id)
+  const moreLikeThis = await getMoreLikeThis(film.genre ?? null, [film.id, ...moreToWatch.map((f: any) => f.id)])
+  const nextFilm = nextFilmFrom(moreToWatch[0] ?? moreLikeThis[0], stateSlug, districtSlug)
 
   // SEO: VideoObject structured data so films can surface in Google video results
   const videoId = film.video_url?.match(/embed\/([^?]+)/)?.[1]
@@ -230,7 +253,7 @@ export default async function FilmPage({
 
           {/* Video player (metered soft wall for anonymous viewers) */}
           <div className={`relative aspect-video rounded-2xl overflow-hidden bg-gradient-to-br ${style.gradient} mb-6 border border-[color:var(--border)]`}>
-            <FilmPlayer videoUrl={film.video_url} filmId={film.id} emoji={style.emoji} />
+            <FilmPlayer videoUrl={film.video_url} filmId={film.id} emoji={style.emoji} nextFilm={nextFilm} />
           </div>
 
           {/* Film info */}
@@ -272,6 +295,9 @@ export default async function FilmPage({
                   <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Views</div>
                 </div>
                 <WatchlistButton filmId={film.id} />
+                {(film as any).profiles?.id && (
+                  <FollowButton creatorId={(film as any).profiles.id} size="sm" />
+                )}
               </div>
             </div>
           </div>
@@ -298,6 +324,17 @@ export default async function FilmPage({
           <CommentSection filmId={film.id} initialComments={comments} />
 
         </div>
+
+        {/* More like this — same genre */}
+        {moreLikeThis.length > 0 && (
+          <FilmRow
+            films={moreLikeThis}
+            eyebrow={film.genre ? `${film.genre} films` : 'You might like'}
+            title="🎯 More like this"
+            accent="pink"
+            metric={(f) => `👁 ${f.view_count} views`}
+          />
+        )}
 
         {/* More to watch — keep the binge going */}
         {moreToWatch.length > 0 && (

@@ -4,25 +4,32 @@
 // stays public (title/description/thumbnail) so search + sharing keep bringing
 // new people in — the gate only nudges engaged viewers to create an account.
 //
-// Note: this is a growth nudge, not DRM. The metering lives in localStorage, so
-// it's intentionally soft (incognito bypasses it). Real content protection would
-// mean moving off public YouTube embeds.
+// The player uses the YouTube IFrame API so we can: resume where you left off,
+// save Continue-Watching progress, default captions on, and autoplay the next
+// film when one ends. Metering still lives in localStorage (intentionally soft).
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from './AuthProvider'
+import { loadYouTubeAPI, ytIdFromUrl } from '@/lib/youtube'
+import { saveProgress, getProgress } from '@/lib/watchProgress'
 
 const FREE_LIMIT = 2
 const STORAGE_KEY = 'cv_watched'
+
+type NextFilm = { href: string; title: string; thumb: string | null } | null
 
 export default function FilmPlayer({
   videoUrl,
   filmId,
   emoji,
+  nextFilm = null,
 }: {
   videoUrl: string | null
   filmId: string
   emoji: string
+  nextFilm?: NextFilm
 }) {
   const { user, loading } = useAuth()
   const [gated, setGated] = useState(false)
@@ -93,12 +100,134 @@ export default function FilmPlayer({
     )
   }
 
+  const vid = ytIdFromUrl(videoUrl)
+  if (!vid) {
+    // Not a recognisable YouTube URL — fall back to a plain embed.
+    return (
+      <iframe
+        src={`${videoUrl}?rel=0`}
+        className="w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    )
+  }
+
+  return <YouTubePlayer vid={vid} filmId={filmId} userId={user?.id ?? null} nextFilm={nextFilm} />
+}
+
+function YouTubePlayer({
+  vid,
+  filmId,
+  userId,
+  nextFilm,
+}: {
+  vid: string
+  filmId: string
+  userId: string | null
+  nextFilm: NextFilm
+}) {
+  const router = useRouter()
+  const hostRef = useRef<HTMLDivElement | null>(null)
+  const playerRef = useRef<any>(null)
+  const saveTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [ended, setEnded] = useState(false)
+  const [countdown, setCountdown] = useState(8)
+
+  // Persist current position (logged-in users only).
+  function persist() {
+    const p = playerRef.current
+    if (!userId || !p?.getCurrentTime) return
+    try {
+      const pos = p.getCurrentTime()
+      const dur = p.getDuration?.() ?? null
+      if (pos > 0) saveProgress(userId, filmId, pos, dur)
+    } catch {}
+  }
+
+  useEffect(() => {
+    let cancelled = false
+
+    loadYouTubeAPI().then(async () => {
+      if (cancelled || !hostRef.current) return
+      const resumeAt = userId ? await getProgress(userId, filmId) : 0
+      if (cancelled || !hostRef.current) return
+      const YT = (window as any).YT
+
+      playerRef.current = new YT.Player(hostRef.current, {
+        videoId: vid,
+        playerVars: {
+          rel: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          cc_load_policy: 1,   // captions on by default when the video has them
+          start: Math.floor(resumeAt),
+        },
+        events: {
+          onStateChange: (e: any) => {
+            // 1 = playing, 0 = ended, 2 = paused
+            if (e.data === 1) {
+              if (!saveTimer.current) saveTimer.current = setInterval(persist, 10000)
+            } else {
+              if (saveTimer.current) { clearInterval(saveTimer.current); saveTimer.current = null }
+              persist()
+              if (e.data === 0 && nextFilm) setEnded(true)
+            }
+          },
+        },
+      })
+    })
+
+    const onHide = () => { if (document.visibilityState === 'hidden') persist() }
+    document.addEventListener('visibilitychange', onHide)
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onHide)
+      if (saveTimer.current) clearInterval(saveTimer.current)
+      persist()
+      try { playerRef.current?.destroy?.() } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vid, filmId, userId])
+
+  // Up-next countdown after a film ends
+  useEffect(() => {
+    if (!ended || !nextFilm) return
+    if (countdown <= 0) { router.push(nextFilm.href); return }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [ended, countdown, nextFilm, router])
+
   return (
-    <iframe
-      src={`${videoUrl}?rel=0`}
-      className="w-full h-full"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-    />
+    <>
+      <div ref={hostRef} className="w-full h-full" />
+
+      {ended && nextFilm && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/85 backdrop-blur-sm px-6 text-center">
+          <p className="text-white/60 text-xs uppercase tracking-[3px]">Up next in {countdown}s</p>
+          <Link href={nextFilm.href} className="group flex flex-col items-center gap-3">
+            {nextFilm.thumb && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={nextFilm.thumb} alt="" className="w-56 aspect-video object-cover rounded-lg border border-white/20 group-hover:border-[#FF6B1A] transition" />
+            )}
+            <span className="text-white font-bold text-lg group-hover:text-[#FFC845] transition" style={{ fontFamily: "'Georgia', serif" }}>
+              {nextFilm.title}
+            </span>
+          </Link>
+          <div className="flex gap-3">
+            <Link href={nextFilm.href}
+              className="inline-flex items-center gap-2 bg-white text-black px-6 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide hover:bg-white/85 transition">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+              Play now
+            </Link>
+            <button onClick={() => setEnded(false)}
+              className="border border-white/30 text-white px-6 py-2.5 rounded-lg font-bold text-sm uppercase tracking-wide hover:bg-white/10 transition">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

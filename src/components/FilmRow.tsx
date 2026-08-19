@@ -3,38 +3,37 @@
 // metric formatter — replaces three near-identical inline blocks.
 
 import Link from 'next/link'
-import Image from 'next/image'
+import FilmPoster from './FilmPoster'
 
 type Accent = 'gold' | 'pink' | 'blue' | 'green'
 
 // Static class strings per accent (Tailwind can't see runtime-built classes)
 const ACCENT: Record<Accent, {
-  bar: string; text: string; dot: string; hoverText: string; hoverBorder: string; stroke: string
+  bar: string; text: string; dot: string; hoverText: string; hoverBorder: string
 }> = {
   gold: {
     bar: 'bg-[#D4A017]', text: 'text-[color:var(--accent)]', dot: 'bg-[#D4A017]',
     hoverText: 'group-hover:text-[color:var(--accent)]', hoverBorder: 'group-hover:border-[color:var(--accent)]/50',
-    stroke: 'rgba(212,160,23,0.5)',
   },
   pink: {
     bar: 'bg-[#E84393]', text: 'text-[#E84393]', dot: 'bg-[#E84393]',
     hoverText: 'group-hover:text-[#E84393]', hoverBorder: 'group-hover:border-[#E84393]/50',
-    stroke: 'rgba(232,67,147,0.5)',
   },
   blue: {
     bar: 'bg-[#4A90E2]', text: 'text-[#4A90E2]', dot: 'bg-[#4A90E2]',
     hoverText: 'group-hover:text-[#4A90E2]', hoverBorder: 'group-hover:border-[#4A90E2]/50',
-    stroke: 'rgba(74,144,226,0.5)',
   },
   green: {
     bar: 'bg-[#22C55E]', text: 'text-[#22C55E]', dot: 'bg-[#22C55E]',
     hoverText: 'group-hover:text-[#22C55E]', hoverBorder: 'group-hover:border-[#22C55E]/50',
-    stroke: 'rgba(34,197,94,0.5)',
   },
 }
 
+function ytId(url?: string) {
+  return url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1] ?? null
+}
 function thumb(url?: string) {
-  const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
+  const id = ytId(url)
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
 }
 
@@ -70,33 +69,41 @@ export default function FilmRow({
       </h2>
       <p className="text-[color:var(--muted)] text-xs mb-6">{subtitle ?? ' '}</p>
 
-      <div className="flex gap-6 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="flex gap-6 overflow-x-auto overflow-y-hidden pt-16 pb-10 -mt-12 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {films.map((film: any, index: number) => {
           const t = thumb(film.video_url)
+          const vid = ytId(film.video_url)
           const d = film.districts as any
           const stateSlug = d?.states?.slug ?? 'telangana'
           const districtSlug = d?.slug ?? 'hyderabad'
           return (
             <Link key={film.id} href={`/${stateSlug}/${districtSlug}/film/${film.id}`}
-              className="relative flex-shrink-0 w-56 group">
+              className="relative flex-shrink-0 w-64 group hover:z-30">
               {showRankBadge && index === 0 && (
-                <div className="absolute top-0 right-5 z-20 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
+                <div className="absolute top-1 right-1 z-30 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow"
                   style={{ background: '#FFD700', color: '#000' }}>🥇</div>
               )}
-              <div className="absolute -left-4 bottom-12 text-9xl font-black select-none z-10 leading-none"
-                style={{ fontFamily: "'Georgia', serif", color: 'transparent', WebkitTextStroke: `2px ${a.stroke}` }}>
-                {index + 1}
+              {/* Ranked row: the numeral sits in its own fixed-width column to the
+                  LEFT of the poster (Netflix "Top 10" style) — fully visible, and
+                  the poster tucks over its right edge for a connected look. */}
+              <div className="flex items-end">
+                <div className="w-16 flex-shrink-0 flex justify-end pr-1 pointer-events-none select-none tabular-nums"
+                  style={{
+                    fontFamily: "'Arial Narrow', 'Helvetica Neue', Arial, sans-serif",
+                    fontSize: index + 1 >= 10 ? '4.75rem' : '6.5rem',
+                    fontWeight: 900,
+                    lineHeight: 0.78,
+                    letterSpacing: '-0.05em',
+                    color: 'var(--rank-fill)',
+                    WebkitTextStroke: '1.5px var(--rank-stroke)',
+                  }}>
+                  {index + 1}
+                </div>
+                <div className="relative z-10 -ml-3 flex-1">
+                  <FilmPoster vid={vid} thumb={t} title={film.title_en} hoverBorder={a.hoverBorder} />
+                </div>
               </div>
-              <div className={`relative aspect-video rounded-lg overflow-hidden ml-5 border border-white/10 ${a.hoverBorder} transition-all duration-300`}>
-                {t ? (
-                  <Image src={t} alt={film.title_en} fill sizes="224px"
-                    className="object-cover transition-transform duration-500 group-hover:scale-110" />
-                ) : (
-                  <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              </div>
-              <div className="mt-2 ml-5">
+              <div className="mt-2 pl-[52px]">
                 <p className={`text-[color:var(--text)] text-xs font-bold leading-tight line-clamp-2 ${a.hoverText} transition-colors`}>
                   {film.title_en}
                 </p>
