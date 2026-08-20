@@ -195,14 +195,14 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
 
   async function handleShare() {
     const url = window.location.href
+    // Contest films → recruit votes; otherwise a normal watch share.
+    const text = isContestFilm
+      ? '🗳️ Vote for my film on CinemaVuru — every vote counts! 🙏'
+      : 'Watch this short film on CinemaVuru 🎬'
     // Mobile: native share sheet (WhatsApp, Instagram, etc.)
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({
-          title: document.title,
-          text: 'Watch this short film on CinemaVuru 🎬',
-          url,
-        })
+        await navigator.share({ title: document.title, text, url })
       } catch {
         // user dismissed the share sheet — nothing to do
       }
@@ -258,15 +258,19 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
         </button>
       )}
 
-      {/* Share — native share sheet on mobile, copy-link fallback on desktop */}
-      <button onClick={handleShare} aria-label="Share this film" title="Share this film"
+      {/* Share — for contest films this becomes a "Get Votes" recruitment share */}
+      <button onClick={handleShare}
+        aria-label={isContestFilm ? 'Share to get votes' : 'Share this film'}
+        title={isContestFilm ? 'Share to get votes' : 'Share this film'}
         className={`${pill} sm:ml-auto ${
           copied
             ? 'bg-[#25D366]/10 text-[#25D366] ring-[#25D366]/40'
+            : isContestFilm
+            ? 'bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black ring-transparent hover:opacity-90'
             : 'bg-[color:var(--surface)] text-[color:var(--muted)] ring-[color:var(--border)] hover:text-[color:var(--accent)] hover:ring-[color:var(--accent)]/40'
         }`}>
         {copied ? <CheckIcon /> : <ShareIcon />}
-        <span>{copied ? 'Link copied' : 'Share'}</span>
+        <span>{copied ? 'Link copied' : isContestFilm ? 'Get Votes' : 'Share'}</span>
       </button>
 
     </div>
