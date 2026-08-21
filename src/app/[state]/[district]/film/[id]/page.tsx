@@ -22,8 +22,11 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
 
 // ISR: the page is cached at the edge and revalidated in the background — view
 // counting is handled client-side (ViewTracker → /api/view) so it doesn't force
-// a dynamic render on every request.
+// a dynamic render on every request. force-cache makes the Supabase reads
+// cacheable so this dynamic-param route can actually be prerendered/ISR-cached
+// (public data only — per-user state like "liked by me" is resolved client-side).
 export const revalidate = 60
+export const fetchCache = 'force-cache'
 
 async function getFilm(id: string) {
   const { data } = await supabase
