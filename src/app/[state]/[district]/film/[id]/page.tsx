@@ -1,6 +1,7 @@
 // src/app/[state]/[district]/film/[id]/page.tsx
 
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { notFound, redirect } from 'next/navigation'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
@@ -26,46 +27,61 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
 // cacheable so this dynamic-param route can actually be prerendered/ISR-cached
 // (public data only — per-user state like "liked by me" is resolved client-side).
 export const revalidate = 60
-export const fetchCache = 'force-cache'
 
-async function getFilm(id: string) {
-  const { data } = await supabase
-    .from('films')
-    .select('*, profiles!films_creator_id_fkey(id, name), districts(slug, name_en, states(slug))')
-    .eq('id', id)
-    .eq('status', 'active')
-    .single()
-  return data
-}
+// All reads are wrapped in unstable_cache so their results live in Next's Data
+// Cache (revalidate 60s). Supabase's client fetches are `no-store`, which would
+// otherwise force this dynamic-param route to render dynamically on every hit;
+// caching the results lets the page be prerendered/ISR-cached at the edge.
+const getFilm = unstable_cache(
+  async (id: string) => {
+    const { data } = await supabase
+      .from('films')
+      .select('*, profiles!films_creator_id_fkey(id, name), districts(slug, name_en, states(slug))')
+      .eq('id', id)
+      .eq('status', 'active')
+      .single()
+    return data
+  },
+  ['film-by-id'],
+  { revalidate: 60, tags: ['films'] },
+)
 
 const RELATED_COLS =
   'id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))'
 
 // "More to watch" — same district first (hyperlocal), fall back to trending.
-async function getMoreToWatch(districtId: string, excludeId: string) {
-  const { data: same } = await supabase
-    .from('films').select(RELATED_COLS)
-    .eq('status', 'active').eq('district_id', districtId).neq('id', excludeId)
-    .order('view_count', { ascending: false }).limit(12)
-  if (same && same.length > 0) return { films: same, fromDistrict: true }
+const getMoreToWatch = unstable_cache(
+  async (districtId: string, excludeId: string) => {
+    const { data: same } = await supabase
+      .from('films').select(RELATED_COLS)
+      .eq('status', 'active').eq('district_id', districtId).neq('id', excludeId)
+      .order('view_count', { ascending: false }).limit(12)
+    if (same && same.length > 0) return { films: same, fromDistrict: true }
 
-  const { data: trending } = await supabase
-    .from('films').select(RELATED_COLS)
-    .eq('status', 'active').neq('id', excludeId)
-    .order('view_count', { ascending: false }).limit(12)
-  return { films: trending ?? [], fromDistrict: false }
-}
+    const { data: trending } = await supabase
+      .from('films').select(RELATED_COLS)
+      .eq('status', 'active').neq('id', excludeId)
+      .order('view_count', { ascending: false }).limit(12)
+    return { films: trending ?? [], fromDistrict: false }
+  },
+  ['more-to-watch'],
+  { revalidate: 60, tags: ['films'] },
+)
 
 // "More like this" — same genre, excluding films already shown elsewhere.
-async function getMoreLikeThis(genre: string | null, excludeIds: string[]) {
-  if (!genre) return []
-  const { data } = await supabase
-    .from('films').select(RELATED_COLS)
-    .eq('status', 'active').eq('genre', genre)
-    .not('id', 'in', `(${excludeIds.join(',')})`)
-    .order('view_count', { ascending: false }).limit(12)
-  return data ?? []
-}
+const getMoreLikeThis = unstable_cache(
+  async (genre: string | null, excludeIds: string[]) => {
+    if (!genre) return []
+    const { data } = await supabase
+      .from('films').select(RELATED_COLS)
+      .eq('status', 'active').eq('genre', genre)
+      .not('id', 'in', `(${excludeIds.join(',')})`)
+      .order('view_count', { ascending: false }).limit(12)
+    return data ?? []
+  },
+  ['more-like-this'],
+  { revalidate: 60, tags: ['films'] },
+)
 
 // Build the autoplay-next payload from the top "more to watch" pick.
 function nextFilmFrom(f: any, fallbackState: string, fallbackDistrict: string) {
@@ -88,24 +104,32 @@ function filmLocation(film: any): { state?: string; district?: string } {
   return { state: s?.slug, district: d?.slug }
 }
 
-async function getComments(filmId: string) {
-  const { data } = await supabase
-    .from('comments')
-    .select('*, profiles(name)')
-    .eq('film_id', filmId)
-    .order('created_at', { ascending: false })
-    .limit(50)
-  return data ?? []
-}
+const getComments = unstable_cache(
+  async (filmId: string) => {
+    const { data } = await supabase
+      .from('comments')
+      .select('*, profiles(name)')
+      .eq('film_id', filmId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    return data ?? []
+  },
+  ['film-comments'],
+  { revalidate: 60, tags: ['comments'] },
+)
 
 // Real like count straight from the likes table (not the denormalised column)
-async function getLikeCount(filmId: string) {
-  const { count } = await supabase
-    .from('likes')
-    .select('*', { count: 'exact', head: true })
-    .eq('film_id', filmId)
-  return count ?? 0
-}
+const getLikeCount = unstable_cache(
+  async (filmId: string) => {
+    const { count } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('film_id', filmId)
+    return count ?? 0
+  },
+  ['film-like-count'],
+  { revalidate: 60, tags: ['likes'] },
+)
 
 // ── SEO: generates meta tags for each film page ──
 export async function generateMetadata({
