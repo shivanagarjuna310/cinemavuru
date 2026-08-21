@@ -1,10 +1,10 @@
 // public/sw.js
 // Service Worker for CinemaVuru PWA
-// Caches key assets so the app loads fast even on slow connections
+// Caches key assets so the app loads fast even on slow connections.
 
-const CACHE_NAME = 'cinemavuru-v1'
+const CACHE_NAME = 'cinemavuru-v2'
 
-// These files get cached immediately when PWA is installed
+// Cached immediately on install.
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -15,9 +15,7 @@ const STATIC_ASSETS = [
 // ── Install: cache static assets ──
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS)
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
   )
   self.skipWaiting()
 })
@@ -25,51 +23,38 @@ self.addEventListener('install', (event) => {
 // ── Activate: clean up old caches ──
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    })
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))),
+    ),
   )
   self.clients.claim()
 })
 
-// ── Fetch: Network first, fallback to cache ──
-// This means users always get fresh content when online
-// But if offline, they still see cached pages
+// ── Fetch: network-first, fall back to cache ──
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') return
+  const req = event.request
+  if (req.method !== 'GET') return
 
-  // Skip Supabase API calls — always need fresh data
-  if (event.request.url.includes('supabase.co')) return
-
-  // Skip Razorpay/Cashfree — payment must be live
-  if (event.request.url.includes('razorpay') || event.request.url.includes('cashfree')) return
+  // Only handle our own origin. YouTube embeds/thumbnails, Supabase, payment
+  // gateways, analytics, etc. always go straight to the network (never cached).
+  const url = new URL(req.url)
+  if (url.origin !== self.location.origin) return
 
   event.respondWith(
-    fetch(event.request)
+    fetch(req)
       .then((response) => {
-        // Cache a copy of successful responses
         if (response.ok) {
           const clone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, clone)
-          })
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone))
         }
         return response
       })
-      .catch(() => {
-        // Network failed — try cache
-        return caches.match(event.request).then((cached) => {
-          if (cached) return cached
-          // If nothing cached, return offline page for navigation
-          if (event.request.mode === 'navigate') {
-            return caches.match('/')
-          }
-        })
-      })
+      .catch(async () => {
+        const cached = await caches.match(req)
+        if (cached) return cached
+        // Offline navigation with nothing cached → the app shell.
+        if (req.mode === 'navigate') return caches.match('/')
+        return new Response('', { status: 504, statusText: 'Offline' })
+      }),
   )
 })
