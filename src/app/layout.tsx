@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Rajdhani, Noto_Sans_Telugu } from "next/font/google";
 import "./globals.css";
 import PWARegister from '@/components/PWARegister'
+import InstallPrompt from '@/components/InstallPrompt'
 import FloatingUploadButton from '@/components/FloatingUploadButton'
 import SiteFooter from '@/components/SiteFooter'
 import { AuthProvider } from '@/components/AuthProvider'
@@ -75,6 +76,9 @@ export default function RootLayout({
 
         {/* Global "Share Your Film" floating action button */}
         <FloatingUploadButton />
+
+        {/* "Add to Home Screen" prompt (Android one-tap / iOS hint) */}
+        <InstallPrompt />
         </AuthProvider>
 
         <Analytics />
