@@ -3,7 +3,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound, redirect } from 'next/navigation'
 import Link             from 'next/link'
-import { headers }      from 'next/headers'
 import Navbar           from '@/components/Navbar'
 import FilmActions      from '@/components/FilmActions'
 import FilmPlayer       from '@/components/FilmPlayer'
@@ -11,6 +10,7 @@ import CommentSection   from '@/components/CommentSection'
 import FilmRow          from '@/components/FilmRow'
 import WatchlistButton  from '@/components/WatchlistButton'
 import FollowButton     from '@/components/FollowButton'
+import ViewTracker      from '@/components/ViewTracker'
 import type { Metadata } from 'next'
 
 const supabase = createClient(
@@ -19,6 +19,11 @@ const supabase = createClient(
 )
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
+
+// ISR: the page is cached at the edge and revalidated in the background — view
+// counting is handled client-side (ViewTracker → /api/view) so it doesn't force
+// a dynamic render on every request.
+export const revalidate = 60
 
 async function getFilm(id: string) {
   const { data } = await supabase
@@ -99,37 +104,6 @@ async function getLikeCount(filmId: string) {
   return count ?? 0
 }
 
-// Search engines, social link-preview fetchers and generic HTTP clients. These
-// hit the server-rendered page (e.g. on every WhatsApp/Facebook share) and must
-// NOT be counted as views — they rotate IPs, so the per-IP dedup can't catch them.
-const BOT_UA = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|facebot|whatsapp|telegram|discord|slack|linkedin|twitter|pinterest|embedly|quora|preview|scrapy|python-requests|http-client|okhttp|axios|node-fetch|curl|wget|headless|phantom|lighthouse|pagespeed|gptbot|claudebot|bytespider|petalbot|dataforseo|semrush|ahrefs|mj12|dotbot|yandex|bingpreview|applebot|amazonbot/i
-
-// Unique human view per IP per day — not per refresh, and never bots.
-async function incrementView(filmId: string) {
-  try {
-    const headersList = await headers()
-    const ua = headersList.get('user-agent') ?? ''
-    // No UA at all, or a known bot/crawler/link-preview → don't count it.
-    if (!ua || BOT_UA.test(ua)) return
-
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
-           ?? headersList.get('x-real-ip')
-           ?? 'unknown'
-    // A missing/opaque IP can't be deduped — skip rather than inflate.
-    if (ip === 'unknown') return
-
-    const today = new Date().toISOString().split('T')[0]
-    const viewerKey = `${ip}-${today}`
-
-    await supabase.rpc('increment_view', {
-      p_film_id:    filmId,
-      p_viewer_key: viewerKey,
-    })
-  } catch {
-    // Don't let view tracking break the page
-  }
-}
-
 // ── SEO: generates meta tags for each film page ──
 export async function generateMetadata({
   params,
@@ -207,10 +181,9 @@ export default async function FilmPage({
 }) {
   const { state: stateSlug, district: districtSlug, id } = await params
 
-  const [film, comments, , likeCount] = await Promise.all([
+  const [film, comments, likeCount] = await Promise.all([
     getFilm(id),
     getComments(id),
-    incrementView(id),  // unique per IP per day
     getLikeCount(id),
   ])
 
@@ -227,8 +200,16 @@ export default async function FilmPage({
 
   const drel: any = Array.isArray((film as any).districts) ? (film as any).districts[0] : (film as any).districts
   const districtName: string = drel?.name_en ?? districtSlug
-  const { films: moreToWatch, fromDistrict } = await getMoreToWatch(film.district_id, film.id)
-  const moreLikeThis = await getMoreLikeThis(film.genre ?? null, [film.id, ...moreToWatch.map((f: any) => f.id)])
+
+  // Both recommendation rows fetched in parallel (was sequential). "More like
+  // this" excludes the current film; we drop any overlap with "More to watch"
+  // in JS so the two rows don't repeat titles.
+  const [{ films: moreToWatch, fromDistrict }, moreLikeRaw] = await Promise.all([
+    getMoreToWatch(film.district_id, film.id),
+    getMoreLikeThis(film.genre ?? null, [film.id]),
+  ])
+  const watchIds = new Set(moreToWatch.map((f: any) => f.id))
+  const moreLikeThis = moreLikeRaw.filter((f: any) => !watchIds.has(f.id))
   const nextFilm = nextFilmFrom(moreToWatch[0] ?? moreLikeThis[0], stateSlug, districtSlug)
 
   // SEO: VideoObject structured data so films can surface in Google video results
@@ -247,6 +228,7 @@ export default async function FilmPage({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <ViewTracker filmId={film.id} />
       <Navbar />
       <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
         <div className="max-w-4xl mx-auto px-6 py-8">
