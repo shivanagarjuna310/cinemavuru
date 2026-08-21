@@ -99,20 +99,32 @@ async function getLikeCount(filmId: string) {
   return count ?? 0
 }
 
-// Unique view per IP per day — not per refresh
+// Search engines, social link-preview fetchers and generic HTTP clients. These
+// hit the server-rendered page (e.g. on every WhatsApp/Facebook share) and must
+// NOT be counted as views — they rotate IPs, so the per-IP dedup can't catch them.
+const BOT_UA = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|facebot|whatsapp|telegram|discord|slack|linkedin|twitter|pinterest|embedly|quora|preview|scrapy|python-requests|http-client|okhttp|axios|node-fetch|curl|wget|headless|phantom|lighthouse|pagespeed|gptbot|claudebot|bytespider|petalbot|dataforseo|semrush|ahrefs|mj12|dotbot|yandex|bingpreview|applebot|amazonbot/i
+
+// Unique human view per IP per day — not per refresh, and never bots.
 async function incrementView(filmId: string) {
   try {
     const headersList = await headers()
+    const ua = headersList.get('user-agent') ?? ''
+    // No UA at all, or a known bot/crawler/link-preview → don't count it.
+    if (!ua || BOT_UA.test(ua)) return
+
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
            ?? headersList.get('x-real-ip')
            ?? 'unknown'
+    // A missing/opaque IP can't be deduped — skip rather than inflate.
+    if (ip === 'unknown') return
+
     const today = new Date().toISOString().split('T')[0]
     const viewerKey = `${ip}-${today}`
 
     await supabase.rpc('increment_view', {
-  p_film_id:    filmId,
-  p_viewer_key: viewerKey,
-})
+      p_film_id:    filmId,
+      p_viewer_key: viewerKey,
+    })
   } catch {
     // Don't let view tracking break the page
   }

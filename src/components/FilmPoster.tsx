@@ -4,7 +4,6 @@
 // Kept as its own client component so FilmRow can stay a server component.
 
 import { useRef, useState } from 'react'
-import Image from 'next/image'
 
 export default function FilmPoster({
   vid,
@@ -51,12 +50,16 @@ export default function FilmPoster({
       className={`relative aspect-video rounded-lg overflow-hidden border border-white/10 ${hoverBorder} shadow-md origin-bottom-left transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-[1.35] group-hover:shadow-2xl group-hover:border-white/30`}
     >
       {thumb ? (
-        <Image
+        // Plain <img> (eager) so every card in the horizontal rail loads — not
+        // just the ones in the initial viewport (next/image lazy-loads and left
+        // cards 8+ blank until scrolled).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           src={thumb}
           alt={title}
-          fill
-          sizes="224px"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="eager"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       ) : (
         <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
