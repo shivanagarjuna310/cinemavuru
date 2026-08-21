@@ -28,6 +28,14 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
 // (public data only — per-user state like "liked by me" is resolved client-side).
 export const revalidate = 60
 
+// A dynamic-param route renders SSR on every request UNLESS it also exports
+// generateStaticParams — that opts it into static generation + on-demand ISR.
+// Empty list = prerender none at build; each film is generated and edge-cached
+// on first visit, then revalidated every 60s.
+export async function generateStaticParams() {
+  return []
+}
+
 // All reads are wrapped in unstable_cache so their results live in Next's Data
 // Cache (revalidate 60s). Supabase's client fetches are `no-store`, which would
 // otherwise force this dynamic-param route to render dynamically on every hit;
