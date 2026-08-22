@@ -61,6 +61,9 @@ html.light {
 html, body {
   background: var(--bg);
   color: var(--text);
+  /* Guard against accidental horizontal overflow shifting the layout on mobile */
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 html { scroll-behavior: smooth; }

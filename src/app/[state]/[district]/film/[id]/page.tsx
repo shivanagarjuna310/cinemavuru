@@ -266,7 +266,7 @@ export default async function FilmPage({
       <ViewTracker filmId={film.id} />
       <Navbar />
       <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs text-[color:var(--muted)] uppercase tracking-widest mb-6">

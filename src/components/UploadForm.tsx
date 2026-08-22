@@ -179,7 +179,7 @@ export default function UploadForm() {
   // Not logged in
   if (!userId) {
     return (
-      <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8 text-center">
+      <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-6 sm:p-8 text-center">
         <div className="text-4xl mb-4">🔐</div>
         <h2 className="text-xl font-bold text-[color:var(--text)] mb-2">Login Required</h2>
         <p className="text-[color:var(--muted)] mb-6 text-sm">
@@ -198,7 +198,7 @@ export default function UploadForm() {
   // Success state
   if (status === 'success') {
     return (
-      <div className="bg-[color:var(--surface)] border border-green-700/30 rounded-2xl p-8 text-center">
+      <div className="bg-[color:var(--surface)] border border-green-700/30 rounded-2xl p-6 sm:p-8 text-center">
         <div className="text-5xl mb-4">🎬</div>
         <h2 className="text-2xl font-bold text-green-400 mb-3">Film Submitted!</h2>
         <p className="text-[color:var(--muted)] mb-2">{message}</p>
@@ -223,8 +223,11 @@ export default function UploadForm() {
     )
   }
 
+  // Live preview thumbnail once a valid YouTube URL is pasted
+  const previewId = toEmbedUrl(youtubeUrl)?.match(/embed\/([^?]+)/)?.[1] ?? null
+
   return (
-    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8">
+    <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-5 sm:p-8">
 
       <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -290,6 +293,7 @@ export default function UploadForm() {
             maxLength={1000}
             className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition resize-none"
           />
+          <div className="text-right text-[10px] text-[color:var(--faint)] mt-1">{description.length}/1000</div>
         </div>
 
         {/* YouTube URL */}
@@ -316,6 +320,26 @@ export default function UploadForm() {
             Upload your film to YouTube as <strong className="text-[color:var(--muted)]">Unlisted</strong> first,
             then paste the link here.
           </p>
+
+          {/* Live preview so creators confirm the right video */}
+          {previewId && !urlError && (
+            <div className="mt-3 flex items-center gap-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--bg)] p-2.5">
+              <div className="relative w-24 sm:w-28 aspect-video rounded-md overflow-hidden flex-shrink-0 bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`https://img.youtube.com/vi/${previewId}/hqdefault.jpg`}
+                  alt="Video preview" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="w-7 h-7 rounded-full bg-black/60 flex items-center justify-center">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z" /></svg>
+                  </span>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[color:var(--accent)] text-xs font-semibold">✓ Video detected</p>
+                <p className="text-[color:var(--muted)] text-[11px] mt-0.5">Make sure this is the film you want to publish.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* District dropdown */}

@@ -71,7 +71,7 @@ export default function FilmPoster({
         <iframe
           ref={iframeRef}
           className="absolute inset-0 w-full h-full pointer-events-none"
-          src={`https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}&modestbranding=1&rel=0&playsinline=1&disablekb=1&enablejsapi=1`}
+          src={`https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}&modestbranding=1&rel=0&playsinline=1&disablekb=1&enablejsapi=1&start=25`}
           allow="autoplay; encrypted-media"
           title={`${title} preview`}
           tabIndex={-1}

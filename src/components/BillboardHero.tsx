@@ -93,7 +93,7 @@ export default function BillboardHero({ films }: { films: Film[] }) {
           <iframe
             ref={iframeRef}
             className="absolute inset-0 w-[130%] h-[130%] -left-[15%] -top-[15%] pointer-events-none anim-fade-in"
-            src={`https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}&modestbranding=1&rel=0&playsinline=1&disablekb=1&enablejsapi=1`}
+            src={`https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}&modestbranding=1&rel=0&playsinline=1&disablekb=1&enablejsapi=1&start=25`}
             allow="autoplay; encrypted-media"
             title={`${film.title_en} trailer`}
             tabIndex={-1}

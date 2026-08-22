@@ -16,15 +16,15 @@ export default function UploadPage() {
         {/* Background glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_0%,rgba(255,107,26,0.06),transparent)] pointer-events-none" />
 
-        <div className="max-w-2xl mx-auto px-6 py-12 relative z-10">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 relative z-10">
 
           {/* Header */}
-          <div className="text-center mb-10">
-            <div className="text-5xl mb-4">🎬</div>
-            <h1 className="text-3xl font-bold text-[color:var(--text)] mb-2">
+          <div className="text-center mb-8 sm:mb-10">
+            <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">🎬</div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[color:var(--text)] mb-2">
               Upload Your Film
             </h1>
-            <p className="text-[color:var(--muted)] leading-relaxed">
+            <p className="text-[color:var(--muted)] leading-relaxed text-sm sm:text-base">
               Submit your short film to CinemaVuru. We review every film
               before it goes live — usually within 24 hours.
             </p>
