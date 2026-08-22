@@ -97,7 +97,12 @@ export default function BillboardHero({ films }: { films: Film[] }) {
             allow="autoplay; encrypted-media"
             title={`${film.title_en} trailer`}
             tabIndex={-1}
-            onLoad={() => { if (!muted) { send('unMute'); send('setVolume', [100]) } }}
+            onLoad={() => {
+              // Seek past the title card (start= is unreliable with loop+playlist).
+              setTimeout(() => send('seekTo', [25, true]), 400)
+              setTimeout(() => send('seekTo', [25, true]), 1100)
+              if (!muted) { send('unMute'); send('setVolume', [100]) }
+            }}
           />
         )}
         {/* Scrims */}

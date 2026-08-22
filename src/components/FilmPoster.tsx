@@ -38,7 +38,10 @@ export default function FilmPoster({
       '*',
     )
   }
-  function unmute() {
+  // Jump to a highlight (past the title card) + unmute. `start=` in the URL is
+  // unreliable with loop+playlist, so we actively seekTo via the IFrame API.
+  function primePreview() {
+    send('seekTo', [25, true])
     send('unMute')
     send('setVolume', [100])
   }
@@ -75,7 +78,12 @@ export default function FilmPoster({
           allow="autoplay; encrypted-media"
           title={`${title} preview`}
           tabIndex={-1}
-          onLoad={() => setTimeout(unmute, 350)}
+          onLoad={() => {
+            // Retry the seek a couple of times — the inner player isn't always
+            // ready to accept commands the instant the iframe fires onLoad.
+            setTimeout(primePreview, 400)
+            setTimeout(() => send('seekTo', [25, true]), 1100)
+          }}
         />
       )}
 
