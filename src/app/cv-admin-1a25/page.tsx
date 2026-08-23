@@ -6,6 +6,7 @@ import { supabase }        from '@/lib/supabase'
 import ErrorLogViewer      from '@/components/ErrorLogViewer'
 import WinnerAdmin         from '@/components/WinnerAdmin'
 import EmailAdmin          from '@/components/EmailAdmin'
+import TrafficPanel        from '@/components/TrafficPanel'
 
 type Film = {
   id: string; title_en: string; title_te: string | null
@@ -48,7 +49,7 @@ type Contest = {
 }
 
 type AccessState = 'checking' | 'denied' | 'granted'
-type MainTab = 'films' | 'activity' | 'errors' | 'contest' | 'winner' | 'email'
+type MainTab = 'films' | 'activity' | 'errors' | 'contest' | 'winner' | 'email' | 'traffic'
 type FilmFilter = 'pending' | 'active' | 'rejected'
 
 function timeAgo(d: string) {
@@ -533,28 +534,32 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 sm:py-3 mb-5 bg-[color:var(--bg)]/95 backdrop-blur border-b border-[color:var(--border)] flex gap-2 flex-wrap">
-          {([
-            { key: 'films',    label: '🎬 Films'    },
-            { key: 'activity', label: '📋 Activity' },
-            { key: 'errors',   label: `🐛 Errors${stats.errors > 0 ? ` (${stats.errors})` : ''}` },
-            { key: 'contest',  label: '🏆 Contest'  },
-            { key: 'winner',   label: '👑 Winner'   },
-            { key: 'email',    label: '📧 Email'    },
-          ] as { key: MainTab; label: string }[]).map(t => (
-            <button key={t.key} onClick={() => setMainTab(t.key)}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[color:var(--accent)] border border-[color:var(--accent)]/40' : 'bg-[color:var(--surface)] text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
-              {t.label}
-            </button>
-          ))}
+        {/* Tabs — single clean scrollable row + pinned refresh */}
+        <div className="sticky top-16 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 mb-5 bg-[color:var(--bg)]/95 backdrop-blur border-b border-[color:var(--border)] flex items-center gap-2">
+          <div className="flex-1 flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {([
+              { key: 'films',    label: '🎬 Films'    },
+              { key: 'traffic',  label: '📊 Traffic'  },
+              { key: 'contest',  label: '🏆 Contest'  },
+              { key: 'winner',   label: '👑 Winner'   },
+              { key: 'email',    label: '📧 Email'    },
+              { key: 'activity', label: '📋 Activity' },
+              { key: 'errors',   label: `🐛 Errors${stats.errors > 0 ? ` (${stats.errors})` : ''}` },
+            ] as { key: MainTab; label: string }[]).map(t => (
+              <button key={t.key} onClick={() => setMainTab(t.key)}
+                className={`whitespace-nowrap flex-shrink-0 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[color:var(--accent)] border border-[color:var(--accent)]/40' : 'bg-[color:var(--surface)] text-[color:var(--muted)] border border-[color:var(--border)] hover:text-[color:var(--text)]'}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
           <button onClick={() => {
             loadStats()
             if (mainTab === 'films')    fetchFilms()
             else if (mainTab === 'activity') fetchLogs()
             else if (mainTab === 'contest')  fetchContestEntries()
-          }} className="ml-auto px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
-            ↻ <span className="hidden sm:inline">Refresh</span>
+          }} title="Refresh"
+            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent)] transition">
+            ↻
           </button>
         </div>
 
@@ -768,6 +773,9 @@ export default function AdminPage() {
 
         {/* EMAIL TAB */}
         {mainTab === 'email' && <EmailAdmin />}
+
+        {/* TRAFFIC TAB */}
+        {mainTab === 'traffic' && <TrafficPanel />}
 
         {/* CONTEST TAB */}
         {mainTab === 'contest' && (
