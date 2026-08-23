@@ -48,9 +48,12 @@ export default function CreatorBell() {
         return [f.id, { title: f.title_en, href: `/${s?.slug ?? 'telangana'}/${d?.slug ?? 'hyderabad'}/film/${f.id}` }]
       }))
 
-      const [commRes, folRes, trendRes] = await Promise.all([
+      const [commRes, likeRes, folRes, trendRes] = await Promise.all([
         ids.length
           ? supabase.from('comments').select('id, text, created_at, film_id').in('film_id', ids).order('created_at', { ascending: false }).limit(10)
+          : Promise.resolve({ data: [] as any[] }),
+        ids.length
+          ? supabase.from('likes').select('film_id, created_at').in('film_id', ids).order('created_at', { ascending: false }).limit(100)
           : Promise.resolve({ data: [] as any[] }),
         supabase.from('follows').select('created_at').eq('creator_id', uid).order('created_at', { ascending: false }).limit(50),
         supabase.from('films').select('id').eq('status', 'active').order('view_count', { ascending: false }).limit(10),
@@ -78,6 +81,19 @@ export default function CreatorBell() {
         const meta = info.get(c.film_id); if (!meta) continue
         const ts = new Date(c.created_at).getTime()
         list.push({ key: `c-${c.id}`, icon: '💬', text: `New comment on "${meta.title}"`, sub: (c.text || '').slice(0, 60), href: meta.href, ts, unread: !firstRun && ts > seenAt })
+      }
+
+      // New likes since last seen — aggregated per film so it never spams
+      if (!firstRun) {
+        const byFilm: Record<string, { n: number; latest: number }> = {}
+        for (const l of (likeRes.data ?? []) as any[]) {
+          const ts = new Date(l.created_at).getTime()
+          if (ts > seenAt) { const e = (byFilm[l.film_id] ??= { n: 0, latest: 0 }); e.n++; e.latest = Math.max(e.latest, ts) }
+        }
+        for (const [fid, e] of Object.entries(byFilm)) {
+          const meta = info.get(fid); if (!meta) continue
+          list.push({ key: `nl-${fid}`, icon: '❤️', text: `${e.n} new like${e.n > 1 ? 's' : ''} on "${meta.title}"`, href: meta.href, ts: e.latest, unread: true })
+        }
       }
 
       // Followers
