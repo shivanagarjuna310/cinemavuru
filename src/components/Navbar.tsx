@@ -7,6 +7,7 @@ import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
 import { useAuth }             from './AuthProvider'
 import ThemeToggle             from './ThemeToggle'
+import CreatorBell             from './CreatorBell'
 
 type DistrictRel = { slug: string; states: { slug: string } | { slug: string }[] | null }
 type SearchResult = {
@@ -167,6 +168,9 @@ export default function Navbar() {
         {/* Theme toggle */}
         <ThemeToggle />
 
+        {/* Creator notifications */}
+        <CreatorBell />
+
         {/* Search */}
         <div ref={searchRef} className="relative">
           {searchOpen ? (
@@ -237,8 +241,9 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Mobile: theme toggle + hamburger */}
+      {/* Mobile: notifications + theme toggle + hamburger */}
       <div className="md:hidden flex items-center gap-1">
+        <CreatorBell />
         <ThemeToggle />
         <button className="text-[color:var(--accent)] text-2xl" onClick={() => setOpen(o => !o)}>
           {open ? '✕' : '☰'}
