@@ -168,6 +168,21 @@ export default function ContestEntryForm() {
         return
       }
       targetFilmId = newFilm.id
+
+      // Alert every admin that a new film is waiting for review (non-blocking).
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        await fetch('/api/admin/notify', {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({ type: 'film_pending', filmId: targetFilmId }),
+        })
+      } catch (notifyErr) {
+        console.error('Admin notify failed:', notifyErr)
+      }
     }
 
     if (!targetFilmId) {

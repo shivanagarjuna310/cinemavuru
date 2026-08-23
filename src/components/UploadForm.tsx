@@ -126,7 +126,7 @@ export default function UploadForm() {
     setStatus('loading')
     setMessage('')
 
-    const { error } = await supabase.from('films').insert({
+    const { data: inserted, error } = await supabase.from('films').insert({
       title_en:    titleEn.trim(),
       title_te:    titleTe.trim() || null,
       description: description.trim() || null,
@@ -137,30 +137,25 @@ export default function UploadForm() {
       status:      'pending',   // Admin must approve before it goes live
       view_count:  0,
       like_count:  0,
-    })
+    }).select('id').single()
 
     if (error) {
       setStatus('error')
       setMessage(`Upload failed: ${error.message}`)
     } else {
-      // ── Notify admin by email (non-blocking) ──
+      // ── Alert EVERY admin that a film is waiting for review (non-blocking) ──
+      // Details are read from the DB server-side; we only pass the film id.
+      // If this call never lands (tab closed, offline), the daily pending-films
+      // digest cron picks the film up as a safety net.
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        const { data: profile }  = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', userId)
-          .single()
-
-        await fetch('/api/email/notify', {
+        const { data: { session } } = await supabase.auth.getSession()
+        await fetch('/api/admin/notify', {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type:         'film_uploaded',
-            filmTitle:    titleEn.trim(),
-            creatorName:  profile?.name ?? 'Unknown',
-            creatorEmail: user?.email   ?? '',
-          }),
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify({ type: 'film_pending', filmId: inserted.id }),
         })
       } catch (emailErr) {
         // Email failure must NOT block upload success

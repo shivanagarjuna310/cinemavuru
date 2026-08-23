@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/milestones", "schedule": "30 11 * * *" }
+    { "path": "/api/cron/milestones", "schedule": "30 11 * * *" },
+    { "path": "/api/cron/admin-digest", "schedule": "30 3 * * *" }
   ]
 }

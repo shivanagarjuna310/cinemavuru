@@ -23,7 +23,8 @@ function getResend(): Resend | null {
   const key = process.env.RESEND_API_KEY
   return key ? new Resend(key) : null
 }
-const FROM = process.env.FROM_EMAIL ?? 'CinemaVuru <noreply@cinemavuru.com>'
+// `||` not `??` — an env var set to an empty string must fall back too.
+const FROM = process.env.FROM_EMAIL?.trim() || 'CinemaVuru <noreply@cinemavuru.com>'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
 
 const MAX_EMAILS_PER_RUN = 40

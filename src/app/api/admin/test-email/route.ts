@@ -15,7 +15,8 @@ function getResend(): Resend | null {
   const k = process.env.RESEND_API_KEY
   return k ? new Resend(k) : null
 }
-const FROM = process.env.FROM_EMAIL ?? 'CinemaVuru <onboarding@resend.dev>'
+// `||` not `??` — an env var set to an empty string must fall back too.
+const FROM = process.env.FROM_EMAIL?.trim() || 'CinemaVuru <onboarding@resend.dev>'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
 
 export async function POST(req: Request) {

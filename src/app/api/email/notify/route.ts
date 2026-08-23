@@ -1,9 +1,14 @@
 // src/app/api/email/notify/route.ts
-// Handles all email notifications for CinemaVuru
-// Called when: film uploaded, film approved, film rejected
+// Creator-facing email notifications for CinemaVuru.
+// Called when: film approved, film rejected.
+//
+// Admin-facing alerts (new film pending, payments, daily digest) live in
+// src/lib/adminNotify.ts + /api/admin/notify — they go to EVERY admin, are
+// authenticated, and read their details from the DB rather than the request.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { notifyAdmins } from '@/lib/adminNotify'
 
 // Lazy so the module doesn't throw at build/import time when the key is absent.
 function getResend(): Resend | null {
@@ -11,7 +16,8 @@ function getResend(): Resend | null {
   return k ? new Resend(k) : null
 }
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!
-const FROM_EMAIL  = process.env.FROM_EMAIL ?? 'CinemaVuru <noreply@cinemavuru.com>'
+// `||` not `??` — an env var set to an empty string must fall back too.
+const FROM_EMAIL  = process.env.FROM_EMAIL?.trim() || 'CinemaVuru <noreply@cinemavuru.com>'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,33 +27,23 @@ export async function POST(request: NextRequest) {
     }
     const { type, filmTitle, creatorName, creatorEmail } = await request.json()
 
-    // ── EMAIL 1: Admin notified when film uploaded ─────────
+    // ── LEGACY: uploads now call /api/admin/notify instead, which reaches
+    // every admin. Kept so browsers still running the old bundle don't lose
+    // the alert — it just forwards to the all-admins sender.
     if (type === 'film_uploaded') {
-      await resend.emails.send({
-        from:    FROM_EMAIL,
-        to:      ADMIN_EMAIL,
-        subject: `🎬 New Film Submitted — ${filmTitle}`,
-        html: `
-          <div style="font-family:sans-serif;max-width:500px;margin:0 auto;background:#0D0A06;color:#FDF6E3;padding:32px;border-radius:12px;">
-            <h2 style="color:#D4A017;margin-top:0;">New Film Submitted 🎬</h2>
-            <table style="width:100%;border-collapse:collapse;">
-              <tr><td style="padding:8px 0;color:#7A6040;width:100px;">Film</td>
-                  <td style="padding:8px 0;font-weight:bold;">${filmTitle}</td></tr>
-              <tr><td style="padding:8px 0;color:#7A6040;">Creator</td>
-                  <td style="padding:8px 0;">${creatorName}</td></tr>
-              <tr><td style="padding:8px 0;color:#7A6040;">Email</td>
-                  <td style="padding:8px 0;">${creatorEmail}</td></tr>
-            </table>
-            <a href="https://www.cinemavuru.com/cv-admin-1a25"
-               style="display:inline-block;margin-top:24px;background:#FF6B1A;color:white;
-                      padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">
-              Review in Admin →
-            </a>
-            <p style="color:#4A3020;font-size:12px;margin-top:32px;">
-              CinemaVuru — Hyperlocal Short Films from Telangana
-            </p>
-          </div>
-        `,
+      await notifyAdmins({
+        kind: 'film_pending',
+        tone: 'info',
+        subject: `New film awaiting review — ${filmTitle}`,
+        heading: 'New film submitted',
+        intro: 'A creator just submitted a film. It stays hidden from the site until an admin approves it.',
+        rows: [
+          ['Film', String(filmTitle ?? '—')],
+          ['Creator', String(creatorName ?? 'Unknown')],
+          ['Email', String(creatorEmail ?? '—')],
+        ],
+        ctaLabel: 'Review in Admin',
+        ctaPath: '/cv-admin-1a25',
       })
     }
 
