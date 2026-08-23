@@ -63,17 +63,23 @@ export default function UploadForm() {
   const [urlError, setUrlError] = useState('')
 
 
-  // Load all active districts
-  const [districts, setDistricts] = useState<{ id: string; name_en: string; state_id: string }[]>([])
+  // Load all active districts (with their state, for grouping)
+  const [districts, setDistricts] = useState<{ id: string; name_en: string; state: string }[]>([])
 
   useEffect(() => {
     supabase
       .from('districts')
-      .select('id, name_en, state_id')
+      .select('id, name_en, states(name_en)')
       .eq('is_active', true)
       .order('name_en', { ascending: true })
       .then(({ data }) => {
-        setDistricts(data ?? [])
+        setDistricts(
+          (data ?? []).map((d: any) => ({
+            id: d.id,
+            name_en: d.name_en,
+            state: (Array.isArray(d.states) ? d.states[0] : d.states)?.name_en ?? 'Other',
+          })),
+        )
       })
   }, [])
 
@@ -98,9 +104,15 @@ export default function UploadForm() {
       return
     }
 
+    if (!genre) {
+      setStatus('error')
+      setMessage('Please pick a genre.')
+      return
+    }
+
     if (!districtId) {
       setStatus('error')
-      setMessage('District not found. Please refresh and try again.')
+      setMessage('Please select your district.')
       return
     }
 
@@ -226,6 +238,12 @@ export default function UploadForm() {
   // Live preview thumbnail once a valid YouTube URL is pasted
   const previewId = toEmbedUrl(youtubeUrl)?.match(/embed\/([^?]+)/)?.[1] ?? null
 
+  // Group districts by state for a cleaner dropdown
+  const grouped = districts.reduce<Record<string, typeof districts>>((acc, d) => {
+    (acc[d.state] ??= []).push(d)
+    return acc
+  }, {})
+
   return (
     <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-5 sm:p-8">
 
@@ -262,22 +280,30 @@ export default function UploadForm() {
           />
         </div>
 
-        {/* Genre */}
+        {/* Genre — chips */}
         <div>
-          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+          <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-2">
             Genre <span className="text-[color:var(--accent-hot)]">*</span>
           </label>
-          <select
-            value={genre}
-            onChange={e => setGenre(e.target.value)}
-            required
-            className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
-          >
-            <option value="" disabled>Select a genre</option>
-            {GENRES.map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            {GENRES.map(g => {
+              const on = genre === g
+              return (
+                <button
+                  type="button"
+                  key={g}
+                  onClick={() => setGenre(g)}
+                  className={`px-3.5 py-2 rounded-full text-sm font-semibold border transition ${
+                    on
+                      ? 'bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black border-transparent'
+                      : 'bg-[color:var(--bg)] text-[color:var(--text)] border-[color:var(--border)] hover:border-[color:var(--accent)]/50'
+                  }`}
+                >
+                  {on ? '✓ ' : ''}{g}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Description */}
@@ -354,8 +380,12 @@ export default function UploadForm() {
             className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-3 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
           >
             <option value="">— Select your district —</option>
-            {districts.map(d => (
-              <option key={d.id} value={d.id}>{d.name_en}</option>
+            {Object.entries(grouped).map(([state, ds]) => (
+              <optgroup key={state} label={state}>
+                {ds.map(d => (
+                  <option key={d.id} value={d.id}>{d.name_en}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>

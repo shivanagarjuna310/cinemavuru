@@ -63,7 +63,7 @@ async function getData() {
   const monthName = now.toLocaleString('en-IN', { month: 'long' })
 
   // Run all independent queries concurrently (was sequential → slow TTFB)
-  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes] = await Promise.all([
+  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes, winnerRes] = await Promise.all([
     supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
     supabase.from('films').select('district_id, genre').eq('status', 'active'),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
@@ -71,6 +71,7 @@ async function getData() {
     supabase.from('films').select(FILM_COLS).eq('status', 'active').gte('created_at', monthStart).lte('created_at', monthEnd).order('view_count', { ascending: false }).limit(10),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('created_at', { ascending: false }).limit(10),
     supabase.from('films').select(SPOTLIGHT_COLS).eq('status', 'active').not('video_url', 'is', null).order('view_count', { ascending: false }).limit(6),
+    supabase.from('monthly_winners').select('month, winner_name, film_title, image_url, blurb, films(id, districts(slug, states(slug)))').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   const districts = districtsRes.data
@@ -86,11 +87,32 @@ async function getData() {
     .sort((a, b) => b[1] - a[1])
     .map(([genre, count]) => ({ genre, count }))
 
+  // Monthly award winner (nullable; hidden until an admin sets one)
+  const w = winnerRes?.data as any
+  let winner = null as null | {
+    month?: string | null; winner_name: string; film_title?: string | null
+    image_url: string; blurb?: string | null; filmHref?: string | null
+  }
+  if (w) {
+    const fw = Array.isArray(w.films) ? w.films[0] : w.films
+    const fd = fw && (Array.isArray(fw.districts) ? fw.districts[0] : fw.districts)
+    const fs = fd && (Array.isArray(fd.states) ? fd.states[0] : fd.states)
+    winner = {
+      month: w.month,
+      winner_name: w.winner_name,
+      film_title: w.film_title,
+      image_url: w.image_url,
+      blurb: w.blurb,
+      filmHref: fw ? `/${fs?.slug ?? 'telangana'}/${fd?.slug ?? 'hyderabad'}/film/${fw.id}` : null,
+    }
+  }
+
   return {
     topFilms: topFilmsRes.data ?? [],
     mostLiked: mostLikedRes.data ?? [],
     monthlyFilms: monthlyFilmsRes.data ?? [],
     spotlight: spotlightRes.data ?? [],
+    winner,
     genres,
     recentFilms: recentFilmsRes.data ?? [],
     monthName,
@@ -105,7 +127,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, genres, recentFilms, monthName } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, winner, genres, recentFilms, monthName } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -119,9 +141,9 @@ export default async function Home() {
         {/* ══════════ BILLBOARD (OTT spotlight) ══════════ */}
         {spotlight.length > 0 && <BillboardHero films={spotlight} />}
 
-        {/* ══════════ BRAND / PURPOSE (keeps the mission front-and-centre) ══════════ */}
+        {/* ══════════ BRAND / PURPOSE (+ monthly winner in the hero slot) ══════════ */}
         {spotlight.length > 0 && (
-          <BrandIntro totalFilms={totalFilms} districtCount={districts.length} />
+          <BrandIntro totalFilms={totalFilms} districtCount={districts.length} winner={winner} />
         )}
 
         {/* ══════════ HERO (fallback when no films yet) ══════════ */}

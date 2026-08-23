@@ -4,6 +4,7 @@
 
 import Link from 'next/link'
 import FilmPoster from './FilmPoster'
+import ScrollRow from './ScrollRow'
 
 type Accent = 'gold' | 'pink' | 'blue' | 'green'
 
@@ -69,7 +70,7 @@ export default function FilmRow({
       </h2>
       <p className="text-[color:var(--muted)] text-xs mb-6">{subtitle ?? ' '}</p>
 
-      <div className="flex gap-6 overflow-x-auto overflow-y-hidden pt-16 pb-10 -mt-12 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <ScrollRow className="flex gap-6 overflow-x-auto overflow-y-hidden pt-16 pb-10 -mt-12 px-1">
         {films.map((film: any, index: number) => {
           const t = thumb(film.video_url)
           const vid = ytId(film.video_url)
@@ -113,7 +114,7 @@ export default function FilmRow({
             </Link>
           )
         })}
-      </div>
+      </ScrollRow>
     </section>
   )
 }
