@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase }        from '@/lib/supabase'
 import ErrorLogViewer      from '@/components/ErrorLogViewer'
 import WinnerAdmin         from '@/components/WinnerAdmin'
+import TestEmailPanel      from '@/components/TestEmailPanel'
 
 type Film = {
   id: string; title_en: string; title_te: string | null
@@ -47,7 +48,7 @@ type Contest = {
 }
 
 type AccessState = 'checking' | 'denied' | 'granted'
-type MainTab = 'films' | 'activity' | 'errors' | 'contest' | 'winner'
+type MainTab = 'films' | 'activity' | 'errors' | 'contest' | 'winner' | 'email'
 type FilmFilter = 'pending' | 'active' | 'rejected'
 
 function timeAgo(d: string) {
@@ -540,6 +541,7 @@ export default function AdminPage() {
             { key: 'errors',   label: `🐛 Errors${stats.errors > 0 ? ` (${stats.errors})` : ''}` },
             { key: 'contest',  label: '🏆 Contest'  },
             { key: 'winner',   label: '👑 Winner'   },
+            { key: 'email',    label: '📧 Email'    },
           ] as { key: MainTab; label: string }[]).map(t => (
             <button key={t.key} onClick={() => setMainTab(t.key)}
               className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wide transition ${mainTab === t.key ? 'bg-[#D4A017]/20 text-[color:var(--accent)] border border-[color:var(--accent)]/40' : 'bg-[color:var(--surface)] text-[color:var(--muted)] border border-[color:var(--border)]'}`}>
@@ -763,6 +765,9 @@ export default function AdminPage() {
 
         {/* MONTHLY WINNER TAB */}
         {mainTab === 'winner' && <WinnerAdmin />}
+
+        {/* EMAIL TAB */}
+        {mainTab === 'email' && <TestEmailPanel />}
 
         {/* CONTEST TAB */}
         {mainTab === 'contest' && (
