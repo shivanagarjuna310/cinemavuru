@@ -6,6 +6,9 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import WatchlistButton from './WatchlistButton'
+import { loadYouTubeAPI } from '@/lib/youtube'
+
+const HIGHLIGHT = 35 // seconds — skip the title card
 
 type Film = {
   id: string
@@ -36,7 +39,8 @@ export default function BillboardHero({ films }: { films: Film[] }) {
   const [idx, setIdx] = useState(0)
   const [playTrailer, setPlayTrailer] = useState(false)
   const [muted, setMuted] = useState(true)
-  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const hostRef = useRef<HTMLDivElement | null>(null)
+  const playerRef = useRef<any>(null)
   const rotateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const film = spotlight[idx]
@@ -57,15 +61,48 @@ export default function BillboardHero({ films }: { films: Film[] }) {
     }
   }, [idx, spotlight.length])
 
-  function send(func: string, args: unknown[] = []) {
-    iframeRef.current?.contentWindow?.postMessage(
-      JSON.stringify({ event: 'command', func, args }),
-      '*',
-    )
-  }
+  // Build the trailer via the YT IFrame API so the seek fires reliably onReady.
+  useEffect(() => {
+    if (!playTrailer || !vid) return
+    let cancelled = false
+    loadYouTubeAPI().then(() => {
+      if (cancelled || !hostRef.current) return
+      const YT = (window as any).YT
+      playerRef.current = new YT.Player(hostRef.current, {
+        videoId: vid,
+        playerVars: {
+          autoplay: 1, mute: 1, controls: 0, loop: 1, playlist: vid,
+          modestbranding: 1, rel: 0, playsinline: 1, disablekb: 1, start: HIGHLIGHT,
+        },
+        events: {
+          onReady: (e: any) => {
+            try {
+              e.target.seekTo(HIGHLIGHT, true)
+              if (muted) e.target.mute(); else { e.target.unMute(); e.target.setVolume(100) }
+              e.target.playVideo()
+              const f = e.target.getIframe?.()
+              if (f) { f.style.position = 'absolute'; f.style.width = '130%'; f.style.height = '130%'; f.style.left = '-15%'; f.style.top = '-15%'; f.style.pointerEvents = 'none' }
+            } catch {}
+          },
+          onStateChange: (e: any) => {
+            if (e.data === 1) { try { if (e.target.getCurrentTime() < HIGHLIGHT - 2) e.target.seekTo(HIGHLIGHT, true) } catch {} }
+          },
+        },
+      })
+    })
+    return () => {
+      cancelled = true
+      try { playerRef.current?.destroy?.() } catch {}
+      playerRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playTrailer, vid])
+
   function toggleMute() {
-    if (muted) { send('unMute'); send('setVolume', [100]); setMuted(false) }
-    else { send('mute'); setMuted(true) }
+    const p = playerRef.current
+    if (!p) return
+    if (muted) { p.unMute?.(); p.setVolume?.(100); setMuted(false) }
+    else { p.mute?.(); setMuted(true) }
   }
 
   if (!film) return null
@@ -90,20 +127,9 @@ export default function BillboardHero({ films }: { films: Film[] }) {
           />
         )}
         {playTrailer && vid && (
-          <iframe
-            ref={iframeRef}
-            className="absolute inset-0 w-[130%] h-[130%] -left-[15%] -top-[15%] pointer-events-none anim-fade-in"
-            src={`https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}&modestbranding=1&rel=0&playsinline=1&disablekb=1&enablejsapi=1&start=25`}
-            allow="autoplay; encrypted-media"
-            title={`${film.title_en} trailer`}
-            tabIndex={-1}
-            onLoad={() => {
-              // Seek past the title card (start= is unreliable with loop+playlist).
-              setTimeout(() => send('seekTo', [25, true]), 400)
-              setTimeout(() => send('seekTo', [25, true]), 1100)
-              if (!muted) { send('unMute'); send('setVolume', [100]) }
-            }}
-          />
+          <div key={`${film.id}-tr`} className="absolute inset-0 overflow-hidden anim-fade-in">
+            <div ref={hostRef} className="absolute inset-0" />
+          </div>
         )}
         {/* Scrims */}
         <div className="absolute inset-0 bg-gradient-to-r from-[color:var(--scrim)] via-[color:var(--scrim)]/70 to-transparent" />

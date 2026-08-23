@@ -1,9 +1,15 @@
 'use client'
 // Poster tile with Netflix-style hover behaviour: the card lifts + zooms, and
-// after a short dwell a muted, looping YouTube preview autoplays in place.
-// Kept as its own client component so FilmRow can stay a server component.
+// after a short dwell a muted, looping YouTube preview autoplays — starting at a
+// highlight (past the title card). Uses the YouTube IFrame Player API so we can
+// seek reliably in onReady (raw postMessage seeks are dropped before the player
+// is ready, which is why it played from 0). Kept client-side so FilmRow stays a
+// server component.
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { loadYouTubeAPI } from '@/lib/youtube'
+
+const HIGHLIGHT = 25 // seconds — skip the intro/title card
 
 export default function FilmPoster({
   vid,
@@ -17,34 +23,57 @@ export default function FilmPoster({
   hoverBorder: string
 }) {
   const [preview, setPreview] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const dwell = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hostRef = useRef<HTMLDivElement | null>(null)
+  const playerRef = useRef<any>(null)
 
   function enter() {
     if (!vid) return
-    timer.current = setTimeout(() => setPreview(true), 650)
+    dwell.current = setTimeout(() => setPreview(true), 650)
   }
   function leave() {
-    if (timer.current) clearTimeout(timer.current)
+    if (dwell.current) clearTimeout(dwell.current)
     setPreview(false)
   }
 
-  // Autoplay is only permitted while muted, so we start muted then ask the
-  // YouTube player to unmute once it's actually playing (browsers still gate
-  // this on the visitor having interacted with the page at least once).
-  function send(func: string, args: unknown[] = []) {
-    iframeRef.current?.contentWindow?.postMessage(
-      JSON.stringify({ event: 'command', func, args }),
-      '*',
-    )
-  }
-  // Jump to a highlight (past the title card) + unmute. `start=` in the URL is
-  // unreliable with loop+playlist, so we actively seekTo via the IFrame API.
-  function primePreview() {
-    send('seekTo', [25, true])
-    send('unMute')
-    send('setVolume', [100])
-  }
+  // Build the player only once the preview is armed; tear it down on leave.
+  useEffect(() => {
+    if (!preview || !vid) return
+    let cancelled = false
+
+    loadYouTubeAPI().then(() => {
+      if (cancelled || !hostRef.current) return
+      const YT = (window as any).YT
+      playerRef.current = new YT.Player(hostRef.current, {
+        videoId: vid,
+        playerVars: {
+          autoplay: 1, mute: 1, controls: 0, loop: 1, playlist: vid,
+          modestbranding: 1, rel: 0, playsinline: 1, disablekb: 1, start: HIGHLIGHT,
+        },
+        events: {
+          onReady: (e: any) => {
+            try {
+              e.target.seekTo(HIGHLIGHT, true)   // guaranteed-ready seek
+              e.target.mute()
+              e.target.playVideo()
+              const f = e.target.getIframe?.()
+              if (f) { f.style.position = 'absolute'; f.style.inset = '0'; f.style.width = '100%'; f.style.height = '100%'; f.style.pointerEvents = 'none' }
+            } catch {}
+          },
+          onStateChange: (e: any) => {
+            // On loop-restart, jump back to the highlight instead of the title.
+            if (e.data === 1) { try { if (e.target.getCurrentTime() < HIGHLIGHT - 2) e.target.seekTo(HIGHLIGHT, true) } catch {} }
+          },
+        },
+      })
+    })
+
+    return () => {
+      cancelled = true
+      try { playerRef.current?.destroy?.() } catch {}
+      playerRef.current = null
+    }
+  }, [preview, vid])
 
   return (
     <div
@@ -53,9 +82,6 @@ export default function FilmPoster({
       className={`relative aspect-video rounded-lg overflow-hidden border border-white/10 ${hoverBorder} shadow-md origin-bottom-left transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-[1.35] group-hover:shadow-2xl group-hover:border-white/30`}
     >
       {thumb ? (
-        // Plain <img> (eager) so every card in the horizontal rail loads — not
-        // just the ones in the initial viewport (next/image lazy-loads and left
-        // cards 8+ blank until scrolled).
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumb}
@@ -68,28 +94,16 @@ export default function FilmPoster({
         <div className="w-full h-full bg-[color:var(--surface)] flex items-center justify-center text-2xl">🎬</div>
       )}
 
-      {/* Looping preview — appears after the hover dwell. Starts muted so it can
-          autoplay, then unmutes via the YouTube iframe API once it's running. */}
+      {/* Preview player (YT API injects the iframe here) */}
       {preview && vid && (
-        <iframe
-          ref={iframeRef}
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          src={`https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&controls=0&loop=1&playlist=${vid}&modestbranding=1&rel=0&playsinline=1&disablekb=1&enablejsapi=1&start=25`}
-          allow="autoplay; encrypted-media"
-          title={`${title} preview`}
-          tabIndex={-1}
-          onLoad={() => {
-            // Retry the seek a couple of times — the inner player isn't always
-            // ready to accept commands the instant the iframe fires onLoad.
-            setTimeout(primePreview, 400)
-            setTimeout(() => send('seekTo', [25, true]), 1100)
-          }}
-        />
+        <div className="absolute inset-0 z-[1]">
+          <div ref={hostRef} className="w-full h-full" />
+        </div>
       )}
 
       {/* Legibility scrim — fades out while previewing so the clip is clean */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none transition-opacity duration-300 ${
+        className={`absolute inset-0 z-[2] bg-gradient-to-t from-black/60 to-transparent pointer-events-none transition-opacity duration-300 ${
           preview ? 'opacity-0' : 'opacity-100'
         }`}
       />
