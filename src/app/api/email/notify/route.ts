@@ -5,12 +5,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
-const resend    = new Resend(process.env.RESEND_API_KEY)
+// Lazy so the module doesn't throw at build/import time when the key is absent.
+function getResend(): Resend | null {
+  const k = process.env.RESEND_API_KEY
+  return k ? new Resend(k) : null
+}
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL!
 const FROM_EMAIL  = process.env.FROM_EMAIL ?? 'CinemaVuru <noreply@cinemavuru.com>'
 
 export async function POST(request: NextRequest) {
   try {
+    const resend = getResend()
+    if (!resend) {
+      return NextResponse.json({ error: 'Email is not configured (RESEND_API_KEY missing).' }, { status: 503 })
+    }
     const { type, filmTitle, creatorName, creatorEmail } = await request.json()
 
     // ── EMAIL 1: Admin notified when film uploaded ─────────
