@@ -37,6 +37,14 @@ function authorized(req: Request): boolean {
   return auth === `Bearer ${secret}` || q === secret
 }
 
+// Best-effort email log (never breaks a send if the table is missing).
+async function logEmail(row: {
+  kind: string; to_email: string; subject: string
+  film_id?: string | null; creator_id?: string | null; status: string; error?: string
+}) {
+  try { await admin.from('email_logs').insert(row) } catch {}
+}
+
 function loc(f: any) {
   const d = Array.isArray(f?.districts) ? f.districts[0] : f?.districts
   const s = d && (Array.isArray(d.states) ? d.states[0] : d.states)
@@ -176,8 +184,10 @@ async function run(req: Request) {
         },
         { onConflict: 'film_id' },
       )
-    } catch {
+      await logEmail({ kind: 'milestone', to_email: email, subject, film_id: f.id, creator_id: f.creator_id, status: 'sent' })
+    } catch (e: any) {
       results.skipped++
+      await logEmail({ kind: 'milestone', to_email: email, subject, film_id: f.id, creator_id: f.creator_id, status: 'failed', error: e?.message ?? 'send failed' })
     }
   }
 

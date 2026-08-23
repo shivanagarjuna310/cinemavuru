@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase }        from '@/lib/supabase'
 import ErrorLogViewer      from '@/components/ErrorLogViewer'
 import WinnerAdmin         from '@/components/WinnerAdmin'
-import TestEmailPanel      from '@/components/TestEmailPanel'
+import EmailAdmin          from '@/components/EmailAdmin'
 
 type Film = {
   id: string; title_en: string; title_te: string | null
@@ -767,7 +767,7 @@ export default function AdminPage() {
         {mainTab === 'winner' && <WinnerAdmin />}
 
         {/* EMAIL TAB */}
-        {mainTab === 'email' && <TestEmailPanel />}
+        {mainTab === 'email' && <EmailAdmin />}
 
         {/* CONTEST TAB */}
         {mainTab === 'contest' && (

@@ -38,18 +38,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'RESEND_API_KEY is not set on the server (works in production).' }, { status: 503 })
   }
 
+  const subject = '🎉 Test — CinemaVuru milestone email'
   try {
     const { data, error: sendErr } = await resend.emails.send({
       from: FROM,
       to: recipient,
-      subject: '🎉 Test — CinemaVuru milestone email',
+      subject,
       html: sampleHtml(),
     })
-    if (sendErr) return NextResponse.json({ error: sendErr.message ?? 'Send failed.' }, { status: 502 })
+    if (sendErr) {
+      await logEmail({ kind: 'test', to_email: recipient, subject, creator_id: user.id, status: 'failed', error: sendErr.message })
+      return NextResponse.json({ error: sendErr.message ?? 'Send failed.' }, { status: 502 })
+    }
+    await logEmail({ kind: 'test', to_email: recipient, subject, creator_id: user.id, status: 'sent' })
     return NextResponse.json({ ok: true, to: recipient, id: (data as any)?.id ?? null })
   } catch (e: any) {
+    await logEmail({ kind: 'test', to_email: recipient, subject, creator_id: user.id, status: 'failed', error: e?.message })
     return NextResponse.json({ error: e?.message ?? 'Send failed.' }, { status: 502 })
   }
+}
+
+async function logEmail(row: {
+  kind: string; to_email: string; subject: string
+  creator_id?: string | null; status: string; error?: string
+}) {
+  try { await admin.from('email_logs').insert(row) } catch {}
 }
 
 function sampleHtml() {
