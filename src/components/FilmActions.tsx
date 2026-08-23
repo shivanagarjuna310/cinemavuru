@@ -1,10 +1,13 @@
 'use client'
 // src/components/FilmActions.tsx
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase }            from '@/lib/supabase'
 import { logger }              from '@/lib/logger'
 import { useAuth }             from './AuthProvider'
+
+// Never recount the likes table more than once per this window per mount.
+const COUNT_THROTTLE_MS = 30_000
 
 type Props = {
   filmId:       string
@@ -102,8 +105,15 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
     return () => { cancelled = true }
   }, [filmId, userId])
 
-  // Authoritative like count from the likes table (reflects everyone's likes)
-  async function refreshLikeCount() {
+  // Authoritative like count from the likes table (reflects everyone's likes).
+  // Throttled: this used to run on every realtime event AND twice per tab
+  // switch, so a film with N viewers cost N count queries per like. On the
+  // Supabase free tier that burns the disk-IO budget for no benefit.
+  const lastCountAt = useRef(0)
+  async function refreshLikeCount(opts?: { force?: boolean }) {
+    const now = Date.now()
+    if (!opts?.force && now - lastCountAt.current < COUNT_THROTTLE_MS) return
+    lastCountAt.current = now
     const { count } = await supabase
       .from('likes')
       .select('*', { count: 'exact', head: true })
@@ -111,28 +121,28 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
     if (typeof count === 'number') setLikeCount(count)
   }
 
-  // Keep the count live: recount when anyone likes/unlikes this film (realtime),
-  // and when the tab regains focus (reliable fallback if realtime is off).
+  // NO realtime subscription here, on purpose.
+  //
+  // `likes` is NOT in the supabase_realtime publication (only `comments` is),
+  // verified directly against the database. So a postgres_changes subscription
+  // on `likes` could never deliver a single event — but it still made Realtime
+  // insert and delete a row in realtime.subscription on every film page view.
+  // Measured cost of that churn: 4,709 inserts + 4,708 deletes + 113,581
+  // sequential scans on realtime.subscription, and Realtime's own publication
+  // bookkeeping queries burned ~8,400 dirtied blocks over ~335s of execution.
+  // That was pure Disk IO for zero benefit.
+  //
+  // The throttled recount below is what actually keeps the count fresh, which
+  // is all the realtime path was ever achieving here anyway.
   useEffect(() => {
-    refreshLikeCount()
-    const channel = supabase
-      .channel(`likes-${filmId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'likes', filter: `film_id=eq.${filmId}` },
-        () => refreshLikeCount(),
-      )
-      .subscribe()
+    refreshLikeCount({ force: true })
 
-    const onFocus = () => { if (document.visibilityState === 'visible') refreshLikeCount() }
-    window.addEventListener('focus', onFocus)
-    document.addEventListener('visibilitychange', onFocus)
+    // `focus` and `visibilitychange` both fire when returning to a tab — one
+    // listener is enough, and it's throttled anyway.
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshLikeCount() }
+    document.addEventListener('visibilitychange', onVisible)
 
-    return () => {
-      supabase.removeChannel(channel)
-      window.removeEventListener('focus', onFocus)
-      document.removeEventListener('visibilitychange', onFocus)
-    }
+    return () => { document.removeEventListener('visibilitychange', onVisible) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filmId])
 

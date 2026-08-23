@@ -3,7 +3,7 @@
 // milestones, new comments, new followers, and "trending" status. Kept limited
 // (max 12, most useful) and non-repetitive via a local last-seen cursor.
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './AuthProvider'
@@ -11,6 +11,11 @@ import { VIEW_MILESTONES, LIKE_MILESTONES, highestReached, fmt } from '@/lib/mil
 
 const SEEN_AT = 'cv_creator_seen_at'
 const MS_MAP  = 'cv_creator_ms'
+// Per-tab cache of the bell's contents. Navigating pages within the TTL reuses
+// it instead of re-running five queries; opening the bell refreshes if stale.
+const CACHE_PREFIX  = 'cv_bell_'
+const CACHE_TTL_MS  = 3 * 60_000
+const OPEN_STALE_MS = 60_000
 
 type Item = { key: string; icon: string; text: string; sub?: string; href?: string; ts: number; unread: boolean }
 
@@ -29,12 +34,37 @@ export default function CreatorBell() {
   const [unread, setUnread] = useState(0)
   const filmsRef = useRef<any[]>([])
   const ref = useRef<HTMLDivElement>(null)
+  // Cancels the in-flight load when a newer one starts or the component unmounts.
+  const aliveRef = useRef<(() => void) | null>(null)
 
-  useEffect(() => {
+  // This component lives in the Navbar, so it mounts on EVERY page. Firing its
+  // five queries per navigation was the single biggest source of Supabase load.
+  // Serve the badge from a short-lived sessionStorage cache instead, and only
+  // hit the DB when the cache is stale or the user actually opens the bell.
+  const load = useCallback(async (force = false) => {
     if (!user) { setItems([]); setUnread(0); return }
+    const uid = user.id
+    const cacheKey = `${CACHE_PREFIX}${uid}`
+
+    if (!force) {
+      try {
+        const raw = sessionStorage.getItem(cacheKey)
+        if (raw) {
+          const c = JSON.parse(raw) as { at: number; items: Item[]; unread: number; films: unknown[] }
+          if (Date.now() - c.at < CACHE_TTL_MS) {
+            filmsRef.current = c.films as any[]
+            setItems(c.items)
+            setUnread(c.unread)
+            return
+          }
+        }
+      } catch { /* corrupt cache → just refetch */ }
+    }
+
     let alive = true
-    ;(async () => {
-      const uid = user.id
+    aliveRef.current?.()
+    aliveRef.current = () => { alive = false }
+    {
       const { data: films } = await supabase
         .from('films')
         .select('id, title_en, video_url, view_count, like_count, districts(slug, states(slug))')
@@ -114,10 +144,20 @@ export default function CreatorBell() {
       setItems(capped)
       setUnread(capped.filter(i => i.unread).length)
 
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          at: Date.now(), items: capped, unread: capped.filter(i => i.unread).length, films: myFilms,
+        }))
+      } catch { /* quota/private mode → just skip caching */ }
+
       if (firstRun) markSeen()  // baseline so the first visit isn't a wall of "new"
-    })()
-    return () => { alive = false }
+    }
   }, [user])
+
+  useEffect(() => {
+    load()
+    return () => { aliveRef.current?.() }
+  }, [load])
 
   function markSeen() {
     try {
@@ -141,6 +181,16 @@ export default function CreatorBell() {
   function toggle() {
     const next = !open
     setOpen(next)
+    if (next) {
+      // Opening is the one moment freshness matters — refresh if the cached
+      // contents are more than a minute old.
+      let age = Infinity
+      try {
+        const raw = user && sessionStorage.getItem(`${CACHE_PREFIX}${user.id}`)
+        if (raw) age = Date.now() - (JSON.parse(raw).at ?? 0)
+      } catch { /* treat as stale */ }
+      if (age > OPEN_STALE_MS) load(true)
+    }
     if (next && unread > 0) { markSeen(); setUnread(0) }
   }
 
