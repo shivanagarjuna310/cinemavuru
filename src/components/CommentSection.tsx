@@ -47,6 +47,23 @@ export default function CommentSection({ filmId, initialComments }: Props) {
   const userId = user?.id ?? null
   const userName = user?.user_metadata?.name ?? user?.email ?? 'You'
 
+  // The film page is ISR-cached, so `initialComments` can be a stale snapshot.
+  // Re-fetch the live list on mount so a just-posted comment never "vanishes"
+  // on refresh and everyone sees the current thread.
+  useEffect(() => {
+    let alive = true
+    supabase
+      .from('comments')
+      .select('id, text, created_at, user_id, profiles(name)')
+      .eq('film_id', filmId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        if (alive && data) setComments(data as unknown as Comment[])
+      })
+    return () => { alive = false }
+  }, [filmId])
+
   // Real-time: reflect other people's comments (and deletions) as they happen
   useEffect(() => {
     const channel = supabase
@@ -232,9 +249,11 @@ export default function CommentSection({ filmId, initialComments }: Props) {
                     <button
                       onClick={() => handleDelete(c.id)}
                       title="Delete comment"
-                      className="ml-auto text-[color:var(--faint)] hover:text-[color:var(--accent-hot)] text-xs opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
+                      aria-label="Delete comment"
+                      className="ml-auto inline-flex items-center gap-1 text-[color:var(--faint)] hover:text-[color:var(--accent-hot)] text-xs transition"
                     >
-                      ✕
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+                      <span className="hidden sm:inline">Delete</span>
                     </button>
                   )}
                 </div>
