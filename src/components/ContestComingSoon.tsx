@@ -17,6 +17,7 @@
 // use literally, because they are identical in both themes by design.
 
 import Link from 'next/link'
+import ContestTeaserCta from './ContestTeaserCta'
 
 export type ComingSoonContest = {
   title: string
@@ -176,17 +177,8 @@ export default function ContestComingSoon({
       <div className="mt-8 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] p-4 sm:p-7">
         <Podium c={contest} />
 
-        {/* One ask, and it is joining the platform — not entering anything. */}
-        <Link
-          href="/auth"
-          className="mt-7 block text-center bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-5 py-3.5 rounded-xl font-black uppercase tracking-wide text-[13px] sm:text-sm hover:opacity-90 transition"
-        >
-          Create your free account
-        </Link>
-
-        <p className="text-[color:var(--faint)] text-[11px] text-center mt-3.5 leading-relaxed">
-          Free to join. Full details announced soon.
-        </p>
+        {/* Auth-aware: signed-in users must not be told to make an account. */}
+        <ContestTeaserCta />
       </div>
     </section>
   )
