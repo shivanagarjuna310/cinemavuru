@@ -12,7 +12,9 @@
 // Auth: Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`; you can also
 // trigger it manually with ?secret=<CRON_SECRET>, or with an admin's own
 // access token (that is what the button in the admin panel uses).
-// Add ?force=1 to send even when there is nothing to report.
+// The digest always sends, including on quiet days -- see the note by the
+// summary below for why. (?force=1 is still accepted and ignored, so the
+// admin panel's existing 'Send digest now' button keeps working.)
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -86,7 +88,6 @@ async function run(req: Request) {
     console.error('[admin-digest] refused:', auth.reason)
     return NextResponse.json({ error: 'unauthorized', reason: auth.reason }, { status: 401 })
   }
-  const force = new URL(req.url).searchParams.get('force') === '1'
   const since = new Date(Date.now() - 24 * 3_600_000).toISOString()
 
   // ── Gather. Each block is independently fault-tolerant so one missing
@@ -139,10 +140,17 @@ async function run(req: Request) {
     errorsLast24h: errors,
   }
 
-  const actionable = summary.pending > 0 || summary.errorsLast24h > 0 || summary.paidLast24h > 0
-  if (!actionable && !force) {
-    return NextResponse.json({ ok: true, sent: 0, note: 'nothing to report', summary })
-  }
+  // The digest always sends — it is a daily heartbeat, not an alert.
+  //
+  // It used to stay silent unless something was "actionable" (pending films,
+  // errors, or payments). That backfired: on a quiet day no email arrived, and
+  // silence is indistinguishable from a broken cron, an expired RESEND_API_KEY,
+  // or a failed deploy. A short "queue clear" email every morning proves the
+  // whole pipeline still works. Two admins x 1 email/day is ~60/month against
+  // a 3,000/month Resend allowance, so the noise costs nothing.
+  //
+  // (The old gate also ignored new signups entirely, so a day with 2 new users
+  // and nothing else still sent nothing.)
 
   // ── Compose.
   const filmList = pendingRows.slice(0, LIST_LIMIT).map(f => {
