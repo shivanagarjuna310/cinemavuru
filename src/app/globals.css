@@ -138,3 +138,9 @@ html.light body::before {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: rgba(212,160,23,0.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(212,160,23,0.5); }
+
+/* Backdrop fade for the contest intro modal (ContestIntroModal.tsx). */
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}

@@ -15,6 +15,7 @@ import FollowingRail from '../components/FollowingRail'
 import OnboardingGenres from '../components/OnboardingGenres'
 import FilmOfTheDay from '../components/FilmOfTheDay'
 import ContestComingSoon from '../components/ContestComingSoon'
+import ContestIntroModal from '../components/ContestIntroModal'
 
 export const revalidate = 60
 
@@ -153,7 +154,13 @@ export default async function Home() {
         {spotlight.length > 0 && <BillboardHero films={spotlight} />}
 
         {/* ══════════ CONTEST COMING SOON (registration hook) ══════════ */}
-        {upcomingContest && <ContestComingSoon contest={upcomingContest} compact />}
+        {/* Modal greets logged-OUT visitors once; the strip is for everyone. */}
+        {upcomingContest && (
+          <>
+            <ContestIntroModal contest={upcomingContest} contestId={upcomingContest.id} />
+            <ContestComingSoon contest={upcomingContest} compact />
+          </>
+        )}
 
         {/* ══════════ FILM OF THE DAY (a reason to come back tomorrow) ══════════ */}
         <FilmOfTheDay films={pickPool as never} />
