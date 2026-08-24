@@ -34,7 +34,7 @@ function benefits(firstPrize: number | null) {
   return [
     { icon: '📍', title: 'Your district first', desc: 'Your town discovers your film before anyone else.' },
     firstPrize
-      ? { icon: '🏆', title: `Win ₹${firstPrize.toLocaleString('en-IN')}`, desc: 'Season 1 entries open soon — published films are eligible.' }
+      ? { icon: '🏆', title: `₹${firstPrize.toLocaleString('en-IN')} first prize`, desc: 'A short film competition is coming. Details announced soon.' }
       : { icon: '🏆', title: 'Win the monthly contest', desc: 'Top films earn cash prizes + a spotlight.' },
     { icon: '❤️', title: 'Build a real following', desc: 'Likes, comments and followers that come back.' },
     { icon: '🆓', title: 'Free forever', desc: 'No fees to publish. Ever.' },

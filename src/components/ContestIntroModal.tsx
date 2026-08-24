@@ -10,13 +10,18 @@
 // learning there is prize money. The strip alone is easy to scroll past, so the
 // prize gets one deliberate, dismissible interruption on arrival.
 //
+// SCOPE: the competition has NOT started. This announces that prize money is
+// coming and nothing else — no entry steps, no voting rules, no fee. The CTA
+// registers the visitor to CinemaVuru, not to the competition, because there is
+// no entry to sign up for yet.
+//
 // Deliberately restrained: fires once, remembers the dismissal forever (keyed
 // by contest id so a new season can ask again), and never blocks the page.
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from './AuthProvider'
-import { Podium, openingLine, type ComingSoonContest } from './ContestComingSoon'
+import { Podium, timingLine, type ComingSoonContest } from './ContestComingSoon'
 
 const SEEN_PREFIX = 'cv_contest_intro_'
 // Let the page paint and settle first — an instant modal reads as an ad.
@@ -98,7 +103,7 @@ export default function ContestIntroModal({
               Coming Soon
             </span>
             <span className="text-[color:var(--muted)] text-xs">
-              {openingLine(contest.submissions_open_at)}
+              {timingLine(contest.submissions_open_at)}
             </span>
           </div>
 
@@ -107,21 +112,20 @@ export default function ContestIntroModal({
             className="text-2xl sm:text-3xl font-black text-[color:var(--text)] leading-[1.12]"
             style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
           >
-            Win {inr(contest.prize_1st)} for your short film
+            A {inr(pool)} short film competition
           </h2>
 
           <p
             className="mt-2 text-[color:var(--accent)] text-sm"
             style={{ fontFamily: "'Noto Sans Telugu', sans-serif" }}
           >
-            మీ షార్ట్ ఫిల్మ్‌కి బహుమతి గెలుచుకోండి
+            మీ షార్ట్ ఫిల్మ్‌కి బహుమతులు — త్వరలో
           </p>
 
           <p className="mt-2.5 text-[color:var(--muted)] text-sm leading-relaxed">
-            Season {contest.season_number ?? 1} of the CinemaVuru short film contest —
-            <b className="text-[color:var(--text)]"> {inr(pool)} total prize pool</b>, open to every
-            Telugu filmmaker in Telangana &amp; Andhra Pradesh. Winners are decided by public votes
-            from your own district.
+            CinemaVuru Season {contest.season_number ?? 1} is on its way, with
+            <b className="text-[color:var(--text)]"> {inr(contest.prize_1st)} for first place</b>.
+            Full details announced soon.
           </p>
 
           <div className="mt-5">
@@ -134,14 +138,7 @@ export default function ContestIntroModal({
               onClick={dismiss}
               className="w-full text-center bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-5 py-3.5 rounded-xl font-black uppercase tracking-wide text-[13px] hover:opacity-90 transition"
             >
-              Register to participate
-            </Link>
-            <Link
-              href="/contest"
-              onClick={dismiss}
-              className="w-full text-center border border-[color:var(--border)] text-[color:var(--text)] px-5 py-3 rounded-xl font-bold text-[13px] hover:border-[color:var(--accent)]/50 transition"
-            >
-              See contest details
+              Create your free account
             </Link>
             <button
               onClick={dismiss}
@@ -152,7 +149,7 @@ export default function ContestIntroModal({
           </div>
 
           <p className="text-[color:var(--faint)] text-[11px] text-center mt-3 leading-relaxed">
-            Free to register. Publishing films on CinemaVuru is always free.
+            Free to join. Watching and publishing on CinemaVuru is always free.
           </p>
         </div>
       </div>
