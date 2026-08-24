@@ -13,6 +13,8 @@ import ContinueWatchingRail from '../components/ContinueWatchingRail'
 import ForYouRail from '../components/ForYouRail'
 import FollowingRail from '../components/FollowingRail'
 import OnboardingGenres from '../components/OnboardingGenres'
+import FilmOfTheDay from '../components/FilmOfTheDay'
+import ContestComingSoon from '../components/ContestComingSoon'
 
 export const revalidate = 60
 
@@ -53,6 +55,11 @@ const DISTRICT_CONFIG: Record<string, { image: string; overlay: string; landmark
 const FILM_COLS =
   'id, title_en, genre, video_url, view_count, like_count, district_id, districts(name_en, slug, states(slug))'
 
+// Film of the Day rotates through the WHOLE library, so it needs every active
+// film (not just a top-10 slice). ~81 rows on a page cached for 60s.
+const PICK_COLS =
+  'id, title_en, title_te, description, genre, video_url, view_count, like_count, districts(name_en, slug, states(slug))'
+
 const SPOTLIGHT_COLS =
   'id, title_en, title_te, description, genre, video_url, view_count, districts(name_en, slug, states(slug))'
 
@@ -63,7 +70,7 @@ async function getData() {
   const monthName = now.toLocaleString('en-IN', { month: 'long' })
 
   // Run all independent queries concurrently (was sequential → slow TTFB)
-  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes, winnerRes] = await Promise.all([
+  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes, winnerRes, pickPoolRes, upcomingRes] = await Promise.all([
     supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
     supabase.from('films').select('district_id, genre').eq('status', 'active'),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
@@ -72,6 +79,8 @@ async function getData() {
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('created_at', { ascending: false }).limit(10),
     supabase.from('films').select(SPOTLIGHT_COLS).eq('status', 'active').not('video_url', 'is', null).order('view_count', { ascending: false }).limit(6),
     supabase.from('monthly_winners').select('month, winner_name, film_title, image_url, blurb, films(id, districts(slug, states(slug)))').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('films').select(PICK_COLS).eq('status', 'active').not('video_url', 'is', null),
+    supabase.from('contests').select('*').eq('status', 'upcoming').order('season_number', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   const districts = districtsRes.data
@@ -108,6 +117,8 @@ async function getData() {
   }
 
   return {
+    upcomingContest: upcomingRes?.data ?? null,
+    pickPool: pickPoolRes.data ?? [],
     topFilms: topFilmsRes.data ?? [],
     mostLiked: mostLikedRes.data ?? [],
     monthlyFilms: monthlyFilmsRes.data ?? [],
@@ -127,7 +138,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, winner, genres, recentFilms, monthName } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, winner, genres, recentFilms, monthName, pickPool, upcomingContest } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -140,6 +151,12 @@ export default async function Home() {
 
         {/* ══════════ BILLBOARD (OTT spotlight) ══════════ */}
         {spotlight.length > 0 && <BillboardHero films={spotlight} />}
+
+        {/* ══════════ CONTEST COMING SOON (registration hook) ══════════ */}
+        {upcomingContest && <ContestComingSoon contest={upcomingContest} compact />}
+
+        {/* ══════════ FILM OF THE DAY (a reason to come back tomorrow) ══════════ */}
+        <FilmOfTheDay films={pickPool as never} />
 
         {/* ══════════ BRAND / PURPOSE (+ monthly winner in the hero slot) ══════════ */}
         {spotlight.length > 0 && (

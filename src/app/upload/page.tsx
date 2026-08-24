@@ -3,15 +3,43 @@
 // Video is hosted on YouTube (unlisted) for now.
 // Saved to Supabase films table with status = 'pending'.
 
-import Navbar     from '@/components/Navbar'
-import UploadForm from '@/components/UploadForm'
+import { createClient }  from '@supabase/supabase-js'
+import Navbar            from '@/components/Navbar'
+import UploadForm        from '@/components/UploadForm'
+import ContestComingSoon from '@/components/ContestComingSoon'
 
-const BENEFITS = [
-  { icon: '📍', title: 'Your district first', desc: 'Your town discovers your film before anyone else.' },
-  { icon: '🏆', title: 'Win the monthly contest', desc: 'Top films earn cash prizes + a spotlight.' },
-  { icon: '❤️', title: 'Build a real following', desc: 'Likes, comments and followers that come back.' },
-  { icon: '🆓', title: 'Free forever', desc: 'No fees to publish. Ever.' },
-]
+// Cached: this page only needs the contest headline, and a stale-by-5-minutes
+// prize figure is fine. Keeps the extra query off every upload page view.
+export const revalidate = 300
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+)
+
+async function getUpcomingContest() {
+  const { data } = await supabase
+    .from('contests')
+    .select('*')
+    .eq('status', 'upcoming')
+    .order('season_number', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return data
+}
+
+// Named prize figures beat vague promises — this is the page where someone is
+// already deciding whether the effort is worth it.
+function benefits(firstPrize: number | null) {
+  return [
+    { icon: '📍', title: 'Your district first', desc: 'Your town discovers your film before anyone else.' },
+    firstPrize
+      ? { icon: '🏆', title: `Win ₹${firstPrize.toLocaleString('en-IN')}`, desc: 'Season 1 entries open soon — published films are eligible.' }
+      : { icon: '🏆', title: 'Win the monthly contest', desc: 'Top films earn cash prizes + a spotlight.' },
+    { icon: '❤️', title: 'Build a real following', desc: 'Likes, comments and followers that come back.' },
+    { icon: '🆓', title: 'Free forever', desc: 'No fees to publish. Ever.' },
+  ]
+}
 
 const STEPS = [
   { n: '1', title: 'Upload to YouTube', desc: 'Set it to Unlisted, copy the link.' },
@@ -19,13 +47,21 @@ const STEPS = [
   { n: '3', title: 'We review & publish', desc: 'Usually live within 24 hours.' },
 ]
 
-export default function UploadPage() {
+export default async function UploadPage() {
+  const upcoming = await getUpcomingContest()
+  const BENEFITS = benefits(upcoming?.prize_1st ?? null)
   return (
     <>
       <Navbar />
       <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
         {/* Background glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_0%,rgba(255,107,26,0.08),transparent)] pointer-events-none" />
+
+        {upcoming && (
+          <div className="relative z-10 pt-6">
+            <ContestComingSoon contest={upcoming} compact />
+          </div>
+        )}
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 relative z-10">
 

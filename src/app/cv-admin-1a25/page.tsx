@@ -7,6 +7,7 @@ import ErrorLogViewer      from '@/components/ErrorLogViewer'
 import WinnerAdmin         from '@/components/WinnerAdmin'
 import EmailAdmin          from '@/components/EmailAdmin'
 import TrafficPanel        from '@/components/TrafficPanel'
+import ContestLifecycle    from '@/components/ContestLifecycle'
 
 type Film = {
   id: string; title_en: string; title_te: string | null
@@ -115,6 +116,8 @@ export default function AdminPage() {
   const [newPrize2,       setNewPrize2]       = useState(3000)
   const [newPrize3,       setNewPrize3]       = useState(2000)
   const [newSubsCloseAt,  setNewSubsCloseAt]  = useState('')
+  const [newSubsOpenAt,   setNewSubsOpenAt]   = useState('')
+  const [newStatus,       setNewStatus]       = useState<'upcoming' | 'open'>('upcoming')
   const [creating,        setCreating]        = useState(false)
   const [newMinVotes,     setNewMinVotes]     = useState(100)
   const [toast,           setToast]           = useState<Toast | null>(null)
@@ -172,13 +175,16 @@ export default function AdminPage() {
   const fetchContestEntries = useCallback(async () => {
     setContestLoading(true)
     // Fetch active contest
+    // Include 'upcoming' so a coming-soon season is visible and manageable here
+    // (it was previously invisible to the admin entirely). maybeSingle() so an
+    // empty result isn't treated as an error.
     const { data: contest } = await supabase
       .from('contests')
       .select('*')
-      .in('status', ['open', 'voting'])
-      .order('created_at', { ascending: false })
+      .in('status', ['upcoming', 'open', 'voting'])
+      .order('season_number', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
     setActiveContest(contest ?? null)
 
     // Fetch entries for active contest only
@@ -322,7 +328,10 @@ export default function AdminPage() {
       prize_2nd:            newPrize2,
       prize_3rd:            newPrize3,
       submissions_close_at: new Date(newSubsCloseAt).toISOString(),
-      status:               'open',
+      // 'upcoming' promotes the prize money publicly without taking entries;
+      // 'open' goes live immediately. Was previously hard-coded to 'open'.
+      status:               newStatus,
+      submissions_open_at:  newSubsOpenAt ? new Date(newSubsOpenAt).toISOString() : null,
       min_votes:            newMinVotes,
     })
 
@@ -335,7 +344,9 @@ export default function AdminPage() {
     setCreating(false)
     setShowCreatePanel(false)
     setNewContestTitle('')
-    showToast(`✅ Season ${newSeasonNumber} created and is now LIVE!`)
+    showToast(newStatus === 'open'
+      ? `✅ Season ${newSeasonNumber} created and is now LIVE!`
+      : `✅ Season ${newSeasonNumber} created as Coming Soon — promoted on the site, entries closed.`)
     fetchContestEntries()
   }
   // ── Delete (single) — opens the confirmation modal ──
@@ -780,6 +791,9 @@ export default function AdminPage() {
         {/* CONTEST TAB */}
         {mainTab === 'contest' && (
           <>
+            {/* Full lifecycle control: schedule, prizes, and stage transitions */}
+            <ContestLifecycle onChanged={fetchContestEntries} />
+
             {/* Active contest banner */}
             {activeContest ? (
               <div className="bg-[color:var(--surface)] border border-[color:var(--accent)]/30 rounded-xl p-4 mb-5">
@@ -940,6 +954,27 @@ export default function AdminPage() {
                           min={0}
                           className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Launch as</label>
+                        <select
+                          value={newStatus}
+                          onChange={e => setNewStatus(e.target.value as 'upcoming' | 'open')}
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+                        >
+                          <option value="upcoming">Coming soon — promote prizes, entries closed</option>
+                          <option value="open">Open now — entries accepted immediately</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Entries Open (optional)</label>
+                        <input
+                          type="datetime-local"
+                          value={newSubsOpenAt}
+                          onChange={e => setNewSubsOpenAt(e.target.value)}
+                          className="w-full bg-[color:var(--bg)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+                        />
+                        <p className="text-[10px] text-[color:var(--faint)] mt-1">Shows a live countdown on the public page. Blank = &ldquo;Dates announced soon&rdquo;.</p>
                       </div>
                       <div>
                         <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">Submissions Close *</label>

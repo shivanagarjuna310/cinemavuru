@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
+import ContestComingSoon from '@/components/ContestComingSoon'
 export const revalidate = 30
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +20,19 @@ async function getActiveContest() {
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
+  return data
+}
+
+// A season with status 'upcoming' can't take entries, so the pages above
+// ignore it. Fetch it separately to promote it instead of showing a dead end.
+async function getUpcomingContest() {
+  const { data } = await supabase
+    .from('contests')
+    .select('*')
+    .eq('status', 'upcoming')
+    .order('season_number', { ascending: false })
+    .limit(1)
+    .maybeSingle()
   return data
 }
 
@@ -58,18 +72,26 @@ export default async function ContestPage() {
   const contest = await getActiveContest()
 
   if (!contest) {
+    // No live season — promote the upcoming one and capture registrations.
+    const upcoming = await getUpcomingContest()
     return (
       <>
         <Navbar />
-        <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16 flex items-center justify-center">
-          <div className="text-center px-6">
-            <div className="text-6xl mb-4">🏆</div>
-            <h1 className="text-2xl font-bold text-[color:var(--accent)] mb-3">No Active Contest</h1>
-            <p className="text-[color:var(--muted)] mb-6">The next contest is coming soon. Stay tuned!</p>
-            <Link href="/" className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition text-sm">
-              ← Back to Films
-            </Link>
-          </div>
+        <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
+          {upcoming ? (
+            <ContestComingSoon contest={upcoming} />
+          ) : (
+            <div className="min-h-[60vh] flex items-center justify-center">
+              <div className="text-center px-6">
+                <div className="text-6xl mb-4">🏆</div>
+                <h1 className="text-2xl font-bold text-[color:var(--accent)] mb-3">No Active Contest</h1>
+                <p className="text-[color:var(--muted)] mb-6">The next contest is coming soon. Stay tuned!</p>
+                <Link href="/" className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition text-sm">
+                  ← Back to Films
+                </Link>
+              </div>
+            </div>
+          )}
         </main>
       </>
     )
