@@ -44,7 +44,15 @@ function CheckIcon() {
     </svg>
   )
 }
-
+function LinkIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+      <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+    </svg>
+  )
+}
 export default function FilmActions({ filmId, initialLikes, stateSlug, districtSlug }: Props) {
   const [liked,        setLiked]        = useState(false)
   const [likeCount,    setLikeCount]    = useState(initialLikes)
@@ -52,6 +60,7 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
   const userId = user?.id ?? null
   const [loading,      setLoading]      = useState(false)
   const [copied,       setCopied]       = useState(false)
+  const [linkCopied,   setLinkCopied]   = useState(false)
   // ── Voting state ─────────────────────────────────────────
   const [contestId,    setContestId]    = useState<string | null>(null)
   const [hasVoted,     setHasVoted]     = useState(false)
@@ -228,6 +237,21 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
     }
   }
 
+  // Copies ONLY the raw URL — no title/description bundled in.
+// Needed separately from handleShare because the native share sheet's
+// own "copy" action bundles title + text + url together, which breaks
+// Instagram's "Add Link" sticker (it requires a plain URL, not a text blob).
+async function handleCopyLink() {
+  const url = window.location.href
+  try {
+    await navigator.clipboard.writeText(url)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  } catch {
+    setLinkCopied(false)
+  }
+}
+  
   const isMyVote = votedFilmId === filmId
 
   const pill = 'inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold ring-1 transition-all'
@@ -282,6 +306,19 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
         {copied ? <CheckIcon /> : <ShareIcon />}
         <span>{copied ? 'Link copied' : isContestFilm ? 'Get Votes' : 'Share'}</span>
       </button>
+      {/* Copy Link — dedicated raw-URL copy, safe to paste into Instagram's
+    "Add Link" sticker or anywhere else that needs a plain URL */}
+<button onClick={handleCopyLink}
+  aria-label="Copy plain link (for Instagram Story link sticker, etc.)"
+  title="Copy plain link — use this for Instagram's Add Link sticker"
+  className={`${pill} ${
+    linkCopied
+      ? 'bg-[#25D366]/10 text-[#25D366] ring-[#25D366]/40'
+      : 'bg-[color:var(--surface)] text-[color:var(--muted)] ring-[color:var(--border)] hover:text-[color:var(--accent)] hover:ring-[color:var(--accent)]/40'
+  }`}>
+  {linkCopied ? <CheckIcon /> : <LinkIcon />}
+  <span className="hidden sm:inline">{linkCopied ? 'Copied' : 'Copy Link'}</span>
+</button>
 
     </div>
   )
