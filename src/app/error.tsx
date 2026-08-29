@@ -12,9 +12,20 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  useEffect(() => {
+    useEffect(() => {
     // Surfaces in the console / server logs; hook a monitor (Sentry) here later.
     console.error(error)
+
+    // Stale PWA cache / old build chunk after a new deploy → auto-recover
+    // once instead of stranding the user on this screen.
+    const isChunkError = /Loading chunk|ChunkLoadError|dynamically imported module/i.test(
+      error?.message ?? ''
+    )
+    const alreadyRetried = sessionStorage.getItem('cv-chunk-retry')
+    if (isChunkError && !alreadyRetried) {
+      sessionStorage.setItem('cv-chunk-retry', '1')
+      window.location.reload()
+    }
   }, [error])
 
   return (
