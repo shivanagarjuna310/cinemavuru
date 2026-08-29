@@ -2,7 +2,7 @@
 // Service Worker for CinemaVuru PWA
 // Caches key assets so the app loads fast even on slow connections.
 
-const CACHE_NAME = 'cinemavuru-v3'
+const CACHE_NAME = 'cinemavuru-v2'
 
 // Cached immediately on install.
 const STATIC_ASSETS = [
