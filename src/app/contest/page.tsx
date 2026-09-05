@@ -6,6 +6,7 @@ import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
 import ContestComingSoon from '@/components/ContestComingSoon'
+import { autoOpenDueContest } from '@/lib/contestSchedule'
 export const revalidate = 30
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,6 +70,10 @@ function formatPrize(amount: number) {
 }
 
 export default async function ContestPage() {
+  // Flips an 'upcoming' season to 'open' once its scheduled time passes. Runs
+  // during ISR revalidation (~30s), so the contest starts on its own.
+  await autoOpenDueContest()
+
   const contest = await getActiveContest()
 
   if (!contest) {

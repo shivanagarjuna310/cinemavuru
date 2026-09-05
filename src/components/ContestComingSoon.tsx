@@ -18,6 +18,7 @@
 
 import Link from 'next/link'
 import ContestTeaserCta from './ContestTeaserCta'
+import ContestCountdown from './ContestCountdown'
 
 export type ComingSoonContest = {
   title: string
@@ -117,7 +118,9 @@ export default function ContestComingSoon({
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-black bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] px-2.5 py-1 rounded">
                   Coming Soon
                 </span>
-                <span className="text-[color:var(--muted)] text-xs">{timing}</span>
+                {contest.submissions_open_at
+                  ? <ContestCountdown openAt={contest.submissions_open_at} compact />
+                  : <span className="text-[color:var(--muted)] text-xs">{timing}</span>}
               </div>
 
               <h3
@@ -170,11 +173,18 @@ export default function ContestComingSoon({
         </p>
 
         <p className="mt-3 text-[color:var(--muted)] text-sm sm:text-base">
-          CinemaVuru Season {contest.season_number ?? 1} · {timing}
+          CinemaVuru Season {contest.season_number ?? 1}
+          {!contest.submissions_open_at && <> · {timing}</>}
         </p>
       </div>
 
       <div className="mt-8 rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface)] p-4 sm:p-7">
+        {contest.submissions_open_at && (
+          <div className="mb-6">
+            <ContestCountdown openAt={contest.submissions_open_at} />
+          </div>
+        )}
+
         <Podium c={contest} />
 
         {/* Auth-aware: signed-in users must not be told to make an account. */}

@@ -3,8 +3,8 @@
 // Shows QR code + UPI ID, user enters UTR after paying
 // Admin verifies UTR manually and approves entry
 
-import { useState } from 'react'
-import Image from 'next/image'
+import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import { supabase } from '@/lib/supabase'
 
 interface UPIPaymentProps {
@@ -25,8 +25,32 @@ export default function UPIPayment({
   const [copied, setCopied]       = useState(false)
   const [utrError, setUtrError]   = useState('')
 
-  const UPI_ID = 'shivanagarjuna777@oksbi'
-  const WHATSAPP_NUMBER = '917801007518' // ← Replace with your WhatsApp number
+  // Configurable without a redeploy of this file; falls back to the live values.
+  const UPI_ID = process.env.NEXT_PUBLIC_UPI_ID || 'shivanagarjuna777@oksbi'
+  const PAYEE_NAME = process.env.NEXT_PUBLIC_UPI_PAYEE || 'CinemaVuru'
+  const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP || '917801007518'
+
+  // Standard UPI deep link. Encoding the amount is the whole point: the old
+  // static /upi-qr.png could not carry it, so payers had to type the figure in
+  // themselves (and that PNG predated the current UPI ID, so it pointed at the
+  // wrong payee entirely — which is why scanning it did not work).
+  const upiLink =
+    `upi://pay?pa=${encodeURIComponent(UPI_ID)}` +
+    `&pn=${encodeURIComponent(PAYEE_NAME)}` +
+    `&am=${encodeURIComponent(String(entryFee))}` +
+    `&cu=INR` +
+    `&tn=${encodeURIComponent('CinemaVuru contest entry')}`
+
+  // Rendered from that link, so the QR can never drift from the UPI ID or fee.
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [qrError, setQrError] = useState(false)
+  useEffect(() => {
+    let alive = true
+    QRCode.toDataURL(upiLink, { width: 480, margin: 1, errorCorrectionLevel: 'M' })
+      .then(url => { if (alive) { setQrDataUrl(url); setQrError(false) } })
+      .catch(() => { if (alive) setQrError(true) })
+    return () => { alive = false }
+  }, [upiLink])
 
   async function handleSubmit() {
     setUtrError('')
@@ -93,22 +117,34 @@ export default function UPIPayment({
         <p className="text-xs text-[color:var(--faint)] mt-1">Contest Entry Fee — Non-refundable</p>
       </div>
 
-      {/* QR Code */}
+      {/* Pay in-app — on a phone this opens GPay/PhonePe with the amount
+          already filled in, which beats scanning a QR on the same device. */}
+      <a
+        href={upiLink}
+        className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black font-bold py-3.5 px-6 rounded-xl uppercase tracking-wide text-sm hover:opacity-90 transition"
+      >
+        📱 Pay ₹{entryFee} in your UPI app
+      </a>
+
+      {/* QR — generated from the same deep link, so it always matches. */}
       <div className="flex flex-col items-center">
         <p className="text-xs text-[color:var(--muted)] uppercase tracking-widest mb-3">
-          Scan QR to Pay
+          Or scan on another phone
         </p>
         <div className="bg-white p-3 rounded-2xl shadow-lg">
-          <Image
-            src="/upi-qr.png"
-            alt="UPI QR Code"
-            width={200}
-            height={200}
-            className="rounded-lg"
-          />
+          {qrDataUrl ? (
+            // Plain <img>: the source is a runtime data URL, which next/image
+            // cannot optimise anyway.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qrDataUrl} alt={`UPI QR to pay ₹${entryFee} to ${UPI_ID}`} width={200} height={200} className="rounded-lg block" />
+          ) : (
+            <div className="w-[200px] h-[200px] grid place-items-center text-xs text-neutral-500 text-center px-4">
+              {qrError ? 'QR unavailable — use the button above or the UPI ID below.' : 'Generating QR…'}
+            </div>
+          )}
         </div>
         <p className="text-xs text-[color:var(--muted)] mt-3">
-          Works with GPay, PhonePe, Paytm, any UPI app
+          Amount ₹{entryFee} is pre-filled · GPay, PhonePe, Paytm, any UPI app
         </p>
       </div>
 
@@ -187,7 +223,7 @@ export default function UPIPayment({
           <span>💬</span> Contact on WhatsApp
         </button>
         <p className="text-xs text-[color:var(--faint)] mt-2">
-          We'll verify your payment and approve your entry manually.
+          We&apos;ll verify your payment and approve your entry manually.
         </p>
       </div>
 

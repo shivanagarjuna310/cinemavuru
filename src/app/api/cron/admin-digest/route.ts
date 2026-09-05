@@ -19,6 +19,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { notifyAdmins, esc, SITE } from '@/lib/adminNotify'
+import { autoOpenDueContest } from '@/lib/contestSchedule'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -88,6 +89,22 @@ async function run(req: Request) {
     console.error('[admin-digest] refused:', auth.reason)
     return NextResponse.json({ error: 'unauthorized', reason: auth.reason }, { status: 401 })
   }
+  // Backstop for the scheduled contest open, in case nobody loads /contest
+  // around the start time (that page normally triggers it on revalidation).
+  const autoOpened = await autoOpenDueContest()
+  if (autoOpened.opened) {
+    await notifyAdmins({
+      kind: 'contest_opened',
+      tone: 'good',
+      subject: `Contest entries are now OPEN — ${autoOpened.title}`,
+      heading: 'Contest opened automatically',
+      intro:
+        'The scheduled start time passed, so entries are now open and the entry fee is being charged.',
+      rows: [['Contest', autoOpened.title]],
+      ctaLabel: 'Open Admin Panel',
+    }).catch(() => {})
+  }
+
   const since = new Date(Date.now() - 24 * 3_600_000).toISOString()
 
   // ── Gather. Each block is independently fault-tolerant so one missing
