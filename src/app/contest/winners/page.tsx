@@ -30,6 +30,19 @@ async function getPastContests() {
   return data ?? []
 }
 
+// The votes a winning film actually received. This is the number that decided
+// the season, and the Hall of Fame was showing views and likes instead of it.
+async function getWinningVotes(contestId: string, filmId: string | null) {
+  if (!filmId) return null
+  const { data } = await supabase
+    .from('contest_entries')
+    .select('contest_score')
+    .eq('contest_id', contestId)
+    .eq('film_id', filmId)
+    .maybeSingle()
+  return data?.contest_score ?? null
+}
+
 async function getFilmDetails(filmId: string | null) {
   if (!filmId) return null
   const { data } = await supabase
@@ -62,19 +75,22 @@ export default async function HallOfFamePage() {
   // Fetch all winner film details in parallel
   const contestsWithFilms = await Promise.all(
     contests.map(async (contest) => {
-      const [film1, film2, film3] = await Promise.all([
+      const [film1, film2, film3, votes1, votes2, votes3] = await Promise.all([
         getFilmDetails(contest.winner_film_id),
         getFilmDetails(contest.winner_2nd_film_id),
         getFilmDetails(contest.winner_3rd_film_id),
+        getWinningVotes(contest.id, contest.winner_film_id),
+        getWinningVotes(contest.id, contest.winner_2nd_film_id),
+        getWinningVotes(contest.id, contest.winner_3rd_film_id),
       ])
-      return { ...contest, film1, film2, film3 }
+      return { ...contest, film1, film2, film3, votes1, votes2, votes3 }
     })
   )
 
   const medals = [
-    { key: 'film1', emoji: '🥇', label: '1st Place', color: '#D4A017', bg: 'bg-[#D4A017]/10 border-[color:var(--accent)]/30' },
-    { key: 'film2', emoji: '🥈', label: '2nd Place', color: '#9CA3AF', bg: 'bg-[#9CA3AF]/10 border-[#9CA3AF]/30' },
-    { key: 'film3', emoji: '🥉', label: '3rd Place', color: '#CD7F32', bg: 'bg-[#CD7F32]/10 border-[#CD7F32]/30' },
+    { key: 'film1', votesKey: 'votes1', emoji: '🥇', label: '1st Place', color: '#D4A017', bg: 'bg-[#D4A017]/10 border-[color:var(--accent)]/30' },
+    { key: 'film2', votesKey: 'votes2', emoji: '🥈', label: '2nd Place', color: '#9CA3AF', bg: 'bg-[#9CA3AF]/10 border-[#9CA3AF]/30' },
+    { key: 'film3', votesKey: 'votes3', emoji: '🥉', label: '3rd Place', color: '#CD7F32', bg: 'bg-[#CD7F32]/10 border-[#CD7F32]/30' },
   ]
 
   return (
@@ -157,6 +173,7 @@ export default async function HallOfFamePage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {medals.map((medal) => {
                       const film = contest[medal.key as 'film1' | 'film2' | 'film3']
+                      const votes = contest[medal.votesKey as 'votes1' | 'votes2' | 'votes3']
                       return (
                         <div key={medal.key}
                           className={`border rounded-xl p-5 ${medal.bg}`}>
@@ -185,10 +202,19 @@ export default async function HallOfFamePage() {
                               {film.title_te && (
                                 <p className="text-xs text-[color:var(--muted)] mb-3">{film.title_te}</p>
                               )}
-                              <div className="flex gap-4 text-xs text-[color:var(--muted)]">
+                              <div className="flex gap-3 text-xs text-[color:var(--muted)] flex-wrap items-center">
+                                {/* Votes first — it is what won the season. */}
+                                {typeof votes === 'number' && (
+                                  <span
+                                    className="font-bold tabular-nums px-2 py-0.5 rounded"
+                                    style={{ color: medal.color }}
+                                    title="Votes received in this contest"
+                                  >
+                                    🗳 {votes} {votes === 1 ? 'vote' : 'votes'}
+                                  </span>
+                                )}
                                 {film.genre && <span>{film.genre}</span>}
                                 <span>👁 {film.view_count ?? 0}</span>
-                                <span>♥ {film.like_count ?? 0}</span>
                               </div>
                               <div className="mt-3 text-xs font-bold uppercase tracking-wide"
                                 style={{ color: medal.color }}>
