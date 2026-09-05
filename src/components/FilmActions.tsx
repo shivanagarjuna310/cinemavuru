@@ -44,6 +44,16 @@ function CheckIcon() {
     </svg>
   )
 }
+function BallotIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="8" width="18" height="13" rx="2" fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.18 : 0} />
+      <path d="M8 8V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v4" />
+      {filled ? <path d="M9 14l2 2 4-4" /> : <path d="M12 12v4M10 14h4" />}
+    </svg>
+  )
+}
 function LinkIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -257,7 +267,33 @@ async function handleCopyLink() {
   const pill = 'inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold ring-1 transition-all'
 
   return (
-    <div className="flex items-center gap-2.5 py-4 border-t border-b border-[color:var(--border)] mb-6 flex-wrap">
+    <div className="py-4 border-t border-b border-[color:var(--border)] mb-6">
+
+      {/* Voting banner — on a phone the button alone was just an icon and a
+          number, so the fact that this film is IN a contest, and whether you
+          had voted, was invisible. State it in words. */}
+      {isContestFilm && (
+        <div className={`mb-3 rounded-xl px-3.5 py-2.5 text-sm flex items-center gap-2 ${
+          isMyVote
+            ? 'bg-[#D4A017]/12 ring-1 ring-[color:var(--accent)]/40 text-[color:var(--accent)]'
+            : hasVoted
+            ? 'bg-[color:var(--surface)] ring-1 ring-[color:var(--border)] text-[color:var(--muted)]'
+            : 'bg-[#FF6B1A]/10 ring-1 ring-[color:var(--accent-hot)]/35 text-[color:var(--accent-hot)]'
+        }`}>
+          <span className="shrink-0"><BallotIcon filled={isMyVote} /></span>
+          <span className="font-semibold">
+            {isMyVote
+              ? 'You voted for this film'
+              : hasVoted
+              ? 'You already voted for another film this season'
+              : 'This film is in the contest — your vote decides the winner'}
+          </span>
+        </div>
+      )}
+
+      {/* Mobile: a 2-up grid so every control has a readable width.
+          Desktop: the original single row. */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5">
 
       {/* Like */}
       <button onClick={handleLike} disabled={loading} aria-pressed={liked}
@@ -268,7 +304,7 @@ async function handleCopyLink() {
         }`}>
         <HeartIcon filled={liked} />
         <span className="tabular-nums">{likeCount}</span>
-        <span className="hidden sm:inline font-medium opacity-80">{likeCount === 1 ? 'Like' : 'Likes'}</span>
+        <span className="font-medium opacity-80">{likeCount === 1 ? 'Like' : 'Likes'}</span>
       </button>
 
       {/* Vote — only shows when film is in voting contest */}
@@ -282,12 +318,12 @@ async function handleCopyLink() {
               ? 'bg-[#D4A017]/15 text-[color:var(--accent)] ring-[color:var(--accent)]/40 cursor-default'
               : hasVoted
               ? 'bg-[color:var(--surface)] text-[color:var(--faint)] ring-[color:var(--border)] cursor-not-allowed opacity-50'
-              : 'bg-[color:var(--surface)] text-[color:var(--muted)] ring-[color:var(--border)] hover:text-[color:var(--accent)] hover:ring-[color:var(--accent)]/40'
+              : 'bg-[#FF6B1A]/12 text-[color:var(--accent-hot)] ring-[color:var(--accent-hot)]/45 hover:bg-[#FF6B1A]/20'
           }`}>
-          <span aria-hidden>🗳️</span>
+          <BallotIcon filled={isMyVote} />
           <span className="tabular-nums">{voteCount}</span>
-          <span className="hidden sm:inline font-medium opacity-80">
-            {isMyVote ? 'Your vote' : hasVoted ? 'Voted' : 'Vote'}
+          <span className="font-medium opacity-80">
+            {isMyVote ? 'Your vote' : hasVoted ? 'Voted' : voteCount === 1 ? 'Vote' : 'Votes'}
           </span>
         </button>
       )}
@@ -296,7 +332,7 @@ async function handleCopyLink() {
       <button onClick={handleShare}
         aria-label={isContestFilm ? 'Share to get votes' : 'Share this film'}
         title={isContestFilm ? 'Share to get votes' : 'Share this film'}
-        className={`${pill} sm:ml-auto ${
+        className={`${pill} justify-center col-span-2 sm:col-span-1 sm:ml-auto ${
           copied
             ? 'bg-[#25D366]/10 text-[#25D366] ring-[#25D366]/40'
             : isContestFilm
@@ -311,15 +347,15 @@ async function handleCopyLink() {
 <button onClick={handleCopyLink}
   aria-label="Copy plain link (for Instagram Story link sticker, etc.)"
   title="Copy plain link — use this for Instagram's Add Link sticker"
-  className={`${pill} ${
+  className={`${pill} justify-center col-span-2 sm:col-span-1 ${
     linkCopied
       ? 'bg-[#25D366]/10 text-[#25D366] ring-[#25D366]/40'
       : 'bg-[color:var(--surface)] text-[color:var(--muted)] ring-[color:var(--border)] hover:text-[color:var(--accent)] hover:ring-[color:var(--accent)]/40'
   }`}>
   {linkCopied ? <CheckIcon /> : <LinkIcon />}
-  <span className="hidden sm:inline">{linkCopied ? 'Copied' : 'Copy Link'}</span>
+  <span>{linkCopied ? 'Copied' : 'Copy Link'}</span>
 </button>
-
+      </div>
     </div>
   )
 }

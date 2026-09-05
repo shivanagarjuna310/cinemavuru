@@ -31,6 +31,7 @@ export default function Navbar() {
   const [open, setOpen]               = useState(false)
   const { user }                      = useAuth()
   const [searchOpen, setSearchOpen]   = useState(false)
+  const [mSearchOpen, setMSearchOpen] = useState(false)
   const [query, setQuery]             = useState('')
   const [results, setResults]         = useState<SearchResult[]>([])
   const [searching, setSearching]     = useState(false)
@@ -243,12 +244,73 @@ export default function Navbar() {
 
       {/* Mobile: notifications + theme toggle + hamburger */}
       <div className="md:hidden flex items-center gap-1">
+        <button
+          aria-label="Search films"
+          aria-expanded={mSearchOpen}
+          onClick={() => { setMSearchOpen(o => !o); setOpen(false) }}
+          className="w-9 h-9 grid place-items-center text-[color:var(--accent)]"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+        </button>
         <CreatorBell />
         <ThemeToggle />
-        <button className="text-[color:var(--accent)] text-2xl" onClick={() => setOpen(o => !o)}>
+        <button aria-label={open ? 'Close menu' : 'Open menu'}
+          className="text-[color:var(--accent)] text-2xl w-9 h-9 grid place-items-center"
+          onClick={() => { setOpen(o => !o); setMSearchOpen(false) }}>
           {open ? '✕' : '☰'}
         </button>
       </div>
+
+      {/* Mobile search bar — sits directly under the header so it is reachable
+          in one tap, instead of being hidden behind the hamburger. */}
+      {mSearchOpen && (
+        <div className="absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] p-3 md:hidden">
+          <div className="relative">
+            <input
+              type="text"
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search films by title..."
+              className="w-full bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--text)] placeholder-[color:var(--muted)] pl-3 pr-9 py-2.5 rounded-lg text-sm outline-none focus:border-[color:var(--accent)] transition"
+            />
+            <button
+              aria-label="Close search"
+              onClick={() => { setMSearchOpen(false); closeSearch() }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center text-[color:var(--muted)]"
+            >
+              ✕
+            </button>
+
+            {(results.length > 0 || searching) && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg overflow-hidden shadow-xl z-50 max-h-[60vh] overflow-y-auto">
+                {searching ? (
+                  <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching…</div>
+                ) : results.map(film => (
+                  <Link key={film.id} href={filmHref(film)}
+                    onClick={() => { closeSearch(); setMSearchOpen(false) }}
+                    className="block w-full px-4 py-3 hover:bg-[color:var(--border)] transition border-b border-[color:var(--border)] last:border-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
+                      {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {query.trim().length > 1 && !searching && results.length === 0 && (
+              <p className="text-[color:var(--muted)] text-xs mt-2 px-1">
+                No films match “{query.trim()}”.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mobile menu */}
       {open && (
