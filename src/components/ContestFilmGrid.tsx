@@ -13,6 +13,11 @@ type Entry = {
   contest_id:    string
   film_id:       string
   contest_score: number
+  // Engagement earned since this film entered, so an older film gets no head
+  // start over a new one. Lifetime totals still live on films.like_count /
+  // films.view_count and are shown everywhere outside the contest.
+  likes_since?:  number
+  views_since?:  number
   films: {
     id:          string
     title_en:    string
@@ -195,9 +200,14 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
                   <span>·</span>
                   <span>{film.genre}</span>
                   <span>·</span>
-                  <span>♥ {film.like_count}</span>
+                  <span title="Likes since this film entered the contest">
+                    ♥ {entry.likes_since ?? 0}
+                  </span>
                   <span>·</span>
-                  <span>👁 {film.view_count}</span>
+                  <span title="Views since this film entered the contest">
+                    👁 {entry.views_since ?? 0}
+                  </span>
+                  <span className="text-[color:var(--faint)]">since entry</span>
                 </div>
               </div>
 
