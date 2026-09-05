@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
+import { logger }              from '@/lib/logger'
 import { useAuth }             from './AuthProvider'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
@@ -142,6 +143,11 @@ export default function UploadForm() {
     if (error) {
       setStatus('error')
       setMessage(`Upload failed: ${error.message}`)
+      // Previously this only rendered inline and vanished with the page, so a
+      // creator reporting "I can't upload" left no trace anywhere to diagnose.
+      await logger.error('UploadForm', 'handleSubmit', 'Film insert failed', error, {
+        userId, districtId, genre, titleLength: titleEn.trim().length,
+      })
     } else {
       // ── Alert EVERY admin that a film is waiting for review (non-blocking) ──
       // Details are read from the DB server-side; we only pass the film id.

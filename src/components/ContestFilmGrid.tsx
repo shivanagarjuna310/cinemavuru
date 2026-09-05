@@ -22,6 +22,7 @@ type Entry = {
     like_count:  number
     video_url:   string | null
     profiles:    { name: string | null } | null
+    districts:   { slug: string | null; states: { slug: string | null } | { slug: string | null }[] | null } | null
   } | null
 }
 
@@ -75,38 +76,57 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
     return () => { cancelled = true }
   }, [contestId, userId])
 
-  async function handleVote(filmId: string) {
-    if (!userId)  { router.push('/auth'); return }
-    if (voting)   return
-    if (hasVoted) return // ← vote is locked, do nothing
+  const [voteError, setVoteError] = useState('')
 
-    setVoting(true)
+  // One call for vote / change / withdraw. The server recomputes the score
+  // from a real count and returns it, so the UI cannot drift from the truth.
+  async function submitVote(filmId: string | null, action: 'vote' | 'unvote') {
+    if (!userId) { router.push('/auth'); return }
+    if (voting) return
+    setVoting(true); setVoteError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/contest/vote', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ contestId, filmId, action }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setVoteError(j.error || 'Could not record your vote.'); return }
 
-    const { error } = await supabase
-      .from('contest_votes')
-      .insert({ contest_id: contestId, user_id: userId, film_id: filmId })
+      setVotedFilmId(j.votedFilmId ?? null)
+      setHasVoted(Boolean(j.votedFilmId))
 
-    if (!error) {
-      setVotedFilmId(filmId)
-      setHasVoted(true) // ← lock the vote immediately
-
-      // Update score locally (+1 vote)
-      setLocalEntries(prev => prev.map(e =>
-        e.film_id === filmId
-          ? { ...e, contest_score: e.contest_score + 1 }
-          : e
-      ).sort((a, b) => b.contest_score - a.contest_score))
+      const scores: Record<string, number> = j.scores ?? {}
+      setLocalEntries(prev => prev
+        .map(e => (e.film_id in scores ? { ...e, contest_score: scores[e.film_id] } : e))
+        .sort((a, b) => b.contest_score - a.contest_score))
+    } catch {
+      setVoteError('Network problem — please try again.')
+    } finally {
+      setVoting(false)
     }
-
-    setVoting(false)
   }
 
   function goToFilm(filmId: string) {
-    router.push(`/telangana/hyderabad/film/${filmId}`)
+    // Was hardcoded to /telangana/hyderabad/, which sent every non-Hyderabad
+    // film to the wrong district URL (the test entry is from Anantapur).
+    const e = localEntries.find(x => x.film_id === filmId)
+    const d = e?.films?.districts
+    const st = d && (Array.isArray(d.states) ? d.states[0] : d.states)
+    router.push(`/${st?.slug ?? 'telangana'}/${d?.slug ?? 'hyderabad'}/film/${filmId}`)
   }
 
   return (
     <div className="space-y-4">
+      {voteError && (
+        <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+          {voteError}
+        </p>
+      )}
 
       {localEntries.map((entry, index) => {
         const film  = entry.films
@@ -125,7 +145,12 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
               'border-[color:var(--border)]'
             } ${isMyVote ? 'ring-1 ring-[#D4A017]/30' : ''}`}
           >
-            <div className="flex items-center gap-4 p-4">
+            {/* Mobile stacks into two rows: identity on top, votes + action
+                below. It used to be one flex row with five children, four of
+                them flex-shrink-0, which could not fit a 360px screen and made
+                the name, vote count and button overlap. */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0 sm:flex-1">
 
               {/* Rank */}
               <div className={`text-center w-8 flex-shrink-0 font-bold ${RANK_STYLE[rank - 1] ?? 'text-[color:var(--muted)] text-base'}`}>
@@ -138,7 +163,7 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
               {/* Thumbnail */}
               <div
                 onClick={() => goToFilm(film.id)}
-                className={`relative w-28 h-16 rounded-lg overflow-hidden bg-gradient-to-br ${style.gradient} flex items-center justify-center text-2xl cursor-pointer flex-shrink-0 group`}
+                className={`relative w-20 h-12 sm:w-28 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br ${style.gradient} flex items-center justify-center text-2xl cursor-pointer flex-shrink-0 group`}
               >
                 {getThumbnail(film.video_url) ? (
                   <img
@@ -165,8 +190,8 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
                 {film.title_te && (
                   <p className="text-[color:var(--muted)] text-xs mb-1">{film.title_te}</p>
                 )}
-                <div className="flex items-center gap-2 text-xs text-[color:var(--muted)]">
-                  <span>{film.profiles?.name ?? 'Creator'}</span>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-[color:var(--muted)] flex-wrap">
+                  <span className="truncate max-w-[9rem]">{film.profiles?.name ?? 'Creator'}</span>
                   <span>·</span>
                   <span>{film.genre}</span>
                   <span>·</span>
@@ -176,20 +201,51 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
                 </div>
               </div>
 
-              {/* Vote count */}
-              <div className="text-center flex-shrink-0">
-                <div className="text-xl font-bold text-[color:var(--accent)]">{entry.contest_score}</div>
-                <div className="text-[10px] text-[color:var(--muted)] uppercase tracking-wide">Votes</div>
               </div>
 
-              {/* Watch & Vote link */}
-              {isVotingOpen && (
-                <button
-                  onClick={() => goToFilm(film.id)}
-                  className="flex-shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--accent)] hover:bg-[#D4A017]/10 transition-all">
-                  Watch & Vote →
-                </button>
-              )}
+              {/* Votes + actions. Own row on mobile, inline from sm up. */}
+              <div className="flex items-center justify-between gap-3 sm:gap-4 sm:justify-end border-t border-[color:var(--border)] pt-3 sm:border-0 sm:pt-0">
+                <div className="text-center flex-shrink-0">
+                  <div className="text-xl font-bold text-[color:var(--accent)] tabular-nums">{entry.contest_score}</div>
+                  <div className="text-[10px] text-[color:var(--muted)] uppercase tracking-wide">
+                    {entry.contest_score === 1 ? 'Vote' : 'Votes'}
+                  </div>
+                </div>
+
+                {isVotingOpen && (
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {isMyVote ? (
+                      <>
+                        <span className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--accent)] whitespace-nowrap">
+                          ✓ Your vote
+                        </span>
+                        {/* The missing escape hatch: a vote used to be permanent. */}
+                        <button
+                          onClick={() => submitVote(null, 'unvote')}
+                          disabled={voting}
+                          className="px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wide border border-[color:var(--border)] text-[color:var(--muted)] hover:text-[color:var(--accent-hot)] hover:border-[color:var(--accent-hot)]/40 transition disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {voting ? '…' : 'Undo'}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => submitVote(entry.film_id, 'vote')}
+                        disabled={voting}
+                        title={hasVoted ? 'This will move your vote to this film' : 'Vote for this film'}
+                        className="px-3.5 py-2 rounded-lg text-[11px] sm:text-xs font-bold uppercase tracking-wide bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {voting ? '…' : hasVoted ? 'Vote instead' : 'Vote'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => goToFilm(film.id)}
+                      className="px-3 py-2 rounded-lg text-[11px] sm:text-xs font-bold uppercase tracking-wide bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--accent)] hover:bg-[#D4A017]/10 transition whitespace-nowrap">
+                      Watch
+                    </button>
+                  </div>
+                )}
+              </div>
 
             </div>
 

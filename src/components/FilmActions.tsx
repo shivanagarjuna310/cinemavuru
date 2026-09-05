@@ -198,28 +198,35 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
 
   async function handleVote() {
     if (!userId)  { window.location.href = '/auth'; return }
-    if (voting || hasVoted || !contestId) return
+    if (voting || !contestId) return
 
+    // Withdraw when this is already my vote, otherwise cast/move it. Goes
+    // through /api/contest/vote so the score is recomputed from a real count
+    // rather than incremented — the old path could never be undone and its
+    // running counter drifted whenever a call failed.
+    const action = isMyVote ? 'unvote' : 'vote'
     setVoting(true)
-    const { error } = await supabase
-      .from('contest_votes')
-      .insert({ contest_id: contestId, user_id: userId, film_id: filmId })
-
-    if (!error) {
-      // Update contest_score on the entry
-      await supabase.rpc('increment_contest_score', {
-        p_contest_id: contestId,
-        p_film_id:    filmId,
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/contest/vote', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ contestId, filmId, action }),
       })
-      setHasVoted(true)
-      setVotedFilmId(filmId)
-      setVoteCount(c => c + 1)
-    } else {
-      alert(error.code === '23505'
-        ? 'You have already voted in this contest!'
-        : `Vote failed: ${error.message}`)
+      const j = await res.json()
+      if (!res.ok) { alert(j.error || 'Vote failed. Please try again.'); return }
+
+      setVotedFilmId(j.votedFilmId ?? null)
+      setHasVoted(Boolean(j.votedFilmId))
+      if (typeof j.scores?.[filmId] === 'number') setVoteCount(j.scores[filmId])
+    } catch {
+      alert('Network problem — please try again.')
+    } finally {
+      setVoting(false)
     }
-    setVoting(false)
   }
 
   async function handleShare() {
@@ -283,7 +290,7 @@ async function handleCopyLink() {
           <span className="shrink-0"><BallotIcon filled={isMyVote} /></span>
           <span className="font-semibold">
             {isMyVote
-              ? 'You voted for this film'
+              ? 'You voted for this film — tap the vote button to undo'
               : hasVoted
               ? 'You already voted for another film this season'
               : 'This film is in the contest — your vote decides the winner'}
@@ -311,11 +318,17 @@ async function handleCopyLink() {
       {isContestFilm && (
         <button
           onClick={handleVote}
-          disabled={voting || hasVoted}
-          title={hasVoted && !isMyVote ? 'You already voted for another film' : ''}
+          disabled={voting || (hasVoted && !isMyVote)}
+          title={
+            isMyVote
+              ? 'Tap to withdraw your vote'
+              : hasVoted
+              ? 'You already voted for another film this season'
+              : 'Vote for this film'
+          }
           className={`${pill} ${
             isMyVote
-              ? 'bg-[#D4A017]/15 text-[color:var(--accent)] ring-[color:var(--accent)]/40 cursor-default'
+              ? 'bg-[#D4A017]/15 text-[color:var(--accent)] ring-[color:var(--accent)]/40 hover:ring-[color:var(--accent)]/70'
               : hasVoted
               ? 'bg-[color:var(--surface)] text-[color:var(--faint)] ring-[color:var(--border)] cursor-not-allowed opacity-50'
               : 'bg-[#FF6B1A]/12 text-[color:var(--accent-hot)] ring-[color:var(--accent-hot)]/45 hover:bg-[#FF6B1A]/20'
@@ -323,7 +336,11 @@ async function handleCopyLink() {
           <BallotIcon filled={isMyVote} />
           <span className="tabular-nums">{voteCount}</span>
           <span className="font-medium opacity-80">
-            {isMyVote ? 'Your vote' : hasVoted ? 'Voted' : voteCount === 1 ? 'Vote' : 'Votes'}
+            {isMyVote
+              ? (voting ? 'Removing…' : 'Your vote · Undo')
+              : hasVoted
+              ? 'Voted elsewhere'
+              : voting ? 'Voting…' : 'Vote'}
           </span>
         </button>
       )}
