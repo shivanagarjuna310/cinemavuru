@@ -31,6 +31,23 @@ export type ComingSoonContest = {
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
+/**
+ * Badge text. Derived from the date rather than hardcoded, so moving the start
+ * in the admin panel updates every surface at once and none of them can go
+ * stale. Formatted in IST — 2026-09-07T18:30Z is "Sep 8" for this audience,
+ * and formatting in UTC would print the 7th.
+ */
+export function startBadge(iso?: string | null): string {
+  if (!iso) return 'Coming Soon'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'Coming Soon'
+  if (d.getTime() <= Date.now()) return 'Live Now'
+  // en-US, not en-IN: en-IN renders "8 Sept", which reads awkwardly in a badge.
+  // The timeZone is what actually matters here and is set explicitly.
+  const day = d.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' })
+  return `Starts ${day}`
+}
+
 /** Teasing, not instructional — no dates means no promises. */
 export function timingLine(iso?: string | null): string {
   if (!iso) return 'Announcing soon'
@@ -115,8 +132,8 @@ export default function ContestComingSoon({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-black bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] px-2.5 py-1 rounded">
-                  Coming Soon
+                <span className="text-[10px] font-black uppercase tracking-[0.14em] text-black bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] px-2.5 py-1 rounded whitespace-nowrap">
+                  {startBadge(contest.submissions_open_at)}
                 </span>
                 {contest.submissions_open_at
                   ? <ContestCountdown openAt={contest.submissions_open_at} compact />
@@ -155,7 +172,7 @@ export default function ContestComingSoon({
       <div className="text-center">
         <span className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-black bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] px-3 py-1.5 rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-black/70 animate-pulse" aria-hidden />
-          Coming Soon
+          {startBadge(contest.submissions_open_at)}
         </span>
 
         <h1

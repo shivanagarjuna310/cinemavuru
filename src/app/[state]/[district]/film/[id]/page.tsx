@@ -9,6 +9,7 @@ import FilmActions      from '@/components/FilmActions'
 import FilmPlayer       from '@/components/FilmPlayer'
 import CommentSection   from '@/components/CommentSection'
 import FilmRow          from '@/components/FilmRow'
+import ContestIntroModal from '@/components/ContestIntroModal'
 import WatchlistButton  from '@/components/WatchlistButton'
 import FollowButton     from '@/components/FollowButton'
 import ViewTracker      from '@/components/ViewTracker'
@@ -52,6 +53,25 @@ const getFilm = unstable_cache(
   },
   ['film-by-id'],
   { revalidate: 60, tags: ['films'] },
+)
+
+// Most traffic lands on a film page from a WhatsApp share, not the homepage —
+// so the contest announcement has to live here too or the people who actually
+// arrive never see it. Cached like the other reads to keep this route
+// ISR-cacheable rather than dynamic.
+const getUpcomingContest = unstable_cache(
+  async () => {
+    const { data } = await supabase
+      .from('contests')
+      .select('id, title, season_number, prize_1st, prize_2nd, prize_3rd, submissions_open_at')
+      .eq('status', 'upcoming')
+      .order('season_number', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    return data
+  },
+  ['upcoming-contest'],
+  { revalidate: 60, tags: ['contests'] },
 )
 
 const RELATED_COLS =
@@ -216,10 +236,11 @@ export default async function FilmPage({
 }) {
   const { state: stateSlug, district: districtSlug, id } = await params
 
-  const [film, comments, likeCount] = await Promise.all([
+  const [film, comments, likeCount, upcomingContest] = await Promise.all([
     getFilm(id),
     getComments(id),
     getLikeCount(id),
+    getUpcomingContest(),
   ])
 
   if (!film) notFound()
@@ -264,6 +285,11 @@ export default async function FilmPage({
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ViewTracker filmId={film.id} />
+      {/* Same localStorage key as the homepage, so a visitor sees this once in
+          total — not once per page they happen to land on. */}
+      {upcomingContest && (
+        <ContestIntroModal contest={upcomingContest} contestId={upcomingContest.id} />
+      )}
       <Navbar />
       <main className="relative z-10 min-h-screen text-[color:var(--text)] pt-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
