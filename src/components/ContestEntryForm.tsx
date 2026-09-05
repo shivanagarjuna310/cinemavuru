@@ -11,6 +11,10 @@ import UPIPayment from '@/components/UPIPayment'
 type Contest = {
   id:                   string
   title:                string
+  status:               string
+  season_number:        number | null
+  submissions_open_at:  string | null
+  voting_close_at:      string | null
   entry_fee:            number
   prize_1st:            number
   prize_2nd:            number
@@ -64,15 +68,21 @@ export default function ContestEntryForm() {
         name:  profile?.name ?? 'Filmmaker',
       })
 
+      // Any live season, not just an open one. Previously this filtered on
+      // status='open', so during voting the page reported "No Active Contest"
+      // — untrue, and a dead end for anyone arriving from the nav link.
       const { data: c } = await supabase
         .from('contests')
-        .select('id, title, entry_fee, prize_1st, prize_2nd, prize_3rd, submissions_close_at')
-        .eq('status', 'open')
+        .select('id, title, status, season_number, submissions_open_at, voting_close_at, entry_fee, prize_1st, prize_2nd, prize_3rd, submissions_close_at')
+        .in('status', ['upcoming', 'open', 'voting'])
+        .order('season_number', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (c) setContest(c as Contest)
       if (!c) return
+      // Only an open season has an entry flow; the screens below explain the rest.
+      if (c.status !== 'open') return
 
       const { data: films } = await supabase
         .from('films')
@@ -265,6 +275,49 @@ export default function ContestEntryForm() {
       </button>
     </div>
   )
+
+  // ── SCREEN: season exists but is not accepting entries ────
+  // Each phase says what is true and where to go, instead of pretending no
+  // contest exists.
+  if (contest && contest.status !== 'open') {
+    const opensOn = contest.submissions_open_at
+      ? new Date(contest.submissions_open_at).toLocaleDateString('en-US',
+          { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' })
+      : null
+
+    const phase = contest.status === 'voting'
+      ? {
+          icon: '🗳️',
+          title: 'Submissions are closed — voting is live',
+          body: `Season ${contest.season_number ?? ''} has moved to the voting round, so new films can no longer be entered. Watch the entries and cast your vote instead.`,
+          cta: { href: '/contest', label: 'Go vote now →' },
+        }
+      : contest.status === 'upcoming'
+      ? {
+          icon: '⏳',
+          title: opensOn ? `Entries open ${opensOn}` : 'Entries open soon',
+          body: `Season ${contest.season_number ?? ''} has not started yet. Nothing to submit today — we will announce it the moment entries open.`,
+          cta: { href: '/contest', label: 'See the prizes →' },
+        }
+      : {
+          icon: '🏛️',
+          title: 'This season has ended',
+          body: 'Entries are closed for this season. Take a look at who won.',
+          cta: { href: '/contest/winners', label: 'View Hall of Fame →' },
+        }
+
+    return (
+      <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-8 text-center">
+        <div className="text-4xl mb-4">{phase.icon}</div>
+        <p className="text-[color:var(--text)] font-bold text-lg mb-2">{phase.title}</p>
+        <p className="text-[color:var(--muted)] text-sm mb-6 max-w-md mx-auto leading-relaxed">{phase.body}</p>
+        <button onClick={() => router.push(phase.cta.href)}
+          className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase tracking-wide text-sm hover:opacity-90 transition">
+          {phase.cta.label}
+        </button>
+      </div>
+    )
+  }
 
   // ── SCREEN: No active contest ─────────────────────────────
   if (!contest) return (

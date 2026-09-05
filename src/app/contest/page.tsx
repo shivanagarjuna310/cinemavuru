@@ -186,7 +186,8 @@ export default async function ContestPage() {
               </div>
             </div>
 
-            {/* CTA buttons */}
+            {/* CTA buttons — one per phase, so the page never shows an action
+                that is not currently possible. */}
             {isOpenPhase && (
               <div className="flex gap-3 flex-wrap">
                 <Link
@@ -196,7 +197,21 @@ export default async function ContestPage() {
                   🎬 Enter Your Film — {formatPrize(contest.entry_fee)}
                 </Link>
                 <div className="border border-[color:var(--border)] rounded-lg px-4 py-3 text-sm text-[color:var(--muted)]">
-                  Voting opens after submissions close
+                  Voting starts once submissions close
+                </div>
+              </div>
+            )}
+
+            {isVotingPhase && (
+              <div className="flex gap-3 flex-wrap items-center">
+                <Link
+                  href="/contest/films"
+                  className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-lg shadow-orange-900/30 text-sm"
+                >
+                  🗳️ Vote for your favourite
+                </Link>
+                <div className="border border-[color:var(--border)] rounded-lg px-4 py-3 text-sm text-[color:var(--muted)]">
+                  Submissions are closed{votingLeft ? ` · ${votingLeft} to vote` : ''}
                 </div>
               </div>
             )}
