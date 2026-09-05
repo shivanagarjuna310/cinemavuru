@@ -111,6 +111,41 @@ export default function ContestEntryForm() {
     init()
   }, [user])
 
+  // Abandon an unpaid entry so a different film can be chosen. Without this
+  // the payment screen was a one-way door: init() always resumed it, so a
+  // creator who picked the wrong film was stuck with it.
+  const [cancelling, setCancelling] = useState(false)
+  async function changeFilm() {
+    if (!submittedEntryId) { setStatus('idle'); return }
+    if (!window.confirm('Discard this entry and choose a different film?\n\nNothing has been paid yet, and your uploaded film stays published.')) return
+    setCancelling(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/contest/entry/cancel', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ entryId: submittedEntryId }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setMessage(j.error || 'Could not change your entry.'); return }
+      // Back to a clean form.
+      setSubmittedEntryId('')
+      setSubmittedFilmId('')
+      setFilmId('')
+      setNewTitle('')
+      setYoutubeUrl('')
+      setMessage('')
+      setStatus('idle')
+    } catch {
+      setMessage('Network problem — please try again.')
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   function toEmbedUrl(url: string): string | null {
     try {
       const u = new URL(url)
@@ -260,6 +295,23 @@ export default function ContestEntryForm() {
         <div className="text-4xl mb-3">🎬</div>
         <p className="text-green-400 font-bold text-lg mb-2">Film Submitted!</p>
         <p className="text-[color:var(--muted)] text-sm">{message}</p>
+
+        {/* Name the film being paid for — the screen used to give no clue
+            which film the entry was actually for. */}
+        {submittedFilmId && (
+          <p className="text-[color:var(--text)] text-sm mt-3">
+            Entering:{' '}
+            <b>{myFilms.find(f => f.id === submittedFilmId)?.title_en ?? (newTitle || 'your film')}</b>
+          </p>
+        )}
+
+        <button
+          onClick={changeFilm}
+          disabled={cancelling}
+          className="mt-3 text-xs text-[color:var(--muted)] underline hover:text-[color:var(--accent)] transition disabled:opacity-50"
+        >
+          {cancelling ? 'Discarding…' : 'Wrong film? Choose a different one'}
+        </button>
       </div>
 
       <UPIPayment
