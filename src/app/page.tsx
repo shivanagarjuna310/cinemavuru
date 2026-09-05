@@ -15,6 +15,7 @@ import FollowingRail from '../components/FollowingRail'
 import OnboardingGenres from '../components/OnboardingGenres'
 import ContestComingSoon from '../components/ContestComingSoon'
 import ContestIntroModal from '../components/ContestIntroModal'
+import ContestLiveBand from '../components/ContestLiveBand'
 
 export const revalidate = 60
 
@@ -65,7 +66,7 @@ async function getData() {
   const monthName = now.toLocaleString('en-IN', { month: 'long' })
 
   // Run all independent queries concurrently (was sequential → slow TTFB)
-  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes, winnerRes, upcomingRes] = await Promise.all([
+  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes, winnerRes, upcomingRes, liveRes] = await Promise.all([
     supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
     supabase.from('films').select('district_id, genre').eq('status', 'active'),
     supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
@@ -75,6 +76,9 @@ async function getData() {
     supabase.from('films').select(SPOTLIGHT_COLS).eq('status', 'active').not('video_url', 'is', null).order('view_count', { ascending: false }).limit(6),
     supabase.from('monthly_winners').select('month, winner_name, film_title, image_url, blurb, films(id, districts(slug, states(slug)))').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('contests').select('*').eq('status', 'upcoming').order('season_number', { ascending: false }).limit(1).maybeSingle(),
+    // A season that is actually running. The homepage previously only knew
+    // about 'upcoming' ones, so it went silent exactly when a contest was live.
+    supabase.from('contests').select('*').in('status', ['open', 'voting']).order('season_number', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   const districts = districtsRes.data
@@ -110,7 +114,41 @@ async function getData() {
     }
   }
 
+  const liveContest = liveRes?.data ?? null
+  let contestFilms: unknown[] = []
+  let contestVotes = 0
+  if (liveContest) {
+    const [entriesRes, votesRes] = await Promise.all([
+      supabase
+        .from('contest_entries')
+        .select('contest_score, films(id, title_en, genre, video_url, view_count, like_count, districts(name_en, slug, states(slug)))')
+        .eq('contest_id', liveContest.id)
+        .eq('payment_status', 'paid')
+        .eq('is_approved', true)
+        .order('contest_score', { ascending: false })
+        .limit(10),
+      supabase
+        .from('contest_votes')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('contest_id', liveContest.id),
+    ])
+    // Flatten to film shape so the existing FilmRow carousel can render them,
+    // carrying the vote count through for the metric line.
+    contestFilms = (entriesRes.data ?? [])
+      // Supabase types the joined `films` as a to-many array; normalise it the
+      // same way the rest of this file does for districts/states.
+      .map((e) => {
+        const f = Array.isArray(e.films) ? e.films[0] : e.films
+        return f ? { ...f, contest_score: e.contest_score ?? 0 } : null
+      })
+      .filter(Boolean)
+    contestVotes = votesRes.count ?? 0
+  }
+
   return {
+    liveContest,
+    contestFilms,
+    contestVotes,
     upcomingContest: upcomingRes?.data ?? null,
     topFilms: topFilmsRes.data ?? [],
     mostLiked: mostLikedRes.data ?? [],
@@ -131,7 +169,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, winner, genres, recentFilms, monthName, upcomingContest } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, winner, genres, recentFilms, monthName, upcomingContest, liveContest, contestFilms, contestVotes } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -145,9 +183,20 @@ export default async function Home() {
         {/* ══════════ BILLBOARD (OTT spotlight) ══════════ */}
         {spotlight.length > 0 && <BillboardHero films={spotlight} />}
 
+        {/* ══════════ LIVE CONTEST (submissions or voting in progress) ══════════ */}
+        {/* Takes precedence over the coming-soon teaser: a running season is
+            more urgent than a future one, and showing both would compete. */}
+        {liveContest && (
+          <ContestLiveBand
+            contest={liveContest}
+            entryCount={contestFilms.length}
+            voteCount={contestVotes}
+          />
+        )}
+
         {/* ══════════ CONTEST COMING SOON (registration hook) ══════════ */}
         {/* Modal greets logged-OUT visitors once; the strip is for everyone. */}
-        {upcomingContest && (
+        {!liveContest && upcomingContest && (
           <>
             <ContestIntroModal contest={upcomingContest} contestId={upcomingContest.id} />
             <ContestComingSoon contest={upcomingContest} compact />
@@ -263,6 +312,30 @@ export default async function Home() {
           <ForYouRail />
           <FollowingRail />
         </div>
+
+        {/* ══════════ CONTEST FILMS ══════════ */}
+        {/* The films actually competing, ranked, right on the homepage. Before
+            this there was no way to see them without navigating to /contest —
+            so the contest had no pull from the page most people land on. */}
+        {liveContest && contestFilms.length > 0 && (
+          <FilmRow
+            films={contestFilms as never[]}
+            eyebrow={liveContest.status === 'voting' ? 'Voting Live' : 'In the Contest'}
+            title={liveContest.status === 'voting' ? '🗳️ Vote for the winner' : '🎬 Films in the contest'}
+            subtitle={
+              liveContest.status === 'voting'
+                ? 'Watch, then cast your one vote — the leader takes the top prize.'
+                : 'Entries so far this season. Voting opens when submissions close.'
+            }
+            accent="gold"
+            showRankBadge={liveContest.status === 'voting'}
+            metric={(f) =>
+              liveContest.status === 'voting'
+                ? `🗳 ${f.contest_score ?? 0} ${(f.contest_score ?? 0) === 1 ? 'vote' : 'votes'}`
+                : `👁 ${f.view_count ?? 0} views`
+            }
+          />
+        )}
 
         {/* ══════════ FILM ROWS ══════════ */}
         {recentFilms.length > 0 && (

@@ -25,9 +25,14 @@ function remaining(target: number): Parts | null {
 export default function ContestCountdown({
   openAt,
   compact = false,
+  label = 'Entries open in',
+  endedLabel = 'Entries are opening now…',
 }: {
   openAt: string
   compact?: boolean
+  /** Reused for any deadline — entries opening, entries closing, voting ending. */
+  label?: string
+  endedLabel?: string
 }) {
   const target = new Date(openAt).getTime()
   const [left, setLeft] = useState<Parts | null>(null)
@@ -51,7 +56,7 @@ export default function ContestCountdown({
   if (!left) {
     return (
       <p className={`text-[color:var(--accent)] font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
-        Entries are opening now…
+        {endedLabel}
       </p>
     )
   }
@@ -63,10 +68,12 @@ export default function ContestCountdown({
     [left.s, 'Sec'],
   ]
 
+  const compactPrefix = label === 'Entries open in' ? 'Starts in' : label.replace(/ in$/, '') + ' in'
+
   if (compact) {
     return (
       <span className="text-[color:var(--muted)] text-xs tabular-nums">
-        Starts in{' '}
+        {compactPrefix}{' '}
         <span className="text-[color:var(--accent)] font-bold">
           {left.d}d {String(left.h).padStart(2, '0')}h {String(left.m).padStart(2, '0')}m
         </span>
@@ -77,7 +84,7 @@ export default function ContestCountdown({
   return (
     <div>
       <p className="text-[10px] uppercase tracking-[0.14em] text-[color:var(--muted)] text-center mb-2.5">
-        Entries open in
+        {label}
       </p>
       <div className="grid grid-cols-4 gap-2 max-w-xs mx-auto">
         {cells.map(([v, label]) => (
