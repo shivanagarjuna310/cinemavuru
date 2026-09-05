@@ -10,6 +10,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Without this the page is prerendered once at build time (it showed as
+// "○ Static" in the build output), so a season closed after the last deploy
+// never appeared in the Hall of Fame until the next deploy. 60s matches the
+// other contest pages.
+export const revalidate = 60
+
 async function getPastContests() {
   const { data } = await supabase
     .from('contests')

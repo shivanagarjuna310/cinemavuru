@@ -156,6 +156,14 @@ export default function ContestLifecycle({ onChanged }: { onChanged?: () => void
     const { error } = await supabase.from('contests').update(patch).eq('id', contest.id)
     setSaving(false)
     if (error) { setErr(error.message); return }
+
+    // Leave a trail in the admin Activity tab for each phase change.
+    try {
+      await supabase.from('logs').insert({
+        event_type: next === 'open' ? 'contest_opened' : 'contest_voting',
+        metadata: { season: String(contest.season_number ?? ''), title: contest.title },
+      })
+    } catch { /* best-effort */ }
     flash(next === 'open' ? 'Entries are now OPEN.' : 'Voting has started.')
     await load(); onChanged?.()
   }

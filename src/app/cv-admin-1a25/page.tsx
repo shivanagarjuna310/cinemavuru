@@ -79,6 +79,9 @@ const EVENT_STYLE: Record<string, { color: string; label: string }> = {
   film_rejected:   { color: 'text-red-400',    label: '❌ Rejected'   },
   user_registered: { color: 'text-[color:var(--accent)]',  label: '👤 Registered' },
   system_cleanup:  { color: 'text-[color:var(--muted)]',  label: '🗑 Cleanup'    },
+  contest_closed:  { color: 'text-[color:var(--accent)]', label: '🏆 Contest closed' },
+  contest_opened:  { color: 'text-green-400',  label: '▶ Contest opened' },
+  contest_voting:  { color: 'text-[color:var(--accent)]', label: '🗳 Voting started' },
 }
 
 export default function AdminPage() {
@@ -312,6 +315,22 @@ export default function AdminPage() {
     setClosing(false)
     setShowClosePanel(false)
     setActiveContest(null)
+    // Record it so the Activity tab has a history of contest lifecycle events —
+    // closing used to leave no trace anywhere except a toast.
+    try {
+      await supabase.from('logs').insert({
+        event_type: 'contest_closed',
+        film_id: winner1 || null,
+        metadata: {
+          season: String(activeContest.season_number),
+          title: activeContest.title,
+          winner_1st: winner1 || '',
+          winner_2nd: winner2 || '',
+          winner_3rd: winner3 || '',
+        },
+      })
+    } catch { /* history is best-effort; never block the close */ }
+
     showToast(`✅ Season ${activeContest.season_number} closed! Winners saved to Hall of Fame.`)
     fetchContestEntries()
   }
