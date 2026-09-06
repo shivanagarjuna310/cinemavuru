@@ -1,14 +1,24 @@
-// SERVER-ONLY. Opens the contest automatically when its scheduled time passes.
+// SERVER-ONLY. Moves a contest through its published schedule on its own.
 //
-// WHY NOT A CRON: Vercel Hobby allows exactly two cron jobs and both are already
-// used (milestones + admin-digest), and Hobby crons only run once a day — a
-// contest advertised as starting at midnight would sit closed for hours.
+// Two transitions are automated:
+//   upcoming -> open    when submissions_open_at passes
+//   open     -> voting  when submissions_close_at passes
 //
-// Instead this runs lazily during the /contest page's ISR revalidation (every
-// 30s) with the daily cron as a backstop. The guard means the UPDATE fires at
-// most once: after the flip the status is no longer 'upcoming', so the
-// condition can never match again. That matters on the free tier, where the
-// Disk IO budget is already tight.
+// Both matter because the dates are advertised publicly. Season 1 tells
+// entrants submissions close 25 Sep and voting runs from 26 Sep — if that
+// depended on somebody clicking a button at midnight, a missed click would
+// leave submissions open past their published deadline and voting never
+// starting. Closing is NOT automated: it writes the Hall of Fame and needs a
+// human to pick placements.
+//
+// WHY NOT A CRON: Vercel Hobby allows two cron jobs and both are already used
+// (milestones + admin-digest), and Hobby crons run once a day, so a midnight
+// deadline could sit stale for hours. Instead this runs lazily during the
+// /contest page's ISR revalidation (~30s) with the daily cron as a backstop.
+//
+// Every write is guarded by the status it expects, so it fires at most once per
+// transition and concurrent renders cannot double-apply it — which matters on
+// the free tier, where the Disk IO budget is already tight.
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -18,47 +28,81 @@ const admin = createClient(
   { auth: { persistSession: false } },
 )
 
-export type AutoOpenResult =
-  | { opened: false; reason: 'no_contest' | 'not_upcoming' | 'no_date' | 'not_yet' | 'error' }
-  | { opened: true; id: string; title: string }
+export type AdvanceResult =
+  | { changed: false; reason: 'no_contest' | 'not_due' | 'no_entries' | 'error' }
+  | { changed: true; to: 'open' | 'voting'; id: string; title: string; entryCount?: number }
 
 /**
- * Flip the newest 'upcoming' contest to 'open' once submissions_open_at passes.
- * Safe to call on every render — it short-circuits without writing in every
- * case except the single moment the schedule is actually due.
+ * Advance the current season if its schedule says so. Safe to call on every
+ * render: in every case except the exact moment a transition is due, it
+ * short-circuits without writing.
  */
-export async function autoOpenDueContest(): Promise<AutoOpenResult> {
+export async function autoAdvanceContest(): Promise<AdvanceResult> {
   try {
     const { data: c } = await admin
       .from('contests')
-      .select('id, title, status, submissions_open_at')
-      .eq('status', 'upcoming')
+      .select('id, title, status, submissions_open_at, submissions_close_at')
+      .in('status', ['upcoming', 'open'])
       .order('season_number', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    if (!c) return { opened: false, reason: 'no_contest' }
-    if (c.status !== 'upcoming') return { opened: false, reason: 'not_upcoming' }
-    if (!c.submissions_open_at) return { opened: false, reason: 'no_date' }
-    if (new Date(c.submissions_open_at).getTime() > Date.now()) {
-      return { opened: false, reason: 'not_yet' }
+    if (!c) return { changed: false, reason: 'no_contest' }
+    const now = Date.now()
+
+    // ── upcoming -> open ──────────────────────────────────────────────────
+    if (c.status === 'upcoming') {
+      if (!c.submissions_open_at) return { changed: false, reason: 'not_due' }
+      if (new Date(c.submissions_open_at).getTime() > now) {
+        return { changed: false, reason: 'not_due' }
+      }
+      const { data: up, error } = await admin
+        .from('contests')
+        .update({ status: 'open' })
+        .eq('id', c.id)
+        .eq('status', 'upcoming')      // idempotent under concurrent renders
+        .select('id, title')
+        .maybeSingle()
+      if (error || !up) return { changed: false, reason: 'error' }
+      console.log(`[contestSchedule] auto-opened "${up.title}" (${up.id})`)
+      return { changed: true, to: 'open', id: up.id, title: up.title }
     }
 
-    // `.eq('status','upcoming')` makes this idempotent: if two renders race,
-    // only the first one matches a row and the second updates nothing.
-    const { data: updated, error } = await admin
+    // ── open -> voting ────────────────────────────────────────────────────
+    if (!c.submissions_close_at) return { changed: false, reason: 'not_due' }
+    if (new Date(c.submissions_close_at).getTime() > now) {
+      return { changed: false, reason: 'not_due' }
+    }
+
+    // Refuse to start voting with nothing to vote on. An empty voting round is
+    // worse than a late one: it strands the season with no possible winner and
+    // no way back. Leave submissions open and let the daily digest raise it.
+    const { count } = await admin
+      .from('contest_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', c.id)
+      .eq('payment_status', 'paid')
+      .eq('is_approved', true)
+    const entryCount = count ?? 0
+    if (entryCount === 0) {
+      console.warn(
+        `[contestSchedule] "${c.title}" was due to start voting but has no paid, approved entries — left open`,
+      )
+      return { changed: false, reason: 'no_entries' }
+    }
+
+    const { data: up, error } = await admin
       .from('contests')
-      .update({ status: 'open' })
+      .update({ status: 'voting' })
       .eq('id', c.id)
-      .eq('status', 'upcoming')
+      .eq('status', 'open')
       .select('id, title')
       .maybeSingle()
-
-    if (error || !updated) return { opened: false, reason: 'error' }
-    console.log(`[contestSchedule] auto-opened "${updated.title}" (${updated.id})`)
-    return { opened: true, id: updated.id, title: updated.title }
+    if (error || !up) return { changed: false, reason: 'error' }
+    console.log(`[contestSchedule] auto-started voting on "${up.title}" (${up.id})`)
+    return { changed: true, to: 'voting', id: up.id, title: up.title, entryCount }
   } catch (e) {
-    console.error('[contestSchedule] autoOpenDueContest failed:', e)
-    return { opened: false, reason: 'error' }
+    console.error('[contestSchedule] autoAdvanceContest failed:', e)
+    return { changed: false, reason: 'error' }
   }
 }

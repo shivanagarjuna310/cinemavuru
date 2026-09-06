@@ -6,7 +6,8 @@ import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
 import ContestComingSoon from '@/components/ContestComingSoon'
-import { autoOpenDueContest } from '@/lib/contestSchedule'
+import ContestRulesButton from '@/components/ContestRulesButton'
+import { autoAdvanceContest } from '@/lib/contestSchedule'
 export const revalidate = 30
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -116,9 +117,10 @@ function formatPrize(amount: number) {
 }
 
 export default async function ContestPage() {
-  // Flips an 'upcoming' season to 'open' once its scheduled time passes. Runs
-  // during ISR revalidation (~30s), so the contest starts on its own.
-  await autoOpenDueContest()
+  // Advances the season on its published schedule — opens submissions, then
+  // starts voting when they close. Runs during ISR revalidation (~30s), so both
+  // happen on their own rather than needing an admin at the keyboard.
+  await autoAdvanceContest()
 
   const contest = await getActiveContest()
 
@@ -245,6 +247,7 @@ export default async function ContestPage() {
                 <div className="border border-[color:var(--border)] rounded-lg px-4 py-3 text-sm text-[color:var(--muted)]">
                   Voting starts once submissions close
                 </div>
+                <ContestRulesButton contest={contest} className="border border-[color:var(--border)] text-[color:var(--muted)] px-4 py-3 rounded-lg text-sm hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]/40 transition" />
               </div>
             )}
 
@@ -259,6 +262,7 @@ export default async function ContestPage() {
                 <div className="border border-[color:var(--border)] rounded-lg px-4 py-3 text-sm text-[color:var(--muted)]">
                   Submissions are closed{votingLeft ? ` · ${votingLeft} to vote` : ''}
                 </div>
+                <ContestRulesButton contest={contest} className="border border-[color:var(--border)] text-[color:var(--muted)] px-4 py-3 rounded-lg text-sm hover:text-[color:var(--accent)] hover:border-[color:var(--accent)]/40 transition" />
               </div>
             )}
           </div>

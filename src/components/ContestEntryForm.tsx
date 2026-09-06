@@ -7,11 +7,15 @@ import { supabase }            from '@/lib/supabase'
 import { useAuth }             from '@/components/AuthProvider'
 import CashfreeButton          from '@/components/CashfreeButton'
 import UPIPayment from '@/components/UPIPayment'
+import ContestRulesModal from '@/components/ContestRulesModal'
+const ROLES = ['Director','Writer','Producer','Cinematographer','Editor','Cast','Music','Other']
+
 // ── Types ─────────────────────────────────────────────────────
 type Contest = {
   id:                   string
   title:                string
   status:               string
+  min_votes:            number | null
   season_number:        number | null
   submissions_open_at:  string | null
   voting_close_at:      string | null
@@ -49,6 +53,16 @@ export default function ContestEntryForm() {
   const [alreadyEntered, setAlreadyEntered] = useState(false)
   const [districtId,     setDistrictId]     = useState('')
   const [districts,      setDistricts]      = useState<{ id: string; name_en: string }[]>([])
+  // Declared by the entrant — the "must be your own work" rule is otherwise
+  // unenforceable, since nothing in the build can verify authorship and the
+  // form previously captured nothing a reviewer could judge it against.
+  const [entrantRole,   setEntrantRole]   = useState('')
+  const [entrantCredit, setEntrantCredit] = useState('')
+  const [entrantPhone,  setEntrantPhone]  = useState('')
+  // Resolved directly rather than looked up in myFilms: a film created through
+  // this form is `pending`, and myFilms only holds `active` ones, so the
+  // payment screen fell back to the useless label "your film".
+  const [submittedFilmTitle, setSubmittedFilmTitle] = useState('')
   const [submittedFilmId,  setSubmittedFilmId]  = useState('')
   const [submittedEntryId, setSubmittedEntryId] = useState('') // ← NEW: contest_entry row ID
 
@@ -73,7 +87,7 @@ export default function ContestEntryForm() {
       // — untrue, and a dead end for anyone arriving from the nav link.
       const { data: c } = await supabase
         .from('contests')
-        .select('id, title, status, season_number, submissions_open_at, voting_close_at, entry_fee, prize_1st, prize_2nd, prize_3rd, submissions_close_at')
+        .select('id, title, status, min_votes, season_number, submissions_open_at, voting_close_at, entry_fee, prize_1st, prize_2nd, prize_3rd, submissions_close_at')
         .in('status', ['upcoming', 'open', 'voting'])
         .order('season_number', { ascending: false })
         .limit(1)
@@ -106,13 +120,25 @@ export default function ContestEntryForm() {
         .maybeSingle()
 
       if (entry) {
+        // Look the title up directly; the film may be `pending` and so absent
+        // from myFilms, which is what made this read "your film".
+        const { data: ef } = await supabase
+          .from('films').select('title_en').eq('id', entry.film_id).maybeSingle()
+        if (ef?.title_en) setSubmittedFilmTitle(ef.title_en)
+        setSubmittedEntryId(entry.id)
+        setSubmittedFilmId(entry.film_id)
+
+        // Three distinct states, not two. This used to test only for 'paid',
+        // so an entry sitting at 'pending_verification' — meaning the creator
+        // HAS paid and submitted their UTR — fell into the unpaid branch and
+        // was shown the QR again on every refresh, asking them to pay twice.
         if (entry.payment_status === 'paid') {
-          // Fully paid — show already entered
           setAlreadyEntered(true)
+        } else if (entry.payment_status === 'pending_verification') {
+          // Paid, awaiting admin verification. Nothing left for them to do.
+          setStatus('paid')
         } else {
-          // Has entry but not paid yet — resume payment screen
-          setSubmittedEntryId(entry.id)
-          setSubmittedFilmId(entry.film_id)
+          // Genuinely unpaid — resume the payment screen.
           setStatus('submitted')
           setMessage('Complete your payment to confirm your contest entry.')
         }
@@ -120,6 +146,30 @@ export default function ContestEntryForm() {
     }
     init()
   }, [user])
+
+  // Rules must be acknowledged before an entry can be submitted. Two of the
+  // rules cannot be enforced by the build at all — that the entrant
+  // contributed to the film, and that the fee is non-refundable — so an
+  // explicit, timestamped claim at entry is the only real control available.
+  const [rulesOpen, setRulesOpen] = useState(false)
+  const [acknowledged, setAcknowledged] = useState(false)
+
+  async function recordAcknowledgement() {
+    setAcknowledged(true)
+    // Audit trail. Best-effort: never block an entry because logging failed.
+    try {
+      await supabase.from('logs').insert({
+        event_type: 'contest_rules_accepted',
+        user_id: userInfo?.id ?? null,
+        metadata: {
+          contest: contest?.id ?? '',
+          season: String(contest?.season_number ?? ''),
+          declared_own_work: 'true',
+          at: new Date().toISOString(),
+        },
+      })
+    } catch { /* best-effort */ }
+  }
 
   // Abandon an unpaid entry so a different film can be chosen. Without this
   // the payment screen was a one-way door: init() always resumed it, so a
@@ -172,6 +222,24 @@ export default function ContestEntryForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!userInfo || !contest) return
+
+    // Open the rules instead of submitting, rather than failing silently.
+    if (!acknowledged) {
+      setRulesOpen(true)
+      return
+    }
+
+    if (!entrantRole) {
+      setStatus('error')
+      setMessage('Please select your role in this film.')
+      return
+    }
+    const phone = entrantPhone.replace(/[^0-9]/g, '')
+    if (phone.length !== 10) {
+      setStatus('error')
+      setMessage('Please enter a valid 10-digit mobile number — we need it to reach you about your entry and any prize.')
+      return
+    }
 
     setStatus('loading')
     setMessage('')
@@ -245,6 +313,9 @@ export default function ContestEntryForm() {
         creator_id:     userInfo.id,
         payment_status: 'pending',
         is_approved:    false,
+        entrant_role:   entrantRole,
+        entrant_credit: entrantCredit.trim() || null,
+        entrant_phone:  phone,
       })
       .select('id')
       .single()
@@ -258,6 +329,11 @@ export default function ContestEntryForm() {
     }
 
     setSubmittedFilmId(targetFilmId)
+    // `||` not `??`: trim() always returns a string, so `??` would never fall
+    // through to the empty default.
+    setSubmittedFilmTitle(
+      myFilms.find(f => f.id === targetFilmId)?.title_en || newTitle.trim() || '',
+    )
     setSubmittedEntryId(newEntry.id) // ← NEW: save entry row ID
     setStatus('submitted')
     setMessage('Film submitted! Complete payment to confirm your entry.')
@@ -354,7 +430,7 @@ export default function ContestEntryForm() {
         {submittedFilmId && (
           <p className="text-[color:var(--text)] text-sm mt-3">
             Entering:{' '}
-            <b>{myFilms.find(f => f.id === submittedFilmId)?.title_en ?? (newTitle || 'your film')}</b>
+            <b>{submittedFilmTitle || myFilms.find(f => f.id === submittedFilmId)?.title_en || 'your film'}</b>
           </p>
         )}
 
@@ -380,9 +456,17 @@ export default function ContestEntryForm() {
   if (status === 'paid') return (
     <div className="bg-[color:var(--surface)] border border-green-700/30 rounded-2xl p-8 text-center">
       <div className="text-5xl mb-4">🎉</div>
-      <p className="text-green-400 font-bold text-xl mb-2">Payment Details Submitted!</p>
-      <p className="text-[color:var(--text)] text-sm mb-1">We have received your UTR number.</p>
-      <p className="text-[color:var(--muted)] text-sm mb-6">Admin will verify your payment and approve your entry within 24 hours.</p>
+      <p className="text-green-400 font-bold text-xl mb-2">Payment submitted — nothing more to do</p>
+      {submittedFilmTitle && (
+        <p className="text-[color:var(--text)] text-sm mb-1">
+          Your entry: <b>{submittedFilmTitle}</b>
+        </p>
+      )}
+      <p className="text-[color:var(--text)] text-sm mb-1">We have received your payment reference.</p>
+      <p className="text-[color:var(--muted)] text-sm mb-6">
+        An admin will verify it and approve your entry within 24 hours. You do <b>not</b> need to pay
+        again — if you reload this page you will land right back here until it is approved.
+      </p>
       <button onClick={() => router.push('/contest')}
         className="bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-8 py-3 rounded-lg font-bold uppercase text-sm">
         View Leaderboard →
@@ -467,10 +551,104 @@ export default function ContestEntryForm() {
           </div>
         )}
 
-        <button type="submit" disabled={status === 'loading'}
-          className="w-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black py-3.5 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition disabled:opacity-50 text-sm">
-          {status === 'loading' ? '⏳ Submitting...' : `Submit Film →`}
+        {/* Authorship declaration + contact. Required: these are what make the
+            "it must be your own work" rule reviewable, and the phone number is
+            how you reach a winner to pay them. */}
+        <div className="rounded-xl border border-[color:var(--border)] bg-[color:var(--bg)] p-4 space-y-4">
+          <div>
+            <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+              Your role in this film *
+            </label>
+            <select
+              value={entrantRole}
+              onChange={e => { setEntrantRole(e.target.value); setMessage('') }}
+              className="w-full bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+            >
+              <option value="">Select your role…</option>
+              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <p className="text-[11px] text-[color:var(--faint)] mt-1">
+              You must have contributed to the film to enter it.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+              Credit line (optional)
+            </label>
+            <input
+              type="text"
+              value={entrantCredit}
+              onChange={e => setEntrantCredit(e.target.value)}
+              placeholder="e.g. Directed by Ravi Kumar · DOP Anil"
+              maxLength={160}
+              className="w-full bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-[color:var(--muted)] uppercase tracking-widest mb-1.5">
+              Mobile number *
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-[color:var(--muted)] text-sm shrink-0">+91</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={entrantPhone}
+                onChange={e => { setEntrantPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10)); setMessage('') }}
+                placeholder="10-digit mobile number"
+                className="w-full bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-4 py-2.5 text-[color:var(--text)] text-sm placeholder-[color:var(--faint)] focus:outline-none focus:border-[color:var(--accent)]/50 transition"
+              />
+            </div>
+            <p className="text-[11px] text-[color:var(--faint)] mt-1">
+              Used only to contact you about your entry and to pay out if you win. Not shown publicly.
+            </p>
+          </div>
+        </div>
+
+        {/* Rules gate. Reads as a confirmation once done, so the entrant can
+            see the state rather than wondering why submit did nothing. */}
+        <div className={`rounded-xl border p-3.5 ${
+          acknowledged
+            ? 'border-[color:var(--accent)]/40 bg-[#D4A017]/8'
+            : 'border-[color:var(--border)] bg-[color:var(--bg)]'
+        }`}>
+          {acknowledged ? (
+            <p className="text-[13px] text-[color:var(--accent)] font-semibold flex items-center gap-2">
+              <span aria-hidden>✓</span> Rules acknowledged — you can submit your film.
+              <button type="button" onClick={() => setRulesOpen(true)}
+                className="ml-auto text-[11px] text-[color:var(--muted)] underline hover:text-[color:var(--text)]">
+                Read again
+              </button>
+            </p>
+          ) : (
+            <>
+              <p className="text-[13px] text-[color:var(--muted)] leading-relaxed mb-2.5">
+                Before you enter, please read the contest rules — including that the film must be your
+                own work and that the entry fee is non-refundable.
+              </p>
+              <button type="button" onClick={() => setRulesOpen(true)}
+                className="w-full border border-[color:var(--accent)]/45 text-[color:var(--accent)] py-2.5 rounded-lg font-bold uppercase tracking-wide text-xs hover:bg-[#D4A017]/10 transition">
+                📋 Read &amp; acknowledge the rules
+              </button>
+            </>
+          )}
+        </div>
+
+        <button type="submit" disabled={status === 'loading' || !acknowledged}
+          title={!acknowledged ? 'Please read and acknowledge the contest rules first' : ''}
+          className="w-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black py-3.5 rounded-lg font-bold uppercase tracking-wide hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+          {status === 'loading' ? '⏳ Submitting...' : acknowledged ? `Submit Film →` : 'Acknowledge the rules to continue'}
         </button>
+
+        <ContestRulesModal
+          contest={contest}
+          mode="acknowledge"
+          open={rulesOpen}
+          onClose={() => setRulesOpen(false)}
+          onAccept={recordAcknowledgement}
+        />
 
         <p className="text-center text-xs text-[color:var(--faint)]">
           By entering, you confirm this is your original work.

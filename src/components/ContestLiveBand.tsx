@@ -11,6 +11,7 @@
 
 import Link from 'next/link'
 import ContestCountdown from './ContestCountdown'
+import CountUp from './CountUp'
 
 export type LiveContest = {
   id: string
@@ -26,6 +27,11 @@ export type LiveContest = {
 }
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
+
+/** A stat tile either counts up to a number or shows fixed text. */
+type Stat =
+  | { n: number; label: string; text?: never }
+  | { text: string; label: string; n?: never }
 
 export default function ContestLiveBand({
   contest,
@@ -52,10 +58,10 @@ export default function ContestLiveBand({
         countdownLabel: 'Voting ends in',
         endedLabel: 'Voting has closed',
         stats: [
-          [String(entryCount), entryCount === 1 ? 'film competing' : 'films competing'],
-          [String(voteCount), voteCount === 1 ? 'vote cast' : 'votes cast'],
-          [inr(contest.prize_1st), 'top prize'],
-        ] as [string, string][],
+          { n: entryCount, label: entryCount === 1 ? 'film competing' : 'films competing' },
+          { n: voteCount, label: voteCount === 1 ? 'vote cast' : 'votes cast' },
+          { text: inr(contest.prize_1st), label: 'top prize' },
+        ] as Stat[],
       }
     : {
         badge: 'Submissions Open',
@@ -65,23 +71,44 @@ export default function ContestLiveBand({
         countdownLabel: 'Entries close in',
         endedLabel: 'Entries have closed',
         stats: [
-          [String(entryCount), entryCount === 1 ? 'film entered' : 'films entered'],
-          [inr(contest.prize_1st), 'top prize'],
-          [contest.entry_fee != null ? inr(contest.entry_fee) : '—', 'to enter'],
-        ] as [string, string][],
+          { n: entryCount, label: entryCount === 1 ? 'film entered' : 'films entered' },
+          { text: inr(contest.prize_1st), label: 'top prize' },
+          { text: contest.entry_fee != null ? inr(contest.entry_fee) : '—', label: 'to enter' },
+        ] as Stat[],
       }
 
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6">
-      <div className="rounded-2xl border border-[color:var(--accent)]/35 bg-[color:var(--surface)] overflow-hidden">
-        {/* Accent strip — reads as "this is happening now" at a glance. */}
-        <div className="h-1 bg-gradient-to-r from-[#FF6B1A] to-[#D4A017]" />
+      {/* Animated brand edge: this gradient wrapper shows through as a 1.5px
+          border around the inner card, and the gradient itself travels.
+          Cheaper than animating a border colour, and it never causes layout. */}
+      <div className="anim-edge relative rounded-2xl p-[1.5px] shadow-lg shadow-orange-900/10">
+        {/* Breathing glow behind the card. Brand fills only, so it reads the
+            same in light and dark without touching the theme neutrals. */}
+        <div
+          aria-hidden
+          className="anim-breathe pointer-events-none absolute -inset-3 rounded-3xl blur-2xl"
+          style={{ background: 'radial-gradient(60% 60% at 50% 50%, rgba(255,107,26,.28), transparent 70%)' }}
+        />
 
-        <div className="p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8">
+        <div className="relative rounded-[14px] bg-[color:var(--surface)] overflow-hidden">
+          {/* Faint brand wash so the card is not flat surface colour. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'radial-gradient(120% 90% at 0% 0%, rgba(212,160,23,.10), transparent 60%)' }}
+          />
+
+          <div className="relative p-4 sm:p-6 flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-black bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] px-2.5 py-1 rounded">
-                <span className="w-1.5 h-1.5 rounded-full bg-black/70 animate-pulse" aria-hidden />
+              <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-black bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] px-2.5 py-1 rounded">
+                {/* A solid core with an expanding ring reads as "live" far
+                    better than a fading opacity pulse. */}
+                <span className="relative inline-flex w-1.5 h-1.5" aria-hidden>
+                  <span className="anim-ping absolute inline-flex w-full h-full rounded-full bg-black/60" />
+                  <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-black/80" />
+                </span>
                 {copy.badge}
               </span>
               <span className="text-[color:var(--muted)] text-xs">
@@ -90,7 +117,9 @@ export default function ContestLiveBand({
             </div>
 
             <h2
-              className="text-xl sm:text-2xl md:text-3xl font-black text-[color:var(--text)] leading-tight"
+              className={`text-xl sm:text-2xl md:text-3xl font-black leading-tight ${
+                isVoting ? 'text-shimmer' : 'text-[color:var(--text)]'
+              }`}
               style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
             >
               {copy.headline}
@@ -99,16 +128,16 @@ export default function ContestLiveBand({
 
             {/* Live numbers — the "something is happening" signal. */}
             <div className="flex items-stretch gap-2 sm:gap-3 mt-4">
-              {copy.stats.map(([value, label]) => (
+              {copy.stats.map(stat => (
                 <div
-                  key={label}
-                  className="flex-1 min-w-0 rounded-xl bg-[color:var(--bg)] border border-[color:var(--border)] px-2 py-2.5 text-center"
+                  key={stat.label}
+                  className="flex-1 min-w-0 rounded-xl bg-[color:var(--bg)] border border-[color:var(--border)] px-2 py-2.5 text-center transition-all duration-300 hover:border-[color:var(--accent)]/50 hover:-translate-y-0.5"
                 >
                   <div className="text-base sm:text-xl font-black text-[color:var(--accent)] tabular-nums whitespace-nowrap">
-                    {value}
+                    {typeof stat.n === 'number' ? <CountUp value={stat.n} /> : stat.text}
                   </div>
                   <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[color:var(--muted)] mt-0.5 truncate">
-                    {label}
+                    {stat.label}
                   </div>
                 </div>
               ))}
@@ -125,10 +154,16 @@ export default function ContestLiveBand({
             )}
             <Link
               href={copy.cta.href}
-              className="block text-center bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3.5 rounded-xl font-black uppercase tracking-wide text-[13px] sm:text-sm hover:opacity-90 transition lg:min-w-[240px]"
+              className="group relative block text-center bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-6 py-3.5 rounded-xl font-black uppercase tracking-wide text-[13px] sm:text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-orange-900/30 lg:min-w-[240px]"
             >
-              {copy.cta.label}
+              <span
+                aria-hidden
+                className="anim-breathe pointer-events-none absolute -inset-1 rounded-2xl blur-md"
+                style={{ background: 'linear-gradient(90deg, rgba(255,107,26,.45), rgba(212,160,23,.45))' }}
+              />
+              <span className="relative">{copy.cta.label}</span>
             </Link>
+            </div>
           </div>
         </div>
       </div>

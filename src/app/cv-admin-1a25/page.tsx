@@ -32,7 +32,16 @@ type ContestEntry = {
   created_at: string
   razorpay_payment_id: string | null
   payment_ref: string | null
-  films: { id: string; title_en: string } | null
+  // Declared by the entrant at submission — the only evidence a reviewer has
+  // for the "must be your own work" rule.
+  entrant_role: string | null
+  entrant_credit: string | null
+  entrant_phone: string | null
+  // Rejection is tracked separately from is_approved: "not reviewed yet" and
+  // "reviewed and refused" are different states.
+  rejected_at: string | null
+  rejection_reason: string | null
+  films: { id: string; title_en: string; status?: string; genre?: string | null; video_url?: string | null } | null
   profiles: { name: string | null } | null
 }
 type Contest = {
@@ -82,6 +91,8 @@ const EVENT_STYLE: Record<string, { color: string; label: string }> = {
   contest_closed:  { color: 'text-[color:var(--accent)]', label: '🏆 Contest closed' },
   contest_opened:  { color: 'text-green-400',  label: '▶ Contest opened' },
   contest_voting:  { color: 'text-[color:var(--accent)]', label: '🗳 Voting started' },
+  contest_entry_rejected: { color: 'text-red-400', label: '🚫 Entry rejected' },
+  contest_rules_accepted: { color: 'text-[color:var(--muted)]', label: '📋 Rules accepted' },
 }
 
 export default function AdminPage() {
@@ -194,7 +205,7 @@ export default function AdminPage() {
     if (!contest) { setContestLoading(false); return }
     const { data } = await supabase
       .from('contest_entries')
-      .select('*, films(id, title_en, status), profiles!contest_entries_creator_id_fkey(name)')
+      .select('*, films(id, title_en, status, genre, video_url), profiles!contest_entries_creator_id_fkey(name)')
       .eq('contest_id', contest.id)
       .order('contest_score', { ascending: false })
     setContestEntries((data as ContestEntry[]) ?? [])
@@ -249,6 +260,48 @@ export default function AdminPage() {
     setContestEntries(prev => prev.map(e =>
       e.id === entryId ? { ...e, is_approved: isApproved } : e
     ))
+  }
+
+  // Reject an entry, with a recorded reason. Kept distinct from Revoke:
+  // revoking un-approves something previously approved, while rejecting is a
+  // reviewed refusal — and the reason is what you point at in a dispute.
+  async function rejectContestEntry(entryId: string, filmTitle: string) {
+    const reason = window.prompt(
+      `Reject "${filmTitle}"?\n\nGive a reason — the entrant may ask, and this is what you will point to:\n` +
+      `e.g. not the entrant's own work · not Telugu · copyright · inappropriate content · duplicate entry`,
+    )
+    if (reason === null) return
+    if (!reason.trim()) { showToast('A reason is required to reject.', 'error'); return }
+
+    const { error } = await supabase.from('contest_entries').update({
+      rejected_at: new Date().toISOString(),
+      rejection_reason: reason.trim(),
+      is_approved: false,   // a rejected entry must never be publicly listed
+    }).eq('id', entryId)
+    if (error) { showToast(`Error: ${error.message}`, 'error'); return }
+
+    setContestEntries(prev => prev.map(e =>
+      e.id === entryId
+        ? { ...e, rejected_at: new Date().toISOString(), rejection_reason: reason.trim(), is_approved: false }
+        : e,
+    ))
+    try {
+      await supabase.from('logs').insert({
+        event_type: 'contest_entry_rejected',
+        metadata: { entry: entryId, film: filmTitle, reason: reason.trim() },
+      })
+    } catch { /* history is best-effort */ }
+    showToast('Entry rejected')
+  }
+
+  async function unrejectContestEntry(entryId: string) {
+    const { error } = await supabase.from('contest_entries')
+      .update({ rejected_at: null, rejection_reason: null }).eq('id', entryId)
+    if (error) { showToast(`Error: ${error.message}`, 'error'); return }
+    setContestEntries(prev => prev.map(e =>
+      e.id === entryId ? { ...e, rejected_at: null, rejection_reason: null } : e,
+    ))
+    showToast('Rejection undone — entry is back in the queue')
   }
 
   // ── Approve contest entry + film on main feed in one click ──
@@ -1122,7 +1175,52 @@ export default function AdminPage() {
                           </div>
                           <p className="text-[color:var(--muted)] text-xs mb-2">
                             by {entry.profiles?.name ?? 'Unknown'} · Score: <span className="text-[color:var(--accent)] font-bold">{entry.contest_score}</span>
+                            {entry.films?.genre ? ` · ${entry.films.genre}` : ''}
+                            {` · entered ${new Date(entry.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
                           </p>
+
+                          {/* What the entrant declared, plus a way to actually
+                              watch the film. Without this the reviewer was
+                              approving a title and nothing more. */}
+                          <div className="mb-2 rounded-lg bg-[color:var(--bg)] border border-[color:var(--border)] px-3 py-2 space-y-1">
+                            <div className="text-[11px] text-[color:var(--muted)]">
+                              <span className="uppercase tracking-wide text-[color:var(--faint)]">Role</span>{' '}
+                              {entry.entrant_role
+                                ? <span className="text-[color:var(--text)] font-semibold">{entry.entrant_role}</span>
+                                : <span className="text-yellow-500">not declared (entered before this was required)</span>}
+                            </div>
+                            {entry.entrant_credit && (
+                              <div className="text-[11px] text-[color:var(--muted)]">
+                                <span className="uppercase tracking-wide text-[color:var(--faint)]">Credit</span>{' '}
+                                <span className="text-[color:var(--text)]">{entry.entrant_credit}</span>
+                              </div>
+                            )}
+                            <div className="text-[11px] text-[color:var(--muted)]">
+                              <span className="uppercase tracking-wide text-[color:var(--faint)]">Phone</span>{' '}
+                              {entry.entrant_phone
+                                ? <a href={`tel:+91${entry.entrant_phone}`} className="text-[color:var(--accent)]">+91 {entry.entrant_phone}</a>
+                                : <span className="text-yellow-500">not provided</span>}
+                            </div>
+                            {entry.films?.video_url && (
+                              <div className="text-[11px]">
+                                <a href={entry.films.video_url.replace('/embed/', '/watch?v=')}
+                                  target="_blank" rel="noopener noreferrer"
+                                  className="text-[color:var(--accent)] font-semibold hover:underline">
+                                  ▶ Watch the film on YouTube
+                                </a>
+                                {entry.films.status && (
+                                  <span className="text-[color:var(--faint)]"> · film is {entry.films.status}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {entry.rejected_at && (
+                            <div className="mb-2 rounded-lg bg-red-900/20 border border-red-700/40 px-3 py-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wide text-red-400">Rejected</p>
+                              <p className="text-xs text-[color:var(--text)] mt-0.5">{entry.rejection_reason}</p>
+                            </div>
+                          )}
                           <div className="flex gap-2 flex-wrap">
                             <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
                               entry.payment_status === 'paid'
@@ -1132,11 +1230,13 @@ export default function AdminPage() {
                               💳 {entry.payment_status}
                             </span>
                             <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
-                              entry.is_approved
+                              entry.rejected_at
+                                ? 'bg-red-900/50 text-red-300 border border-red-700/60'
+                                : entry.is_approved
                                 ? 'bg-green-900/40 text-green-400 border border-green-700/40'
-                                : 'bg-red-900/40 text-red-400 border border-red-700/40'
+                                : 'bg-yellow-900/40 text-yellow-400 border border-yellow-700/40'
                             }`}>
-                              {entry.is_approved ? '✅ Approved' : '⏳ Pending'}
+                              {entry.rejected_at ? '🚫 Rejected' : entry.is_approved ? '✅ Approved' : '⏳ Awaiting review'}
                             </span>
                             {entry.payment_ref && (
                               <span className="text-xs bg-[#D4A017]/10 border border-[color:var(--accent)]/20 text-[color:var(--accent)] px-2 py-0.5 rounded">
@@ -1151,10 +1251,21 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div className="flex flex-row sm:flex-col gap-2 flex-wrap shrink-0">
-                          {!entry.is_approved && entry.payment_status === 'paid' && (
+                          {!entry.is_approved && entry.payment_status === 'paid' && !entry.rejected_at && (
                             <button onClick={() => approveForContestAndFeed(entry.id, entry.films?.id ?? '')}
                               className="bg-green-700/80 hover:bg-green-600 text-white px-4 py-1.5 rounded text-xs font-bold uppercase transition">
                               ✅ Approve for Contest & Feed
+                            </button>
+                          )}
+                          {entry.rejected_at ? (
+                            <button onClick={() => unrejectContestEntry(entry.id)}
+                              className="border border-[color:var(--border)] text-[color:var(--muted)] px-4 py-1.5 rounded text-xs font-bold uppercase hover:text-[color:var(--accent)] transition">
+                              ↩ Undo rejection
+                            </button>
+                          ) : (
+                            <button onClick={() => rejectContestEntry(entry.id, entry.films?.title_en ?? 'this entry')}
+                              className="border border-red-700/50 text-red-400 px-4 py-1.5 rounded text-xs font-bold uppercase hover:bg-red-700/20 transition">
+                              🚫 Reject entry
                             </button>
                           )}
                           {entry.is_approved && (

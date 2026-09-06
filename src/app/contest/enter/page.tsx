@@ -30,8 +30,8 @@ export default function ContestEnterPage() {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-[#FF6B1A]/15 border border-[color:var(--accent-hot)]/30 flex items-center justify-center text-[color:var(--accent-hot)] font-bold text-lg flex-shrink-0">🔒</div>
                 <div>
-                  <div className="font-semibold text-[color:var(--text)]">Final Vote</div>
-                  <div className="text-xs text-[color:var(--muted)]">Once cast, votes cannot be changed</div>
+                  <div className="font-semibold text-[color:var(--text)]">Changeable</div>
+                  <div className="text-xs text-[color:var(--muted)]">Move or withdraw your vote until voting closes</div>
                 </div>
               </div>
             </div>

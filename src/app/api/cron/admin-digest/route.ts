@@ -19,7 +19,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { notifyAdmins, esc, SITE } from '@/lib/adminNotify'
-import { autoOpenDueContest } from '@/lib/contestSchedule'
+import { autoAdvanceContest } from '@/lib/contestSchedule'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -89,19 +89,38 @@ async function run(req: Request) {
     console.error('[admin-digest] refused:', auth.reason)
     return NextResponse.json({ error: 'unauthorized', reason: auth.reason }, { status: 401 })
   }
-  // Backstop for the scheduled contest open, in case nobody loads /contest
-  // around the start time (that page normally triggers it on revalidation).
-  const autoOpened = await autoOpenDueContest()
-  if (autoOpened.opened) {
+  // Backstop for the scheduled transitions, in case nobody loads /contest
+  // around the deadline (that page normally triggers them on revalidation).
+  const advanced = await autoAdvanceContest()
+  if (advanced.changed) {
     await notifyAdmins({
-      kind: 'contest_opened',
+      kind: advanced.to === 'open' ? 'contest_opened' : 'contest_voting_started',
       tone: 'good',
-      subject: `Contest entries are now OPEN — ${autoOpened.title}`,
-      heading: 'Contest opened automatically',
-      intro:
-        'The scheduled start time passed, so entries are now open and the entry fee is being charged.',
-      rows: [['Contest', autoOpened.title]],
+      subject: advanced.to === 'open'
+        ? `Contest entries are now OPEN — ${advanced.title}`
+        : `Voting has started — ${advanced.title}`,
+      heading: advanced.to === 'open' ? 'Contest opened automatically' : 'Voting started automatically',
+      intro: advanced.to === 'open'
+        ? 'The scheduled start time passed, so entries are now open and the entry fee is being charged.'
+        : 'Submissions closed on schedule, so the season moved to public voting.',
+      rows: advanced.to === 'open'
+        ? [['Contest', advanced.title]]
+        : [['Contest', advanced.title], ['Entries in the vote', String(advanced.entryCount ?? 0)]],
       ctaLabel: 'Open Admin Panel',
+    }).catch(() => {})
+  } else if (advanced.reason === 'no_entries') {
+    // Submissions were due to close but there is nothing to vote on. Needs a
+    // human decision — extend the window, or accept the season has no entries.
+    await notifyAdmins({
+      kind: 'contest_no_entries',
+      tone: 'danger',
+      subject: 'Contest was due to start voting but has NO entries',
+      heading: 'Voting could not start',
+      intro:
+        'The submission deadline passed but no paid, approved entries exist, so voting was not started ' +
+        'and submissions remain open. Extend the deadline or decide how to handle the season.',
+      ctaLabel: 'Open Admin Panel',
+      throttleMinutes: 20 * 60,
     }).catch(() => {})
   }
 

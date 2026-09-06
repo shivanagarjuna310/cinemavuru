@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
+import ContestRulesButton from '@/components/ContestRulesButton'
 
 function getSupabase() {
   return createClient(
@@ -146,6 +147,7 @@ export default async function ContestFilmsPage() {
                   Enter Your Film →
                 </Link>
               )}
+              <ContestRulesButton contest={contest} />
               <Link href="/contest/winners"
                 className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#D4A017]/10 transition">
                 🏛️ Hall of Fame
