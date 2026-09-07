@@ -162,12 +162,16 @@ export default function ContestRulesModal({
           ]} />
 
           <Section title="Scoring" items={[
-            <>Winners are decided by public vote — films are ranked by total votes; the highest wins.</>,
+            <>Winners are decided by public vote — films are ranked by total votes received.</>,
+            <>{b('The top 5 films are manually reviewed.')} Once voting closes we review the top 5 by
+              votes — checking eligibility, authorship, and that the votes are genuine — before the
+              final three winners are announced.</>,
             threshold > 0
               ? <>{b(`${threshold} votes`)} unlocks the full prize pool. Getting your film in front of
                   people is part of the contest — share it, and get your audience to register and vote.</>
               : <>Films are ranked purely by votes received.</>,
-            <>Likes and views do {b('not')} count toward the result. Only votes decide placement.</>,
+            <>Likes and views do {b('not')} count toward the result. Placement comes from votes,
+              subject to the review above.</>,
             <>Engagement shown on the leaderboard counts only what a film earned after it entered, so an
               older film gets no head start over a newer one.</>,
           ]} />

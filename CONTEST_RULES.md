@@ -9,7 +9,7 @@
 
 - **Entry fee:** ₹49 per entry
 - **Who can enter:** Any registered CinemaVuru user, from any district
-- **Submission window:** **8 September – 25 September 2026** (closes 11:59 pm IST on the 25th)
+- **Submission window:** **8 September – 30 September 2026** (closes 11:59 pm IST on the 30th)
 - **Language:** Telugu
 - **Length:** No limit — films are hosted on YouTube and embedded
 - **Film age:** Any film is eligible, including films released earlier. It does not need to be made for this contest.
@@ -21,7 +21,7 @@
 
 ## Voting
 
-- **Voting window:** **26 September – 9 October 2026** (closes 11:59 pm IST on the 9th)
+- **Voting window:** **1 October – 14 October 2026** (closes 11:59 pm IST on the 14th)
 - Voting opens automatically as soon as submissions close.
 - **One vote per registered user, per season.** You may vote for any film, including your own.
 - **You can change or withdraw your vote** any time until voting closes. Moving your vote to another film removes it from the first.
@@ -29,11 +29,12 @@
 
 ## Scoring
 
-- **Winners are decided by public vote.** Films are ranked by total votes received; the highest wins.
+- **Winners are decided by public vote.** Films are ranked by total votes received.
+- **The top 5 films are manually reviewed.** Once voting closes we review the top 5 by votes — checking eligibility, authorship and that the votes are genuine — before the final three winners are announced.
 - **500 votes unlocks the full prize pool.** Getting your film in front of people is part of the contest — share it, and get your audience to register and vote.
 - **If no film reaches 500 votes:** the top three by votes still win, at **[fallback — see note below]**. The contest always produces winners.
 - **Votes are one per user for the whole season, not per film.** So every vote your film gets is a vote no other film can have — and the total is capped by how many people register and vote.
-- Likes and views do **not** count toward the result. Only votes decide placement.
+- Likes and views do **not** count toward the result. Placement comes from votes, subject to the review above.
 - Engagement shown on the contest leaderboard counts only what a film earned **after it entered**, so an older film gets no head start over a newer one.
 
 ## Prizes
@@ -50,7 +51,7 @@
 
 ## Fair Play
 
-- **Vote manipulation** — bots, purchased votes, or fake accounts — may result in disqualification at CinemaVuru's discretion. Voting patterns are reviewed manually before results are finalised.
+- **Vote manipulation** — bots, purchased votes, or fake accounts — may result in disqualification at CinemaVuru's discretion. Voting patterns are reviewed by the jury before results are finalised, and a film whose votes cannot be trusted will not be awarded a prize.
 - CinemaVuru reserves the right to remove any entry that violates copyright, contains inappropriate content, or misrepresents authorship.
 - **Entering someone else's film as your own** is treated as the most serious breach: the entry is disqualified, the fee is not refunded, and the account may be barred from future seasons.
 - Every film is reviewed before approval. Entries that are not Telugu-language, that you did not contribute to, or that breach the above, may be rejected — and the entry fee is not refunded.
@@ -58,7 +59,7 @@
 
 ## Results
 
-- Winners announced **shortly after voting closes on 9 October**, via the CinemaVuru website and Instagram
+- Winners announced **shortly after voting closes on 14 October**, via the CinemaVuru website and Instagram
 - The season moves through: **Coming Soon → Submissions Open → Voting → Results Announced (Closed)**
 
 ---
@@ -101,9 +102,9 @@ Also still blank: the payout method and the payout window.
 
 ## Two changes I made to match your dates
 
-**Dates are now in the database:** submissions 8 Sep 00:00 → 25 Sep 23:59 IST (18 days), voting → 9 Oct 23:59 IST (14 days). These drive the public countdowns, which were previously blank.
+**Dates are now in the database:** submissions 8 Sep 00:00 → 30 Sep 23:59 IST (23 days), voting → 14 Oct 23:59 IST (14 days). These drive the public countdowns, which were previously blank.
 
-**Voting now starts automatically.** Previously only *Coming Soon → Submissions Open* was automated; moving to voting needed an admin to click a button. With 26 September published, a missed click would have left submissions open past their advertised deadline and voting never starting. Both transitions are now automated, with one deliberate guard: if the deadline passes and there are **no paid, approved entries**, voting is *not* started and submissions stay open — an empty voting round would strand the season with no possible winner and no way back. Admins get an email in that case.
+**Voting now starts automatically.** Previously only *Coming Soon → Submissions Open* was automated; moving to voting needed an admin to click a button. With 1 October published, a missed click would have left submissions open past their advertised deadline and voting never starting. Both transitions are now automated, with one deliberate guard: if the deadline passes and there are **no paid, approved entries**, voting is *not* started and submissions stay open — an empty voting round would strand the season with no possible winner and no way back. Admins get an email in that case.
 
 Verified: opens on date ✓, refuses to start voting with zero entries ✓, starts voting once one paid+approved entry exists ✓, repeat runs change nothing ✓, Season 1 untouched throughout ✓.
 
@@ -116,16 +117,15 @@ Closing the season is still manual, on purpose — it writes the Hall of Fame an
 | "Each entry requires its own ₹49 fee" (implying multiple) | One entry per account, enforced by a unique constraint. There is no way to buy a second. |
 | "Votes cannot be changed once cast" | Votes **can** be changed or withdrawn until voting closes. |
 | "Minimum 500 votes" | Impossible — see above. |
-| "80% audience votes + 20% jury score" | **Not built.** No jury column exists in `contests` or `contest_entries`; ranking is a plain `ORDER BY contest_score DESC` on the raw vote count. |
-| "backed by the jury review layer" | No jury layer exists. Fair-play review is manual admin judgement. |
+| "80% audience votes + 20% jury score" | **Not built as scoring.** No jury column exists; ranking is a plain `ORDER BY contest_score DESC`. Replaced with a manual top-5 review, which the build does support. |
+| "backed by the jury review layer" | Now published as a manual review of the top 5 — admin-run, with recorded rejection reasons. |
 | 1st prize ₹10,000 | ₹9,999, per your GST/TDS change. |
 
-**On the 80/20 formula** — publishing it would misdescribe how the winner is actually chosen. Two options:
+**On the jury.** The rules now say the top 5 are manually reviewed, which the build fully supports today — you can watch each film, see the entrant's declared role, credit and phone, and reject with a recorded reason, which promotes the next film up. Nothing to build.
 
-- **Publish pure public voting** (what the rules above say). Accurate today, zero work.
-- **Build the jury layer** — needs a `jury_score` column, an admin UI to enter scores, and weighted ranking. Roughly half a day, and it must ship *before* voting closes on 9 October.
+What is *not* built is jury **scoring** — a weighted blend like "80% votes + 20% jury" that reorders the ranking. There is no `jury_score` column and ranking is a plain `ORDER BY contest_score DESC`. So the published wording deliberately says placement comes from votes, with the review covering eligibility, authorship and vote integrity — a veto, not a re-rank.
 
-I would run Season 1 on pure voting and add a jury in Season 2, once you know what turnout actually looks like.
+That distinction matters if a filmmaker disputes a result: "we disqualified you for X" is defensible, whereas "the jury scored you lower" is not, unless there are recorded scores to show. If you do want scoring to affect placement, say so and I will build it — a `jury_score` column, an admin UI to enter scores, and weighted ranking, roughly half a day, and it must ship *before* voting closes on 14 October.
 
 ## Risks worth closing
 
