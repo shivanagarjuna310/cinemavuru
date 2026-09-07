@@ -21,6 +21,7 @@
 // the free tier, where the Disk IO budget is already tight.
 
 import { createClient } from '@supabase/supabase-js'
+import { announceContestOpen } from '@/lib/contestAnnounce'
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -65,6 +66,21 @@ export async function autoAdvanceContest(): Promise<AdvanceResult> {
         .maybeSingle()
       if (error || !up) return { changed: false, reason: 'error' }
       console.log(`[contestSchedule] auto-opened "${up.title}" (${up.id})`)
+
+      // Tell every registered user that entries are open. The status guard
+      // above means only one render reaches this, and the send dedupes per
+      // address in email_logs, so nobody can be mailed twice.
+      //
+      // Capped low on purpose: this can run inside the /contest revalidation,
+      // where a long render risks the function timeout. Two Resend batches is a
+      // couple of seconds; the daily crons mail whoever is left.
+      const announced = await announceContestOpen(up.id, { maxPerRun: 200 })
+      if (announced) {
+        console.log(
+          `[contestSchedule] announced open to ${announced.sent} user(s), ${announced.failed} failed, ${announced.remaining} left`,
+        )
+      }
+
       return { changed: true, to: 'open', id: up.id, title: up.title }
     }
 

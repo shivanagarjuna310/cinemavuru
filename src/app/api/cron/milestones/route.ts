@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { VIEW_MILESTONES, LIKE_MILESTONES, highestReached, nextMilestone, almostNext, fmt } from '@/lib/milestones'
+import { announceOpenContestIfDue } from '@/lib/contestAnnounce'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -63,6 +64,12 @@ export async function POST(req: Request) { return run(req) }
 async function run(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
+  // Backstop for the "entries are open" broadcast: the send fired inline when
+  // the season opened is capped, and users who registered afterwards were never
+  // in it. No-ops once everyone has had it. Hobby has no spare cron slot, so it
+  // rides along here.
+  const contestAnnounce = await announceOpenContestIfDue()
+
   const { data: films, error } = await admin
     .from('films')
     .select('id, title_en, view_count, like_count, creator_id, districts(name_en, slug, states(slug))')
@@ -74,7 +81,9 @@ async function run(req: Request) {
       { status: 500 },
     )
   }
-  if (!films?.length) return NextResponse.json({ ok: true, sent: 0, note: 'no active films' })
+  if (!films?.length) {
+    return NextResponse.json({ ok: true, sent: 0, note: 'no active films', contestAnnounce })
+  }
 
   // Live rank by views (overall trending).
   const ranked = [...films].sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
@@ -147,7 +156,7 @@ async function run(req: Request) {
   if (!resend) {
     // No email key locally — report what WOULD be sent without sending.
     results.dryRun = true
-    return NextResponse.json({ ok: true, ...results, note: 'RESEND_API_KEY not set — dry run (no emails sent).' })
+    return NextResponse.json({ ok: true, ...results, contestAnnounce, note: 'RESEND_API_KEY not set — dry run (no emails sent).' })
   }
   const batch = candidates.slice(0, MAX_EMAILS_PER_RUN)
 
@@ -192,7 +201,7 @@ async function run(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, ...results })
+  return NextResponse.json({ ok: true, ...results, contestAnnounce })
 }
 
 // ── Email templates (brand-styled, promotion-focused) ────────────────────
