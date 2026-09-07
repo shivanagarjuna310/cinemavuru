@@ -65,7 +65,7 @@ const STEPS = [
 
 export default async function UploadPage() {
   const contest = await getContest()
-  const contestOpen = true // TEMP-PREVIEW: revert before commit
+  const contestOpen = contest?.status === 'open'
   const BENEFITS = benefits({
     firstPrize: contest?.prize_1st ?? null,
     entryFee: contest?.entry_fee ?? null,
