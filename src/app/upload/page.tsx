@@ -3,6 +3,7 @@
 // Video is hosted on YouTube (unlisted) for now.
 // Saved to Supabase films table with status = 'pending'.
 
+import Link              from 'next/link'
 import { createClient }  from '@supabase/supabase-js'
 import Navbar            from '@/components/Navbar'
 import UploadForm        from '@/components/UploadForm'
@@ -17,11 +18,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
-async function getUpcomingContest() {
+// Includes 'open', not just 'upcoming': while a season is running this page has
+// to say what it is NOT, or a creator who came here to enter the contest fills
+// in the free form and believes they have entered.
+async function getContest() {
   const { data } = await supabase
     .from('contests')
     .select('*')
-    .eq('status', 'upcoming')
+    .in('status', ['upcoming', 'open'])
     .order('season_number', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -30,14 +34,26 @@ async function getUpcomingContest() {
 
 // Named prize figures beat vague promises — this is the page where someone is
 // already deciding whether the effort is worth it.
-function benefits(firstPrize: number | null) {
+function benefits(opts: { firstPrize: number | null; entryFee: number | null; contestOpen: boolean }) {
+  const { firstPrize, entryFee, contestOpen } = opts
+  // While the contest is open, "win prizes" next to "free forever" is the exact
+  // pairing that convinces someone a free upload entered them. Name the fee and
+  // say it is a separate form instead.
+  const contestItem = contestOpen
+    ? {
+        icon: '🏆',
+        title: 'The contest is separate',
+        desc: `Entering costs ${entryFee != null ? `₹${entryFee}` : 'a fee'} and uses a different form. Publishing here does not enter you.`,
+      }
+    : firstPrize
+      ? { icon: '🏆', title: `₹${firstPrize.toLocaleString('en-IN')} first prize`, desc: 'A short film competition is coming. Details announced soon.' }
+      : { icon: '🏆', title: 'Win the monthly contest', desc: 'Top films earn cash prizes + a spotlight.' }
+
   return [
     { icon: '📍', title: 'Your district first', desc: 'Your town discovers your film before anyone else.' },
-    firstPrize
-      ? { icon: '🏆', title: `₹${firstPrize.toLocaleString('en-IN')} first prize`, desc: 'A short film competition is coming. Details announced soon.' }
-      : { icon: '🏆', title: 'Win the monthly contest', desc: 'Top films earn cash prizes + a spotlight.' },
+    contestItem,
     { icon: '❤️', title: 'Build a real following', desc: 'Likes, comments and followers that come back.' },
-    { icon: '🆓', title: 'Free forever', desc: 'No fees to publish. Ever.' },
+    { icon: '🆓', title: 'Free to publish', desc: 'No fees to put your film on CinemaVuru.' },
   ]
 }
 
@@ -48,8 +64,13 @@ const STEPS = [
 ]
 
 export default async function UploadPage() {
-  const upcoming = await getUpcomingContest()
-  const BENEFITS = benefits(upcoming?.prize_1st ?? null)
+  const contest = await getContest()
+  const contestOpen = true // TEMP-PREVIEW: revert before commit
+  const BENEFITS = benefits({
+    firstPrize: contest?.prize_1st ?? null,
+    entryFee: contest?.entry_fee ?? null,
+    contestOpen,
+  })
   return (
     <>
       <Navbar />
@@ -57,11 +78,36 @@ export default async function UploadPage() {
         {/* Background glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_0%,rgba(255,107,26,0.08),transparent)] pointer-events-none" />
 
-        {upcoming && (
-          <div className="relative z-10 pt-6">
-            <ContestComingSoon contest={upcoming} compact />
+        {contestOpen ? (
+          <div className="relative z-10 pt-6 max-w-5xl mx-auto px-4 sm:px-6">
+            <div className="bg-[color:var(--surface-2)] border border-[color:var(--border-2)] border-l-4 border-l-red-600 rounded-2xl p-5 sm:flex sm:items-center sm:gap-5">
+              <div className="flex-1">
+                <div className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[2px] font-extrabold text-white bg-red-600 rounded-full px-2.5 py-1 mb-2.5">
+                  Not the contest form
+                </div>
+                <p className="text-[color:var(--text)] text-sm sm:text-base font-bold leading-snug">
+                  This is the free upload — it will not enter you in {contest.title ?? 'the contest'}.
+                </p>
+                <p className="text-[color:var(--muted)] text-xs mt-1.5 leading-relaxed">
+                  Use this form to publish your film on CinemaVuru for free. To compete for the
+                  prize money you must use the contest entry form
+                  {contest.entry_fee != null ? `, which costs ₹${contest.entry_fee}` : ''} and asks
+                  you to declare your role in the film.
+                </p>
+              </div>
+              <Link
+                href="/contest/enter"
+                className="mt-4 sm:mt-0 flex-shrink-0 inline-flex items-center justify-center w-full sm:w-auto bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black font-extrabold text-sm px-5 py-3 rounded-xl"
+              >
+                🏆 Enter the contest{contest.entry_fee != null ? ` — ₹${contest.entry_fee}` : ''} →
+              </Link>
+            </div>
           </div>
-        )}
+        ) : contest ? (
+          <div className="relative z-10 pt-6">
+            <ContestComingSoon contest={contest} compact />
+          </div>
+        ) : null}
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 relative z-10">
 
@@ -83,7 +129,13 @@ export default async function UploadPage() {
 
             {/* Form */}
             <div className="order-2 lg:order-1">
-              <UploadForm />
+              <UploadForm
+                openContest={
+                  contestOpen
+                    ? { title: contest.title ?? null, entryFee: contest.entry_fee ?? null }
+                    : null
+                }
+              />
             </div>
 
             {/* Aside */}

@@ -4,6 +4,7 @@
 // Requires user to be logged in.
 
 import { useState, useEffect } from 'react'
+import Link                   from 'next/link'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
 import { logger }              from '@/lib/logger'
@@ -43,7 +44,16 @@ function toEmbedUrl(url: string): string | null {
   }
 }
 
-export default function UploadForm() {
+/**
+ * @param openContest set when a season is accepting entries, so the success
+ *   screen can correct someone who uploaded here meaning to enter the contest.
+ *   This form never creates an entry.
+ */
+export default function UploadForm({
+  openContest,
+}: {
+  openContest?: { title: string | null; entryFee: number | null } | null
+}) {
   const router = useRouter()
 
   // Auth state (shared context — single session source)
@@ -218,6 +228,33 @@ export default function UploadForm() {
         <p className="text-[color:var(--muted)] text-sm mb-8">
           Once approved, your film will appear on your district film feed.
         </p>
+
+        {/* The moment someone who meant to enter the contest wrongly believes
+            they are done. Say so plainly rather than let them wait for a
+            result that is never coming. */}
+        {openContest && (
+          <div className="text-left bg-[color:var(--surface-2)] border border-[color:var(--border-2)] border-l-4 border-l-red-600 rounded-xl p-4 mb-6">
+            <div className="inline-flex items-center text-[10px] uppercase tracking-[2px] font-extrabold text-white bg-red-600 rounded-full px-2.5 py-1 mb-2.5">
+              You are not in the contest
+            </div>
+            <div className="text-[color:var(--text)] text-sm font-bold mb-1">
+              This was a free upload, not a contest entry
+            </div>
+            <p className="text-[color:var(--muted)] text-xs leading-relaxed mb-3">
+              Your film is now published on CinemaVuru. Competing in
+              {openContest.title ? ` ${openContest.title}` : ' the contest'} is a separate step
+              {openContest.entryFee != null ? ` with a ₹${openContest.entryFee} entry fee` : ''} —
+              you can enter this film once it is approved.
+            </p>
+            <button
+              onClick={() => router.push('/contest/enter')}
+              className="w-full sm:w-auto bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-5 py-2.5 rounded-lg font-extrabold text-sm"
+            >
+              🏆 Enter the contest{openContest.entryFee != null ? ` — ₹${openContest.entryFee}` : ''} →
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-3 justify-center flex-wrap">
           <button
             onClick={() => setStatus('idle')}
@@ -247,6 +284,31 @@ export default function UploadForm() {
 
   return (
     <div className="bg-[color:var(--surface)] border border-[color:var(--border)] rounded-2xl p-5 sm:p-8">
+
+      {/* Repeated inside the form, not just at the top of the page: someone who
+          scrolled straight to the fields never saw the page-level warning. */}
+      {openContest && (
+        <div className="bg-[color:var(--surface-2)] border border-[color:var(--border-2)] border-l-4 border-l-red-600 rounded-xl p-4 mb-6">
+          <div className="inline-flex items-center text-[10px] uppercase tracking-[2px] font-extrabold text-white bg-red-600 rounded-full px-2.5 py-1 mb-2">
+            Free upload — not the contest
+          </div>
+          <div className="text-[color:var(--text)] text-sm font-bold leading-snug">
+            Submitting this form does not enter you in the contest.
+          </div>
+          <p className="text-[color:var(--muted)] text-xs mt-1 leading-relaxed">
+            Your film gets published on CinemaVuru for free, but it will not appear on the
+            {openContest.title ? ` ${openContest.title}` : ' contest'} leaderboard and is not
+            eligible for the prize money.
+          </p>
+          <Link
+            href="/contest/enter"
+            className="inline-flex items-center gap-1 mt-2.5 text-xs font-extrabold text-[color:var(--accent)] hover:underline"
+          >
+            🏆 Go to the contest entry form
+            {openContest.entryFee != null ? ` (₹${openContest.entryFee})` : ''} →
+          </Link>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
 

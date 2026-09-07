@@ -430,7 +430,9 @@ export function buildEmail(c: Contest, ctx: { name: string; uid: string | null }
   // that add the season back don't read "Season 1 of the ... — Season 1".
   const title = rawTitle.replace(/\s*[—–\-·|]\s*season\s*\d+\s*$/i, '').trim() || rawTitle
   const contestUrl = `${SITE}/contest`
-  const uploadUrl = `${SITE}/upload`
+  // /upload is the FREE publish form and cannot enter anyone — the paid entry
+  // (fee, authorship declaration, one-per-account) only exists at /contest/enter.
+  const enterUrl = `${SITE}/contest/enter`
   const unsubscribe = ctx.uid
     ? `${SITE}/api/email/unsubscribe?uid=${encodeURIComponent(ctx.uid)}`
     : `${SITE}/profile`
@@ -521,8 +523,8 @@ export function buildEmail(c: Contest, ctx: { name: string; uid: string | null }
     <div style="color:#7A6040;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">How it works</div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;"><tbody>${stepsHtml}</tbody></table>
 
-    <a href="${days === 0 ? uploadUrl : contestUrl}" style="display:block;text-align:center;background:linear-gradient(90deg,#FF6B1A,#D4A017);color:#000;padding:14px;border-radius:10px;text-decoration:none;font-weight:800;margin-bottom:10px;">
-      ${days === 0 ? '\u{1F3A5} Enter your film now' : '\u{1F3A5} See the contest &amp; get ready'}
+    <a href="${days === 0 ? enterUrl : contestUrl}" style="display:block;text-align:center;background:linear-gradient(90deg,#FF6B1A,#D4A017);color:#000;padding:14px;border-radius:10px;text-decoration:none;font-weight:800;margin-bottom:10px;">
+      ${days === 0 ? `\u{1F3A5} Enter your film — ${rupees(c.entry_fee, FALLBACK.entry_fee)}` : '\u{1F3A5} See the contest &amp; get ready'}
     </a>
     <a href="${contestUrl}" style="display:block;text-align:center;border:1px solid #2E2010;color:#FDF6E3;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;">
       Read the full rules →

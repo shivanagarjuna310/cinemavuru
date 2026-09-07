@@ -37,6 +37,11 @@ export default function FloatingUploadButton() {
         <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
       </svg>
       <span className="hidden sm:inline">Share Your Film</span>
+      {/* Labelled "free" because this button is the free publish path, and while
+          a contest is running people arrive here meaning to enter it. */}
+      <span className="hidden sm:inline text-[10px] font-extrabold bg-black/20 rounded-full px-2 py-0.5 tracking-wider">
+        FREE
+      </span>
     </Link>
   )
 }

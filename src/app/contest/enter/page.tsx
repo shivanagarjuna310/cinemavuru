@@ -1,3 +1,4 @@
+import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import ContestEntryForm from '@/components/ContestEntryForm'
 
@@ -38,6 +39,16 @@ export default function ContestEnterPage() {
           </div>
 
           <ContestEntryForm />
+
+          {/* Escape hatch: not everyone who lands here wants to compete, and
+              without this the fee is a dead end rather than a choice. */}
+          <p className="text-center text-xs text-[color:var(--muted)] mt-8 leading-relaxed">
+            Just want your film on CinemaVuru without competing?{' '}
+            <Link href="/upload" className="text-[color:var(--accent)] font-semibold hover:underline">
+              Publish it for free
+            </Link>{' '}
+            — no entry fee, no voting.
+          </p>
         </div>
       </main>
     </>
