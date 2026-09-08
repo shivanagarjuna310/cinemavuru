@@ -48,6 +48,21 @@ const BATCH_PAUSE_MS = 1100
 // already-mailed addresses are skipped via email_logs.
 export const MAX_PER_RUN = 2000
 
+/**
+ * Automatic contest mail is FROZEN by default.
+ *
+ * Season 1's open announcement exhausted the Resend daily quota — 173 sends
+ * came back "You have reached your daily email sending quota", which also takes
+ * down unrelated transactional mail (film approvals, admin alerts) for the rest
+ * of the day. Left enabled, the daily cron backstop keeps retrying and also
+ * mails every new registrant, so it can re-exhaust the quota on any day.
+ *
+ * Set CONTEST_AUTO_ANNOUNCE=1 to re-enable, ideally only once the Resend plan
+ * can absorb one send per registered user. The admin endpoint is unaffected, so
+ * a deliberate, supervised send is always still possible.
+ */
+const AUTO_ANNOUNCE_ENABLED = process.env.CONTEST_AUTO_ANNOUNCE === '1'
+
 export type Phase = 'teaser' | 'open'
 
 export type Contest = {
@@ -205,6 +220,10 @@ export async function announceContestOpen(
   contestId: string,
   opts?: { maxPerRun?: number },
 ): Promise<BroadcastResult | null> {
+  if (!AUTO_ANNOUNCE_ENABLED) {
+    console.log('[contestAnnounce] auto announce frozen — skipping open mail for', contestId)
+    return null
+  }
   try {
     const contest = await contestById(contestId)
     if (!contest) return null
@@ -227,6 +246,7 @@ export async function announceContestOpen(
  * who registered later in the window, and no-ops once everyone has had it.
  */
 export async function announceOpenContestIfDue(): Promise<BroadcastResult | null> {
+  if (!AUTO_ANNOUNCE_ENABLED) return null
   try {
     const { data } = await admin
       .from('contests').select(CONTEST_COLS)
