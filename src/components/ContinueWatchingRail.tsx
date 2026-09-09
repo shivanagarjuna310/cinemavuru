@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './AuthProvider'
 import { PROGRESS_EVENT } from '@/lib/watchProgress'
+import RailSkeleton from './RailSkeleton'
 
 function ytThumb(url?: string | null) {
   const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
@@ -20,9 +21,11 @@ function hrefFor(f: any) {
 export default function ContinueWatchingRail() {
   const { user } = useAuth()
   const [rows, setRows] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) { setRows([]); return }
+    if (!user) { setRows([]); setLoading(false); return }
+    setLoading(true)
     let alive = true
     async function load() {
       const { data } = await supabase
@@ -37,12 +40,14 @@ export default function ContinueWatchingRail() {
         .map((r: any) => ({ ...r, film: Array.isArray(r.films) ? r.films[0] : r.films }))
         .filter((r: any) => r.film && r.position_sec >= 8)
       setRows(norm)
+      setLoading(false)
     }
     load()
     window.addEventListener(PROGRESS_EVENT, load)
     return () => { alive = false; window.removeEventListener(PROGRESS_EVENT, load) }
   }, [user])
 
+  if (loading && user) return <RailSkeleton />
   if (rows.length === 0) return null
 
   return (

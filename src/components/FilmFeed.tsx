@@ -58,18 +58,22 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
   const router = useRouter()
   const [films, setFilms] = useState<Film[]>(initialFilms)
   const [hasMounted, setHasMounted] = useState(false)
+  // Changing the sort tab refetches; without this the grid sits on stale rows
+  // with no sign anything is happening.
+  const [refetching, setRefetching] = useState(false)
 
   useEffect(() => {
     if (!hasMounted) { setHasMounted(true); return }
 
     async function fetchFilms() {
+      setRefetching(true)
       const { data: districtRow } = await supabase
         .from('districts')
         .select('id')
         .eq('slug', districtSlug)
         .single()
 
-      if (!districtRow) return
+      if (!districtRow) { setRefetching(false); return }
 
       let query = supabase
         .from('films')
@@ -84,6 +88,7 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
 
       const { data } = await query
       setFilms(data ?? [])
+      setRefetching(false)
     }
     fetchFilms()
   }, [currentSort, districtSlug, hasMounted])
@@ -97,8 +102,17 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
 
       {/* Sort bar */}
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-        <p className="text-sm text-[color:var(--muted)]">
-          Showing <span className="text-[color:var(--accent)] font-semibold">{films.length}</span> films
+        <p className="text-sm text-[color:var(--muted)] flex items-center gap-2">
+          {refetching ? (
+            <>
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-[color:var(--border)] border-t-[color:var(--accent)] animate-spin" />
+              Updating&hellip;
+            </>
+          ) : (
+            <>
+              Showing <span className="text-[color:var(--accent)] font-semibold">{films.length}</span> films
+            </>
+          )}
         </p>
 
         <div className="flex gap-1 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg p-1">
@@ -129,7 +143,12 @@ export default function FilmFeed({ films: initialFilms, currentSort, stateSlug, 
 
       {/* Film grid */}
       {films.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+        <div
+          aria-busy={refetching}
+          className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 transition-opacity duration-200 ${
+            refetching ? 'opacity-40 pointer-events-none' : 'opacity-100'
+          }`}
+        >
           {films.map(film => {
             const style = GENRE_STYLE[film.genre ?? ''] ?? GENRE_STYLE.Default
             return (

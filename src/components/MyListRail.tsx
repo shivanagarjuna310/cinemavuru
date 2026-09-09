@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './AuthProvider'
 import { WATCHLIST_EVENT } from '@/lib/watchlist'
+import RailSkeleton from './RailSkeleton'
 
 function thumb(url: string | null) {
   const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
@@ -17,15 +18,18 @@ export default function MyListRail() {
   const { user } = useAuth()
   const userId = user?.id ?? null
   const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    if (!userId) { setItems([]); return }
+    if (!userId) { setItems([]); setLoading(false); return }
+    setLoading(true)
     const { data } = await supabase
       .from('watchlist')
       .select('film_id, created_at, films(id, title_en, video_url, districts(name_en, slug, states(slug)))')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
     setItems((data ?? []).filter((r: any) => r.films))
+    setLoading(false)
   }, [userId])
 
   useEffect(() => {
@@ -40,6 +44,7 @@ export default function MyListRail() {
     await supabase.from('watchlist').delete().eq('user_id', userId).eq('film_id', filmId)
   }
 
+  if (loading && userId) return <RailSkeleton />
   if (items.length === 0) return null
 
   return (
