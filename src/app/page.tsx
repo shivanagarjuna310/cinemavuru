@@ -116,12 +116,19 @@ async function getData() {
 
   const liveContest = liveRes?.data ?? null
   let contestFilms: unknown[] = []
+  let contestEntryCount = 0
   let contestVotes = 0
   if (liveContest) {
     const [entriesRes, votesRes] = await Promise.all([
       supabase
         .from('contest_entries')
-        .select('contest_score, films(id, title_en, genre, video_url, view_count, like_count, districts(name_en, slug, states(slug)))')
+        // `count: 'exact'` returns the total number of live entries even though
+        // the rows below are capped at 10 — the carousel only needs a handful,
+        // but the headline count must be the real total.
+        .select(
+          'contest_score, films(id, title_en, genre, video_url, view_count, like_count, districts(name_en, slug, states(slug)))',
+          { count: 'exact' },
+        )
         .eq('contest_id', liveContest.id)
         .eq('payment_status', 'paid')
         .eq('is_approved', true)
@@ -142,12 +149,16 @@ async function getData() {
         return f ? { ...f, contest_score: e.contest_score ?? 0 } : null
       })
       .filter(Boolean)
+    // NOT contestFilms.length — that is capped by the limit above, so it
+    // froze at 10 once the contest passed ten entries.
+    contestEntryCount = entriesRes.count ?? contestFilms.length
     contestVotes = votesRes.count ?? 0
   }
 
   return {
     liveContest,
     contestFilms,
+    contestEntryCount,
     contestVotes,
     upcomingContest: upcomingRes?.data ?? null,
     topFilms: topFilmsRes.data ?? [],
@@ -169,7 +180,7 @@ async function getData() {
 }
 
 export default async function Home() {
-  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, winner, genres, recentFilms, monthName, upcomingContest, liveContest, contestFilms, contestVotes } = await getData()
+  const { districts, totalFilms, topFilms, mostLiked, monthlyFilms, spotlight, winner, genres, recentFilms, monthName, upcomingContest, liveContest, contestFilms, contestEntryCount, contestVotes } = await getData()
 
   const telangana = districts.filter(d => d.stateSlug === 'telangana')
   const andhra    = districts.filter(d => d.stateSlug === 'andhra-pradesh')
@@ -189,7 +200,7 @@ export default async function Home() {
         {liveContest && (
           <ContestLiveBand
             contest={liveContest}
-            entryCount={contestFilms.length}
+            entryCount={contestEntryCount}
             voteCount={contestVotes}
           />
         )}
