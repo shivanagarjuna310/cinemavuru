@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from './AuthProvider'
 import { WATCHLIST_EVENT } from '@/lib/watchlist'
 import RailSkeleton from './RailSkeleton'
+import { useCoalescedRefresh } from '@/lib/useCoalescedRefresh'
 
 function thumb(url: string | null) {
   const id = url?.match(/(?:v=|youtu\.be\/|embed\/)([^&?/]+)/)?.[1]
@@ -20,7 +21,7 @@ export default function MyListRail() {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const load = useCallback(async () => {
+  const fetchList = useCallback(async () => {
     if (!userId) { setItems([]); setLoading(false); return }
     setLoading(true)
     const { data } = await supabase
@@ -31,6 +32,10 @@ export default function MyListRail() {
     setItems((data ?? []).filter((r: any) => r.films))
     setLoading(false)
   }, [userId])
+
+  // Toggling one film dispatches WATCHLIST_EVENT, and a burst of toggles can
+  // outpace the query; coalesce so only one request is ever in flight.
+  const load = useCoalescedRefresh(fetchList)
 
   useEffect(() => {
     load()

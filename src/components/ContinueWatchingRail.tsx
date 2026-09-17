@@ -2,11 +2,12 @@
 // "Continue Watching" — in-progress films with a resume progress bar. DB-backed
 // (watch_progress), shown only to logged-in users who have something to resume.
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './AuthProvider'
 import { PROGRESS_EVENT } from '@/lib/watchProgress'
+import { useCoalescedRefresh } from '@/lib/useCoalescedRefresh'
 import RailSkeleton from './RailSkeleton'
 
 function ytThumb(url?: string | null) {
@@ -23,29 +24,36 @@ export default function ContinueWatchingRail() {
   const [rows, setRows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  const uid = user?.id ?? null
+
+  const fetchRows = useCallback(async () => {
+    if (!uid) { setRows([]); setLoading(false); return }
+    const { data } = await supabase
+      .from('watch_progress')
+      .select('position_sec, duration_sec, films(id, title_en, video_url, districts(name_en, slug, states(slug)))')
+      .eq('user_id', uid)
+      .eq('completed', false)
+      .order('updated_at', { ascending: false })
+      .limit(12)
+    const norm = (data ?? [])
+      .map((r: any) => ({ ...r, film: Array.isArray(r.films) ? r.films[0] : r.films }))
+      .filter((r: any) => r.film && r.position_sec >= 8)
+    setRows(norm)
+    setLoading(false)
+  }, [uid])
+
+  // saveProgress dispatches PROGRESS_EVENT every 10s while a film plays, which
+  // is faster than this query can return on a slow connection. Coalescing keeps
+  // one request in flight instead of stacking one per tick.
+  const load = useCoalescedRefresh(fetchRows)
+
   useEffect(() => {
-    if (!user) { setRows([]); setLoading(false); return }
+    if (!uid) { setRows([]); setLoading(false); return }
     setLoading(true)
-    let alive = true
-    async function load() {
-      const { data } = await supabase
-        .from('watch_progress')
-        .select('position_sec, duration_sec, films(id, title_en, video_url, districts(name_en, slug, states(slug)))')
-        .eq('user_id', user!.id)
-        .eq('completed', false)
-        .order('updated_at', { ascending: false })
-        .limit(12)
-      if (!alive) return
-      const norm = (data ?? [])
-        .map((r: any) => ({ ...r, film: Array.isArray(r.films) ? r.films[0] : r.films }))
-        .filter((r: any) => r.film && r.position_sec >= 8)
-      setRows(norm)
-      setLoading(false)
-    }
     load()
     window.addEventListener(PROGRESS_EVENT, load)
-    return () => { alive = false; window.removeEventListener(PROGRESS_EVENT, load) }
-  }, [user])
+    return () => window.removeEventListener(PROGRESS_EVENT, load)
+  }, [uid, load])
 
   if (loading && user) return <RailSkeleton />
   if (rows.length === 0) return null
