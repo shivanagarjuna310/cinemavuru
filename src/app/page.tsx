@@ -340,6 +340,14 @@ export default async function Home() {
             }
             accent="gold"
             showRankBadge={liveContest.status === 'voting'}
+            // The row is capped at 10 while the band above reports the real
+            // total, so link out whenever there are entries it cannot show.
+            viewAllHref="/contest/films"
+            viewAllLabel={
+              contestEntryCount > contestFilms.length
+                ? `View all ${contestEntryCount}`
+                : 'View more'
+            }
             metric={(f) =>
               liveContest.status === 'voting'
                 ? `🗳 ${f.contest_score ?? 0} ${(f.contest_score ?? 0) === 1 ? 'vote' : 'votes'}`

@@ -46,6 +46,8 @@ export default function FilmRow({
   accent,
   metric,
   showRankBadge = false,
+  viewAllHref,
+  viewAllLabel = 'View more',
 }: {
   films: any[]
   eyebrow: string
@@ -54,6 +56,9 @@ export default function FilmRow({
   accent: Accent
   metric: (f: any) => string
   showRankBadge?: boolean
+  /** Shown beside the title when the row holds only part of the set. */
+  viewAllHref?: string
+  viewAllLabel?: string
 }) {
   if (!films?.length) return null
   const a = ACCENT[accent]
@@ -65,9 +70,19 @@ export default function FilmRow({
         <span className={`text-xs ${a.text} uppercase tracking-[3px] font-semibold`}>{eyebrow}</span>
         <span className={`w-2 h-2 rounded-full ${a.dot} animate-pulse`} />
       </div>
-      <h2 className="text-2xl font-bold text-[color:var(--text)] mb-1" style={{ fontFamily: "'Georgia', serif" }}>
-        {title}
-      </h2>
+      <div className="flex items-baseline justify-between gap-4 mb-1">
+        <h2 className="text-2xl font-bold text-[color:var(--text)]" style={{ fontFamily: "'Georgia', serif" }}>
+          {title}
+        </h2>
+        {viewAllHref && (
+          <Link
+            href={viewAllHref}
+            className={`shrink-0 text-xs font-bold uppercase tracking-wider ${a.text} hover:underline whitespace-nowrap`}
+          >
+            {viewAllLabel} &rarr;
+          </Link>
+        )}
+      </div>
       <p className="text-[color:var(--muted)] text-xs mb-6">{subtitle ?? ' '}</p>
 
       <ScrollRow className="flex gap-6 overflow-x-auto overflow-y-hidden pt-16 pb-10 -mt-12 px-1">
