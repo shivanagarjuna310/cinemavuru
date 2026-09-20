@@ -16,7 +16,28 @@ function friendlyError(msg: string): string {
   if (m.includes('already registered') || m.includes('already exists')) return 'An account with this email already exists. Please log in instead.'
   if (m.includes('rate') || m.includes('too many')) return 'Too many attempts. Please wait a moment and try again.'
   if (m.includes('password') && m.includes('6')) return 'Password must be at least 6 characters.'
+  // Transport failures, not API responses. These arrive as thrown errors, so
+  // before the try/catch below they left the form spinning with no message.
+  if (m.startsWith('timeout:')) return 'The server took too long to respond. Please try again.'
+  if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed') || m.includes('network request failed')) {
+    return 'Could not reach the server. Check your connection and try again.'
+  }
+  if (m.includes('fetch')) return 'Could not reach the server. Please try again in a moment.'
   return msg
+}
+
+// The auth service has been answering in 3-5s and has returned gateway errors
+// outright. Without a ceiling a hung request leaves the button spinning with no
+// way back, which reads to the user as a broken login.
+const AUTH_TIMEOUT_MS = 20_000
+
+function withTimeout<T>(work: PromiseLike<T>, label: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(work),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`timeout:${label}`)), AUTH_TIMEOUT_MS),
+    ),
+  ])
 }
 
 export default function AuthForm() {
@@ -34,32 +55,48 @@ export default function AuthForm() {
     setMessage('')
     // Redirect back to the site root — the browser client (detectSessionInUrl)
     // exchanges the code there and establishes the session client-side.
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
-    })
-    if (error) {
+    try {
+      const { error } = await withTimeout(supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/` },
+      }), 'google')
+      if (error) {
+        setStatus('error')
+        setMessage(
+          /provider is not enabled|unsupported provider/i.test(error.message)
+            ? 'Google sign-in isn’t enabled yet. Enable the Google provider in Supabase → Authentication → Providers.'
+            : friendlyError(error.message),
+        )
+      }
+    } catch (err) {
       setStatus('error')
-      setMessage(
-        /provider is not enabled|unsupported provider/i.test(error.message)
-          ? 'Google sign-in isn’t enabled yet. Enable the Google provider in Supabase → Authentication → Providers.'
-          : friendlyError(error.message),
-      )
+      setMessage(friendlyError(err instanceof Error ? err.message : 'Something went wrong.'))
     }
   }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setStatus('loading')
     setMessage('')
+    try {
+      await runSubmit()
+    } catch (err) {
+      // Anything that threw rather than returning an { error } — network drop,
+      // gateway failure, the timeout above. Surface it so the form leaves the
+      // loading state and the user can retry.
+      setStatus('error')
+      setMessage(friendlyError(err instanceof Error ? err.message : 'Something went wrong.'))
+    }
+  }
 
+  async function runSubmit() {
     const cleanEmail = email.trim().toLowerCase()
     const cleanName  = name.trim()
 
     // ── Forgot Password ──────────────────────────────────────
     if (tab === 'forgot') {
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      const { error } = await withTimeout(supabase.auth.resetPasswordForEmail(cleanEmail, {
         redirectTo: `${window.location.origin}/auth/reset`,
-      })
+      }), 'reset')
       if (error) {
         setStatus('error')
         setMessage(friendlyError(error.message))
@@ -73,11 +110,11 @@ export default function AuthForm() {
     if (tab === 'register') {
 
       // Step 1 — create the auth user
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await withTimeout(supabase.auth.signUp({
         email: cleanEmail,
         password,
         options: { data: { name: cleanName } },
-      })
+      }), 'signup')
 
       if (signUpError) {
         setStatus('error')
@@ -119,10 +156,10 @@ export default function AuthForm() {
     } else {
 
       // Login
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await withTimeout(supabase.auth.signInWithPassword({
         email: cleanEmail,
         password,
-      })
+      }), 'login')
 
       if (error) {
         setStatus('error')
