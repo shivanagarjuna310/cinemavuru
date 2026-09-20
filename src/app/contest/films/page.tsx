@@ -4,7 +4,8 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
-import ContestFilmGrid  from '@/components/ContestFilmGrid'
+import ContestFilmsBrowser from '@/components/ContestFilmsBrowser'
+import { withEntryScopedStats } from '@/lib/contestStats'
 import ContestRulesButton from '@/components/ContestRulesButton'
 
 function getSupabase() {
@@ -21,8 +22,8 @@ async function getActiveContest() {
     .in('status', ['open', 'voting'])
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
-  console.log('Active contest:', data?.id, 'Error:', error?.message)
+    .maybeSingle()
+  if (error) console.error('[contest/films] contest lookup failed:', error.message)
   return data
 }
 
@@ -34,15 +35,18 @@ async function getContestEntries(contestId: string) {
       films(
         id, title_en, title_te, genre,
         view_count, like_count, video_url,
-        profiles!films_creator_id_fkey(name)
+        profiles!films_creator_id_fkey(name),
+        districts(slug, states(slug))
       )
     `)
     .eq('contest_id', contestId)
     .eq('is_approved', true)
     .eq('payment_status', 'paid')
     .order('contest_score', { ascending: false })
-  console.log('Entries count:', data?.length, 'Error:', error?.message)
-  return data ?? []
+  if (error) console.error('[contest/films] entries lookup failed:', error.message)
+  // Same entry-scoped counts the main contest page uses; without this the grid
+  // renders `views_since ?? 0` and every film shows zero views.
+  return await withEntryScopedStats(data ?? [])
 }
 
 function daysLeft(dateStr: string | null) {
@@ -176,8 +180,8 @@ export default async function ContestFilmsPage() {
                   {isVotingPhase ? '🗳️ Vote for Your Favourite' : '🎬 Entered Films'}
                 </h2>
               </div>
-              <ContestFilmGrid
-                entries={entries}
+              <ContestFilmsBrowser
+                entries={entries as never[]}
                 contestId={contest.id}
                 isVotingOpen={isVotingPhase}
               />
