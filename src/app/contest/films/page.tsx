@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
-import ContestFilmsBrowser from '@/components/ContestFilmsBrowser'
+import ContestFilmGrid  from '@/components/ContestFilmGrid'
 import { withEntryScopedStats } from '@/lib/contestStats'
 import ContestRulesButton from '@/components/ContestRulesButton'
 
@@ -36,7 +36,7 @@ async function getContestEntries(contestId: string) {
         id, title_en, title_te, genre,
         view_count, like_count, video_url,
         profiles!films_creator_id_fkey(name),
-        districts(name_en, slug, states(slug, name_en))
+        districts(slug, states(slug))
       )
     `)
     .eq('contest_id', contestId)
@@ -180,7 +180,7 @@ export default async function ContestFilmsPage() {
                   {isVotingPhase ? '🗳️ Vote for Your Favourite' : '🎬 Entered Films'}
                 </h2>
               </div>
-              <ContestFilmsBrowser
+              <ContestFilmGrid
                 entries={entries as never[]}
                 contestId={contest.id}
                 isVotingOpen={isVotingPhase}
