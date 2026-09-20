@@ -36,7 +36,7 @@ async function getContestEntries(contestId: string) {
         id, title_en, title_te, genre,
         view_count, like_count, video_url,
         profiles!films_creator_id_fkey(name),
-        districts(slug, states(slug))
+        districts(name_en, slug, states(slug, name_en))
       )
     `)
     .eq('contest_id', contestId)
