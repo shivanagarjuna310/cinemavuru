@@ -13,8 +13,22 @@ type DistrictRel = { slug: string; states: { slug: string } | { slug: string }[]
 type SearchResult = {
   id: string
   title_en: string
+  title_te: string | null
   genre: string | null
   districts: DistrictRel | DistrictRel[] | null
+  profiles: { name: string | null } | { name: string | null }[] | null
+}
+
+const SEARCH_COLS =
+  'id, title_en, title_te, genre, districts(slug, states(slug)), profiles!films_creator_id_fkey(name)'
+// Filtering on an embedded column only narrows the parent rows when the join is
+// inner; without it PostgREST returns every film with the profile pruned.
+const SEARCH_COLS_BY_CREATOR =
+  'id, title_en, title_te, genre, districts(slug, states(slug)), profiles!films_creator_id_fkey!inner(name)'
+
+function creatorName(f: SearchResult): string | null {
+  const p = Array.isArray(f.profiles) ? f.profiles[0] : f.profiles
+  return p?.name ?? null
 }
 
 // Build the correct film URL from its district/state (falls back gracefully)
@@ -35,6 +49,10 @@ export default function Navbar() {
   const [query, setQuery]             = useState('')
   const [results, setResults]         = useState<SearchResult[]>([])
   const [searching, setSearching]     = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
+  // Monotonic id so a slow earlier request cannot overwrite a newer one's
+  // results — typing quickly used to leave stale matches on screen.
+  const searchSeq                     = useRef(0)
   const [contestOpen, setContestOpen] = useState(false)
   const searchRef                     = useRef<HTMLDivElement>(null)
   const contestRef = useRef<HTMLLIElement>(null)
@@ -69,19 +87,45 @@ export default function Navbar() {
 
   // Search Supabase as user types (debounced 300ms)
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return }
+    if (!query.trim()) { setResults([]); setSearchFailed(false); return }
+    const seq = ++searchSeq.current
     const timer = setTimeout(async () => {
       setSearching(true)
+      setSearchFailed(false)
       // Strip characters that would break the PostgREST or() filter syntax
-      const term = query.trim().replace(/[,()%*]/g, ' ')
-      const { data } = await supabase
-        .from('films')
-        .select('id, title_en, genre, districts(slug, states(slug))')
-        .eq('status', 'active')
-        .or(`title_en.ilike.%${term}%,genre.ilike.%${term}%`)
-        .limit(6)
-      setResults((data as unknown as SearchResult[]) ?? [])
-      setSearching(false)
+      const term = query.trim().replace(/[,()%*"]/g, ' ').trim()
+      if (!term) {
+        if (seq === searchSeq.current) { setResults([]); setSearching(false) }
+        return
+      }
+      try {
+        const [byFilm, byCreator] = await Promise.all([
+          supabase.from('films').select(SEARCH_COLS).eq('status', 'active')
+            .or(`title_en.ilike.%${term}%,title_te.ilike.%${term}%,genre.ilike.%${term}%`)
+            .limit(8),
+          // Creator name lives on an embedded table, which or() cannot reach in
+          // the same call, so it is a second query merged below. Without this,
+          // searching a filmmaker's name returned nothing.
+          supabase.from('films').select(SEARCH_COLS_BY_CREATOR).eq('status', 'active')
+            .ilike('profiles.name', `%${term}%`)
+            .limit(8),
+        ])
+        if (seq !== searchSeq.current) return      // a newer keystroke won
+        if (byFilm.error) throw new Error(byFilm.error.message)
+
+        const seen = new Set<string>()
+        const merged = [...(byFilm.data ?? []), ...(byCreator.data ?? [])]
+          .filter(f => { if (seen.has(f.id)) return false; seen.add(f.id); return true })
+        setResults(merged.slice(0, 8) as unknown as SearchResult[])
+      } catch {
+        // Previously the error was discarded, so an unreachable database looked
+        // identical to "no films found".
+        if (seq !== searchSeq.current) return
+        setResults([])
+        setSearchFailed(true)
+      } finally {
+        if (seq === searchSeq.current) setSearching(false)
+      }
     }, 300)
     return () => clearTimeout(timer)
   }, [query])
@@ -185,7 +229,7 @@ export default function Navbar() {
                   placeholder="Search films..."
                   className="w-48 bg-[color:var(--surface)] border border-[color:var(--accent)]/40 text-[color:var(--text)] placeholder-[color:var(--muted)] px-3 py-1.5 rounded text-sm outline-none focus:border-[color:var(--accent)] transition"
                 />
-                {(results.length > 0 || searching) && (
+                {(results.length > 0 || searching || searchFailed) && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg overflow-hidden shadow-xl min-w-[280px]">
                     {searching ? (
                       <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching...</div>
@@ -193,12 +237,22 @@ export default function Navbar() {
                       results.map(film => (
                         <Link key={film.id} href={filmHref(film)} onClick={closeSearch}
                           className="w-full text-left px-4 py-3 hover:bg-[color:var(--border)] transition flex items-center justify-between gap-3 border-b border-[color:var(--border)] last:border-0">
-                          <span className="text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
+                          <span className="min-w-0">
+                            <span className="block text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
+                            {(film.title_te || creatorName(film)) && (
+                              <span className="block text-[color:var(--muted)] text-xs truncate">
+                                {[film.title_te, creatorName(film)].filter(Boolean).join(' · ')}
+                              </span>
+                            )}
+                          </span>
                           {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
                         </Link>
                       ))
                     )}
-                    {!searching && results.length === 0 && query.trim() && (
+                    {!searching && searchFailed && (
+                      <div className="px-4 py-3 text-red-400 text-sm">Search is unavailable right now. Try again.</div>
+                    )}
+                    {!searching && !searchFailed && results.length === 0 && query.trim() && (
                       <div className="px-4 py-3 text-[color:var(--muted)] text-sm">No films found</div>
                     )}
                   </div>
@@ -286,16 +340,25 @@ export default function Navbar() {
               ✕
             </button>
 
-            {(results.length > 0 || searching) && (
+            {(results.length > 0 || searching || searchFailed) && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg overflow-hidden shadow-xl z-50 max-h-[60vh] overflow-y-auto">
                 {searching ? (
                   <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching…</div>
+                ) : searchFailed ? (
+                  <div className="px-4 py-3 text-red-400 text-sm">Search is unavailable right now. Try again.</div>
                 ) : results.map(film => (
                   <Link key={film.id} href={filmHref(film)}
                     onClick={() => { closeSearch(); setMSearchOpen(false) }}
                     className="block w-full px-4 py-3 hover:bg-[color:var(--border)] transition border-b border-[color:var(--border)] last:border-0">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
+                      <span className="min-w-0">
+                        <span className="block text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
+                        {(film.title_te || creatorName(film)) && (
+                          <span className="block text-[color:var(--muted)] text-xs truncate">
+                            {[film.title_te, creatorName(film)].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </span>
                       {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
                     </div>
                   </Link>
@@ -303,7 +366,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {query.trim().length > 1 && !searching && results.length === 0 && (
+            {query.trim().length > 1 && !searching && !searchFailed && results.length === 0 && (
               <p className="text-[color:var(--muted)] text-xs mt-2 px-1">
                 No films match “{query.trim()}”.
               </p>
