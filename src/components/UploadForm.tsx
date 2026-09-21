@@ -155,6 +155,7 @@ export default function UploadForm({
       video_url:   embedUrl,
       creator_id:  userId,
       district_id: districtId,
+      creator_phone: cleanPhone,
       status:      'pending',   // Admin must approve before it goes live
       view_count:  0,
       like_count:  0,
@@ -169,24 +170,6 @@ export default function UploadForm({
         userId, districtId, genre, titleLength: titleEn.trim().length,
       })
     } else {
-      // Phone lives in film_contacts, not on films: films is readable by
-      // anonymous visitors, so a column there would publish every creator's
-      // number. Best-effort — the film is the record that matters, and this
-      // must not fail an otherwise good upload (e.g. before the one-time
-      // FILM_CONTACT_SETUP.sql migration has been run).
-      try {
-        const { error: contactError } = await supabase.from('film_contacts').insert({
-          film_id: inserted.id,
-          user_id: userId,
-          phone:   cleanPhone,
-        })
-        if (contactError) {
-          await logger.error('UploadForm', 'handleSubmit', 'Contact insert failed', contactError, {
-            userId, filmId: inserted.id,
-          })
-        }
-      } catch { /* never block the upload on the contact row */ }
-
       // ── Alert EVERY admin that a film is waiting for review (non-blocking) ──
       // Details are read from the DB server-side; we only pass the film id.
       // If this call never lands (tab closed, offline), the daily pending-films
@@ -502,7 +485,7 @@ export default function UploadForm({
             />
           </div>
           <p className="text-xs text-[color:var(--faint)] mt-1.5">
-            So we can reach you about your film. Never shown publicly.
+            So we can reach you about your film and pay you if you win.
           </p>
         </div>
 
