@@ -16,7 +16,7 @@ type Film = {
   created_at: string; like_count: number; view_count: number
   creator_id: string
   creator_phone: string | null
-  contest_entries?: { payment_status: string; payment_ref: string | null }[]
+  contest_entries?: { payment_status: string; payment_ref: string | null; entrant_phone: string | null }[]
 }
 type Log = {
   id: string; event_type: string; created_at: string
@@ -173,7 +173,7 @@ export default function AdminPage() {
     setLoading(true)
     const { data } = await supabase
       .from('films')
-      .select('*, contest_entries(payment_status, payment_ref)')
+      .select('*, contest_entries(payment_status, payment_ref, entrant_phone)')
       .eq('status', filmFilter)
       .order('created_at', { ascending: false })
     setFilms(data ?? [])
@@ -728,6 +728,15 @@ export default function AdminPage() {
             ) : (
               <div className="space-y-3">
                 {visibleFilms.map(film => {
+                  // creator_phone is only written by the FREE upload form; a
+                  // film entered through the contest has its number on the
+                  // entry instead. Showing only creator_phone marked all 30
+                  // contest films "no number" while the number existed.
+                  const entrantPhone = film.contest_entries?.[0]?.entrant_phone ?? null
+                  const phone = film.creator_phone ?? entrantPhone
+                  const phoneSource = film.creator_phone
+                    ? 'given on the upload form'
+                    : entrantPhone ? 'given on the contest entry' : null
                   const thumb = filmThumb(film.video_url)
                   const watch = film.video_url ? film.video_url.replace('/embed/','/watch?v=') : '#'
                   return (
@@ -759,8 +768,12 @@ export default function AdminPage() {
                             <span>{timeAgo(film.created_at)}</span>
                             <span>👁 {film.view_count}</span>
                             <span>♥ {film.like_count}</span>
-                            {film.creator_phone
-                              ? <a href={`tel:+91${film.creator_phone}`} className="bg-[color:var(--border)] px-2 py-0.5 rounded text-[color:var(--accent)]">📞 +91 {film.creator_phone}</a>
+                            {phone
+                              ? <a href={`tel:+91${phone}`} title={`Phone ${phoneSource}`}
+                                  className="bg-[color:var(--border)] px-2 py-0.5 rounded text-[color:var(--accent)]">
+                                  📞 +91 {phone}
+                                  <span className="text-[color:var(--faint)] ml-1">{film.creator_phone ? 'upload' : 'entry'}</span>
+                                </a>
                               : <span className="text-yellow-600">📞 no number</span>}
                             {film.contest_entries && film.contest_entries.length > 0 && (
                               <span className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-2 py-0.5 rounded font-bold">🏆 Contest</span>
