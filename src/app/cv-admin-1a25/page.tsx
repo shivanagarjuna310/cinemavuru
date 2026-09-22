@@ -15,6 +15,7 @@ type Film = {
   description: string | null; status: string
   created_at: string; like_count: number; view_count: number
   creator_id: string
+  creator_phone: string | null
   contest_entries?: { payment_status: string; payment_ref: string | null }[]
 }
 type Log = {
@@ -758,6 +759,9 @@ export default function AdminPage() {
                             <span>{timeAgo(film.created_at)}</span>
                             <span>👁 {film.view_count}</span>
                             <span>♥ {film.like_count}</span>
+                            {film.creator_phone
+                              ? <a href={`tel:+91${film.creator_phone}`} className="bg-[color:var(--border)] px-2 py-0.5 rounded text-[color:var(--accent)]">📞 +91 {film.creator_phone}</a>
+                              : <span className="text-yellow-600">📞 no number</span>}
                             {film.contest_entries && film.contest_entries.length > 0 && (
                               <span className="bg-[#D4A017]/20 border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-2 py-0.5 rounded font-bold">🏆 Contest</span>
                             )}
