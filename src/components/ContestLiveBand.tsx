@@ -11,7 +11,6 @@
 
 import Link from 'next/link'
 import ContestCountdown from './ContestCountdown'
-import CountUp from './CountUp'
 
 export type LiveContest = {
   id: string
@@ -134,7 +133,9 @@ export default function ContestLiveBand({
                   className="flex-1 min-w-0 rounded-xl bg-[color:var(--bg)] border border-[color:var(--border)] px-2 py-2.5 text-center transition-all duration-300 hover:border-[color:var(--accent)]/50 hover:-translate-y-0.5"
                 >
                   <div className="text-base sm:text-xl font-black text-[color:var(--accent)] tabular-nums whitespace-nowrap">
-                    {typeof stat.n === 'number' ? <CountUp value={stat.n} /> : stat.text}
+                    {/* Plain number, not an animated counter: the real figure is in the
+                        HTML at once instead of a 0 that ticks up after hydration. */}
+                    {typeof stat.n === 'number' ? stat.n.toLocaleString('en-IN') : stat.text}
                   </div>
                   <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[color:var(--muted)] mt-0.5 truncate">
                     {stat.label}
