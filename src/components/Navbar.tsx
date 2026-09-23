@@ -58,6 +58,10 @@ export default function Navbar() {
   const contestRef = useRef<HTMLLIElement>(null)
   const inputRef                      = useRef<HTMLInputElement>(null)
   const mobileRef                     = useRef<HTMLDivElement>(null)
+  // The mobile search panel is its own element, outside both the desktop
+  // search and the hamburger menu, so it needs its own ref here or the
+  // outside-click handler treats a tap on a result as a tap outside.
+  const mSearchRef                    = useRef<HTMLDivElement>(null)
 
   // Close search when clicking outside
   useEffect(() => {
@@ -67,7 +71,8 @@ export default function Navbar() {
       // mobile menu — otherwise the result <Link> unmounts before the tap lands.
       const inSearch = searchRef.current?.contains(target)
       const inMobile = mobileRef.current?.contains(target)
-      if (!inSearch && !inMobile) {
+      const inMobileSearch = mSearchRef.current?.contains(target)
+      if (!inSearch && !inMobile && !inMobileSearch) {
         setSearchOpen(false)
         setQuery('')
         setResults([])
@@ -322,7 +327,7 @@ export default function Navbar() {
       {/* Mobile search bar — sits directly under the header so it is reachable
           in one tap, instead of being hidden behind the hamburger. */}
       {mSearchOpen && (
-        <div className="absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] p-3 md:hidden">
+        <div ref={mSearchRef} className="absolute top-16 left-0 right-0 bg-[color:var(--bg)] border-b border-[color:var(--border)] p-3 md:hidden">
           <div className="relative">
             <input
               type="text"
