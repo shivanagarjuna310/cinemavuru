@@ -2,8 +2,8 @@
 // src/components/Navbar.tsx — with Contest tab + Search + Hall of Fame
 
 import { useState, useEffect, useRef } from 'react'
-import Link                    from 'next/link'
-import { useRouter }           from 'next/navigation'
+import Link, { useLinkStatus } from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
 import { useAuth }             from './AuthProvider'
 import ThemeToggle             from './ThemeToggle'
@@ -25,6 +25,26 @@ const SEARCH_COLS =
 // inner; without it PostgREST returns every film with the profile pruned.
 const SEARCH_COLS_BY_CREATOR =
   'id, title_en, title_te, genre, districts(slug, states(slug)), profiles!films_creator_id_fkey!inner(name)'
+
+/**
+ * Spinner for the search result being navigated to. Rendered INSIDE the Link so
+ * useLinkStatus can report that specific navigation, rather than a page-wide
+ * flag that would spin every row at once.
+ *
+ * The film route has a loading.tsx, but that only appears once the router has
+ * committed; the gap between the tap and that moment is what read as the click
+ * having done nothing.
+ */
+function NavPending() {
+  const { pending } = useLinkStatus()
+  if (!pending) return null
+  return (
+    <span
+      aria-label="Opening"
+      className="inline-block w-3.5 h-3.5 shrink-0 rounded-full border-2 border-[color:var(--border)] border-t-[color:var(--accent)] animate-spin"
+    />
+  )
+}
 
 function creatorName(f: SearchResult): string | null {
   const p = Array.isArray(f.profiles) ? f.profiles[0] : f.profiles
@@ -142,6 +162,22 @@ export default function Navbar() {
     window.location.href = '/'
   }
 
+  // Closing on click tore the dropdown down instantly, leaving nothing on
+  // screen while the film page loaded — which is what made a tap feel like it
+  // had done nothing. Closing on arrival instead keeps the row (and its
+  // spinner) visible for the whole wait.
+  const pathname = usePathname()
+  const firstPath = useRef(pathname)
+  useEffect(() => {
+    if (pathname === firstPath.current) return
+    firstPath.current = pathname
+    setSearchOpen(false)
+    setMSearchOpen(false)
+    setOpen(false)
+    setQuery('')
+    setResults([])
+  }, [pathname])
+
   function closeSearch() {
     setSearchOpen(false)
     setOpen(false)
@@ -240,7 +276,7 @@ export default function Navbar() {
                       <div className="px-4 py-3 text-[color:var(--muted)] text-sm">Searching...</div>
                     ) : (
                       results.map(film => (
-                        <Link key={film.id} href={filmHref(film)} onClick={closeSearch}
+                        <Link key={film.id} href={filmHref(film)}
                           className="w-full text-left px-4 py-3 hover:bg-[color:var(--border)] transition flex items-center justify-between gap-3 border-b border-[color:var(--border)] last:border-0">
                           <span className="min-w-0">
                             <span className="block text-[color:var(--text)] text-sm font-medium truncate">{film.title_en}</span>
@@ -250,7 +286,10 @@ export default function Navbar() {
                               </span>
                             )}
                           </span>
-                          {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
+                          <span className="flex items-center gap-2 shrink-0">
+                            {film.genre && <span className="text-[color:var(--muted)] text-xs">{film.genre}</span>}
+                            <NavPending />
+                          </span>
                         </Link>
                       ))
                     )}
@@ -353,7 +392,6 @@ export default function Navbar() {
                   <div className="px-4 py-3 text-red-400 text-sm">Search is unavailable right now. Try again.</div>
                 ) : results.map(film => (
                   <Link key={film.id} href={filmHref(film)}
-                    onClick={() => { closeSearch(); setMSearchOpen(false) }}
                     className="block w-full px-4 py-3 hover:bg-[color:var(--border)] transition border-b border-[color:var(--border)] last:border-0">
                     <div className="flex items-center justify-between gap-3">
                       <span className="min-w-0">
@@ -364,7 +402,10 @@ export default function Navbar() {
                           </span>
                         )}
                       </span>
-                      {film.genre && <span className="text-[color:var(--muted)] text-xs shrink-0">{film.genre}</span>}
+                      <span className="flex items-center gap-2 shrink-0">
+                        {film.genre && <span className="text-[color:var(--muted)] text-xs">{film.genre}</span>}
+                        <NavPending />
+                      </span>
                     </div>
                   </Link>
                 ))}
