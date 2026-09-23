@@ -17,7 +17,9 @@
 // server-side so a stale page cannot vote on a closed season.
 
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
+import { TAG } from '@/lib/cacheTags'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,6 +92,16 @@ export async function POST(req: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     const score = await syncScore(contestId, prevFilmId)
+    // Standings and vote counts on / and /contest are served from the Data
+    // Cache; bust them so the withdrawal shows on the next request rather than
+    // after the 30s window. Only real changes bust — the no-op paths above
+    // return without touching the cache.
+    //
+    // 'max' = stale-while-revalidate: the next reader may get the previous
+    // standings once while a refresh runs in the background, instead of every
+    // reader stampeding Supabase the instant a vote lands. The voter themself
+    // is not waiting on this — they get the new scores in this response.
+    revalidateTag(TAG.contestEntries, 'max')
     return NextResponse.json({ ok: true, votedFilmId: null, scores: { [prevFilmId]: score } })
   }
 
@@ -136,5 +148,6 @@ export async function POST(req: Request) {
   scores[filmId] = await syncScore(contestId, filmId)
   if (prevFilmId) scores[prevFilmId] = await syncScore(contestId, prevFilmId)
 
+  revalidateTag(TAG.contestEntries, 'max')
   return NextResponse.json({ ok: true, votedFilmId: filmId, scores })
 }

@@ -2,7 +2,9 @@
 // Public contest page — shows active contest, film entries, live leaderboard
 
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import Link             from 'next/link'
+import { TAG } from '@/lib/cacheTags'
 import Navbar           from '@/components/Navbar'
 import ContestFilmGrid  from '@/components/ContestFilmGrid'
 import ContestComingSoon from '@/components/ContestComingSoon'
@@ -14,41 +16,59 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-async function getActiveContest() {
-  const { data } = await supabase
-    .from('contests')
-    .select('*, districts(name_en, name_te)')
-    .in('status', ['open', 'voting'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-  return data
-}
+// Contest reads are cached for 30s — the same window this page already used
+// for ISR — but in Next's Data Cache, which is shared across every instance.
+// autoAdvanceContest() below stays UNcached: it writes.
+const getActiveContest = unstable_cache(
+  async () => {
+    const { data } = await supabase
+      .from('contests')
+      .select('*, districts(name_en, name_te)')
+      .in('status', ['open', 'voting'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+    return data
+  },
+  ['contest-active'],
+  { revalidate: 30, tags: [TAG.contests] },
+)
 
 // A season with status 'upcoming' can't take entries, so the pages above
 // ignore it. Fetch it separately to promote it instead of showing a dead end.
-async function getUpcomingContest() {
-  const { data } = await supabase
-    .from('contests')
-    .select('*')
-    .eq('status', 'upcoming')
-    .order('season_number', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  return data
-}
+const getUpcomingContest = unstable_cache(
+  async () => {
+    const { data } = await supabase
+      .from('contests')
+      .select('*')
+      .eq('status', 'upcoming')
+      .order('season_number', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    return data
+  },
+  ['contest-upcoming'],
+  { revalidate: 30, tags: [TAG.contests] },
+)
 
-async function getContestEntries(contestId: string) {
-  const { data } = await supabase
-    .from('contest_entries')
-    .select('*, films(id, title_en, title_te, genre, video_url, view_count, like_count, profiles!films_creator_id_fkey(name), districts(slug, states(slug)))')
-    .eq('contest_id', contestId)
-    .eq('is_approved', true)
-    .eq('payment_status', 'paid')
-    .order('contest_score', { ascending: false })
-  // Pass through untouched so the row shape (and every joined field) survives.
-  return await withEntryScopedStats(data ?? [])
-}
+// Entries plus their entry-scoped stats (three queries) cached as one unit.
+// The vote route busts TAG.contestEntries after every vote, so standings
+// update on the next request rather than waiting out the 30s.
+const getContestEntries = unstable_cache(
+  async (contestId: string) => {
+    const { data } = await supabase
+      .from('contest_entries')
+      .select('*, films(id, title_en, title_te, genre, video_url, view_count, like_count, profiles!films_creator_id_fkey(name), districts(slug, states(slug)))')
+      .eq('contest_id', contestId)
+      .eq('is_approved', true)
+      .eq('payment_status', 'paid')
+      .order('contest_score', { ascending: false })
+    // Pass through untouched so the row shape (and every joined field) survives.
+    return await withEntryScopedStats(data ?? [])
+  },
+  ['contest-entries'],
+  { revalidate: 30, tags: [TAG.contestEntries] },
+)
 
 // Contest standings must not inherit a film's lifetime popularity. A film that
 // has been on the site for months would show hundreds of likes next to a fresh
@@ -95,13 +115,17 @@ async function withEntryScopedStats<T extends { film_id: string; created_at: str
   })
 }
 
-async function getVoteCount(contestId: string) {
-  const { count } = await supabase
-    .from('contest_votes')
-    .select('*', { count: 'exact', head: true })
-    .eq('contest_id', contestId)
-  return count ?? 0
-}
+const getVoteCount = unstable_cache(
+  async (contestId: string) => {
+    const { count } = await supabase
+      .from('contest_votes')
+      .select('*', { count: 'exact', head: true })
+      .eq('contest_id', contestId)
+    return count ?? 0
+  },
+  ['contest-vote-count'],
+  { revalidate: 30, tags: [TAG.contestEntries] },
+)
 
 function daysLeft(dateStr: string | null) {
   if (!dateStr) return null

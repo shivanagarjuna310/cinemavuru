@@ -1,6 +1,8 @@
 // src/app/page.tsx
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import Link from 'next/link'
+import { TAG } from '@/lib/cacheTags'
 import Image from 'next/image'
 import Navbar from '../components/Navbar'
 import Reveal from '../components/Reveal'
@@ -59,30 +61,154 @@ const FILM_COLS =
 const SPOTLIGHT_COLS =
   'id, title_en, title_te, description, genre, video_url, view_count, districts(name_en, slug, states(slug))'
 
+// ── Cached reads ──────────────────────────────────────────────────────────
+// Every read below is public and identical for every visitor, so it lives in
+// Next's Data Cache — shared across every Vercel instance, unlike the page's
+// ISR cache, which is per instance and was observed re-rendering the full set
+// of 19 queries twice within 5 seconds. Freshness matches the previous ISR
+// windows (60s here, 30s for contest data), and the vote route additionally
+// busts the contest tag so votes never wait on the timer.
+//
+// The personalised rails (My List, For You, Continue Watching, Following) are
+// client-side and untouched: they are per user and cannot be shared.
+
+const getDistricts = unstable_cache(
+  async () => {
+    const { data } = await supabase
+      .from('districts').select('*, states(slug, name_en)')
+      .eq('is_active', true).order('name_en', { ascending: true })
+    return data ?? []
+  },
+  ['home-districts'],
+  { revalidate: 300, tags: [TAG.districts] },
+)
+
+const getHomeFilms = unstable_cache(
+  async (monthStart: string, monthEnd: string) => {
+    const [filmRows, top, mostLiked, monthly, recent, spotlight] = await Promise.all([
+      supabase.from('films').select('district_id, genre').eq('status', 'active'),
+      supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
+      supabase.from('films').select(FILM_COLS).eq('status', 'active').order('like_count', { ascending: false }).limit(10),
+      supabase.from('films').select(FILM_COLS).eq('status', 'active').gte('created_at', monthStart).lte('created_at', monthEnd).order('view_count', { ascending: false }).limit(10),
+      supabase.from('films').select(FILM_COLS).eq('status', 'active').order('created_at', { ascending: false }).limit(10),
+      supabase.from('films').select(SPOTLIGHT_COLS).eq('status', 'active').not('video_url', 'is', null).order('view_count', { ascending: false }).limit(6),
+    ])
+    return {
+      filmRows: filmRows.data ?? [],
+      top: top.data ?? [],
+      mostLiked: mostLiked.data ?? [],
+      monthly: monthly.data ?? [],
+      recent: recent.data ?? [],
+      spotlight: spotlight.data ?? [],
+    }
+  },
+  ['home-films'],
+  { revalidate: 60, tags: [TAG.films] },
+)
+
+// Supabase types every joined relation as possibly-an-array, so the winner row
+// is given an explicit shape here and the flattening below needs no `any`.
+type SlugRel = { slug: string } | { slug: string }[] | null
+type WinnerFilm = {
+  id: string
+  districts: { slug: string; states: SlugRel } | { slug: string; states: SlugRel }[] | null
+}
+type WinnerRow = {
+  month: string | null
+  winner_name: string
+  film_title: string | null
+  image_url: string
+  blurb: string | null
+  films: WinnerFilm | WinnerFilm[] | null
+}
+
+const getWinner = unstable_cache(
+  async () => {
+    const { data } = await supabase
+      .from('monthly_winners')
+      .select('month, winner_name, film_title, image_url, blurb, films(id, districts(slug, states(slug)))')
+      .eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    return data as unknown as WinnerRow | null
+  },
+  ['home-winner'],
+  { revalidate: 300, tags: [TAG.winners] },
+)
+
+const getUpcomingContest = unstable_cache(
+  async () => {
+    const { data } = await supabase
+      .from('contests').select('*').eq('status', 'upcoming')
+      .order('season_number', { ascending: false }).limit(1).maybeSingle()
+    return data
+  },
+  ['home-upcoming-contest'],
+  { revalidate: 30, tags: [TAG.contests] },
+)
+
+// A season that is actually running. The homepage previously only knew about
+// 'upcoming' ones, so it went silent exactly when a contest was live.
+const getLiveContest = unstable_cache(
+  async () => {
+    const { data } = await supabase
+      .from('contests').select('*').in('status', ['open', 'voting'])
+      .order('season_number', { ascending: false }).limit(1).maybeSingle()
+    return data
+  },
+  ['home-live-contest'],
+  { revalidate: 30, tags: [TAG.contests] },
+)
+
+// Top entries for the carousel plus the true totals for the band. Busted by
+// the vote route on every vote, so standings on the homepage track the real
+// count rather than the 30s timer.
+const getContestSummary = unstable_cache(
+  async (contestId: string) => {
+    const [entriesRes, votesRes] = await Promise.all([
+      supabase
+        .from('contest_entries')
+        // `count: 'exact'` returns the total number of live entries even though
+        // the rows are capped at 10 — the carousel only needs a handful, but
+        // the headline count must be the real total.
+        .select(
+          'contest_score, films(id, title_en, genre, video_url, view_count, like_count, districts(name_en, slug, states(slug)))',
+          { count: 'exact' },
+        )
+        .eq('contest_id', contestId)
+        .eq('payment_status', 'paid')
+        .eq('is_approved', true)
+        .order('contest_score', { ascending: false })
+        .limit(10),
+      supabase
+        .from('contest_votes')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('contest_id', contestId),
+    ])
+    return {
+      entries: entriesRes.data ?? [],
+      count: entriesRes.count ?? 0,
+      votes: votesRes.count ?? 0,
+    }
+  },
+  ['home-contest-summary'],
+  { revalidate: 30, tags: [TAG.contestEntries] },
+)
+
 async function getData() {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
   const monthName = now.toLocaleString('en-IN', { month: 'long' })
 
-  // Run all independent queries concurrently (was sequential → slow TTFB)
-  const [districtsRes, filmRowsRes, topFilmsRes, mostLikedRes, monthlyFilmsRes, recentFilmsRes, spotlightRes, winnerRes, upcomingRes, liveRes] = await Promise.all([
-    supabase.from('districts').select('*, states(slug, name_en)').eq('is_active', true).order('name_en', { ascending: true }),
-    supabase.from('films').select('district_id, genre').eq('status', 'active'),
-    supabase.from('films').select(FILM_COLS).eq('status', 'active').order('view_count', { ascending: false }).limit(10),
-    supabase.from('films').select(FILM_COLS).eq('status', 'active').order('like_count', { ascending: false }).limit(10),
-    supabase.from('films').select(FILM_COLS).eq('status', 'active').gte('created_at', monthStart).lte('created_at', monthEnd).order('view_count', { ascending: false }).limit(10),
-    supabase.from('films').select(FILM_COLS).eq('status', 'active').order('created_at', { ascending: false }).limit(10),
-    supabase.from('films').select(SPOTLIGHT_COLS).eq('status', 'active').not('video_url', 'is', null).order('view_count', { ascending: false }).limit(6),
-    supabase.from('monthly_winners').select('month, winner_name, film_title, image_url, blurb, films(id, districts(slug, states(slug)))').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('contests').select('*').eq('status', 'upcoming').order('season_number', { ascending: false }).limit(1).maybeSingle(),
-    // A season that is actually running. The homepage previously only knew
-    // about 'upcoming' ones, so it went silent exactly when a contest was live.
-    supabase.from('contests').select('*').in('status', ['open', 'voting']).order('season_number', { ascending: false }).limit(1).maybeSingle(),
+  // Concurrent, and every one of these is a Data Cache read — on a warm cache
+  // this whole block costs zero Supabase requests.
+  const [districts, films, w, upcomingContest, liveContest] = await Promise.all([
+    getDistricts(),
+    getHomeFilms(monthStart, monthEnd),
+    getWinner(),
+    getUpcomingContest(),
+    getLiveContest(),
   ])
-
-  const districts = districtsRes.data
-  const filmRows = filmRowsRes.data
+  const filmRows = films.filmRows
 
   const counts: Record<string, number> = {}
   const genreCounts: Record<string, number> = {}
@@ -95,7 +221,6 @@ async function getData() {
     .map(([genre, count]) => ({ genre, count }))
 
   // Monthly award winner (nullable; hidden until an admin sets one)
-  const w = winnerRes?.data as any
   let winner = null as null | {
     month?: string | null; winner_name: string; film_title?: string | null
     image_url: string; blurb?: string | null; filmHref?: string | null
@@ -114,34 +239,14 @@ async function getData() {
     }
   }
 
-  const liveContest = liveRes?.data ?? null
   let contestFilms: unknown[] = []
   let contestEntryCount = 0
   let contestVotes = 0
   if (liveContest) {
-    const [entriesRes, votesRes] = await Promise.all([
-      supabase
-        .from('contest_entries')
-        // `count: 'exact'` returns the total number of live entries even though
-        // the rows below are capped at 10 — the carousel only needs a handful,
-        // but the headline count must be the real total.
-        .select(
-          'contest_score, films(id, title_en, genre, video_url, view_count, like_count, districts(name_en, slug, states(slug)))',
-          { count: 'exact' },
-        )
-        .eq('contest_id', liveContest.id)
-        .eq('payment_status', 'paid')
-        .eq('is_approved', true)
-        .order('contest_score', { ascending: false })
-        .limit(10),
-      supabase
-        .from('contest_votes')
-        .select('user_id', { count: 'exact', head: true })
-        .eq('contest_id', liveContest.id),
-    ])
+    const summary = await getContestSummary(liveContest.id)
     // Flatten to film shape so the existing FilmRow carousel can render them,
     // carrying the vote count through for the metric line.
-    contestFilms = (entriesRes.data ?? [])
+    contestFilms = summary.entries
       // Supabase types the joined `films` as a to-many array; normalise it the
       // same way the rest of this file does for districts/states.
       .map((e) => {
@@ -151,8 +256,8 @@ async function getData() {
       .filter(Boolean)
     // NOT contestFilms.length — that is capped by the limit above, so it
     // froze at 10 once the contest passed ten entries.
-    contestEntryCount = entriesRes.count ?? contestFilms.length
-    contestVotes = votesRes.count ?? 0
+    contestEntryCount = summary.count || contestFilms.length
+    contestVotes = summary.votes
   }
 
   return {
@@ -160,14 +265,14 @@ async function getData() {
     contestFilms,
     contestEntryCount,
     contestVotes,
-    upcomingContest: upcomingRes?.data ?? null,
-    topFilms: topFilmsRes.data ?? [],
-    mostLiked: mostLikedRes.data ?? [],
-    monthlyFilms: monthlyFilmsRes.data ?? [],
-    spotlight: spotlightRes.data ?? [],
+    upcomingContest: upcomingContest ?? null,
+    topFilms: films.top,
+    mostLiked: films.mostLiked,
+    monthlyFilms: films.monthly,
+    spotlight: films.spotlight,
     winner,
     genres,
-    recentFilms: recentFilmsRes.data ?? [],
+    recentFilms: films.recent,
     monthName,
     districts: (districts ?? []).map(d => ({
       ...d,
@@ -175,7 +280,7 @@ async function getData() {
       stateName: (d.states as { slug: string; name_en: string } | null)?.name_en ?? 'Telangana',
       filmCount: counts[d.id] ?? 0,
     })),
-    totalFilms: filmRows?.length ?? 0,
+    totalFilms: filmRows.length,
   }
 }
 
