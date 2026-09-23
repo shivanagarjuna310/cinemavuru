@@ -57,7 +57,7 @@ export default function BrandIntro({
           <div className="flex gap-3 sm:gap-4 flex-wrap mb-10">
             <a href="#explore"
               className="group relative overflow-hidden bg-gradient-to-r from-[#FF6B1A] to-[#D4A017] text-black px-7 py-3.5 rounded-xl font-bold uppercase tracking-wider text-sm hover:shadow-2xl hover:shadow-orange-900/40 hover:-translate-y-0.5 transition-all duration-300">
-              <span className="relative z-10">🎬 Explore Films</span>
+              <span className="relative z-10">🎬 Mana oori chitralu</span>
             </a>
             <Link href="/upload"
               className="border border-[color:var(--accent)]/40 text-[color:var(--accent)] px-7 py-3.5 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-[#D4A017]/10 hover:-translate-y-0.5 transition-all duration-300">
