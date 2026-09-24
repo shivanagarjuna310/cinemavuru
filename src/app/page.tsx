@@ -481,7 +481,9 @@ export default async function Home() {
               subtitle="Films uploaded this month · Resets every month · Top film wins ₹2,000 + promo interview"
               accent="blue"
               showRankBadge
-              metric={(f) => `👁 ${f.view_count} views`}
+              // Likes alongside views: this row is its own monthly contest, and
+              // ranking by views alone hid the films people actually liked.
+              metric={(f) => `👁 ${f.view_count ?? 0} · ❤️ ${f.like_count ?? 0}`}
             />
           </Reveal>
         )}
