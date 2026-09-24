@@ -19,20 +19,25 @@ const supabase = createClient(
 // Contest reads are cached for 30s — the same window this page already used
 // for ISR — but in Next's Data Cache, which is shared across every instance.
 // autoAdvanceContest() below stays UNcached: it writes.
-const getActiveContest = unstable_cache(
-  async () => {
-    const { data } = await supabase
-      .from('contests')
-      .select('*, districts(name_en, name_te)')
-      .in('status', ['open', 'voting'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-    return data
-  },
-  ['contest-active'],
-  { revalidate: 30, tags: [TAG.contests] },
-)
+//
+// This one read is deliberately NOT cached. autoAdvanceContest() runs
+// immediately before it and is what flips open -> voting; a cached status
+// could then still say 'open' for up to 30s, hiding the vote UI right after
+// voting opens. autoAdvance cannot bust the tag itself either, because Next
+// throws if revalidateTag is called during a render. It is a single-row
+// select, and the page is ISR-cached at 30s regardless, so reading it live
+// costs about one query per 30s per instance. The expensive reads below —
+// entries plus their scoped stats — stay cached.
+async function getActiveContest() {
+  const { data } = await supabase
+    .from('contests')
+    .select('*, districts(name_en, name_te)')
+    .in('status', ['open', 'voting'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  return data
+}
 
 // A season with status 'upcoming' can't take entries, so the pages above
 // ignore it. Fetch it separately to promote it instead of showing a dead end.
