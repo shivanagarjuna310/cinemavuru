@@ -4,6 +4,7 @@
 
 import Link from 'next/link'
 import { useEffect } from 'react'
+import { logger } from '@/lib/logger'
 
 export default function Error({
   error,
@@ -13,8 +14,16 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    // Surfaces in the console / server logs; hook a monitor (Sentry) here later.
     console.error(error)
+    // Also persist it. This boundary used to only log to the console, so a
+    // crash a user hit on their phone left nothing behind — error_logs held no
+    // error-level rows at all while this page was being shown in production.
+    // The URL and digest are what make one of these reproducible afterwards.
+    logger.error('ErrorBoundary', 'render', error.message || 'Unhandled render error', error, {
+      digest: error.digest,
+      url: typeof window !== 'undefined' ? window.location.pathname : null,
+      stack: error.stack?.slice(0, 800),
+    }).catch(() => { /* never let reporting break the fallback UI */ })
   }, [error])
 
   return (

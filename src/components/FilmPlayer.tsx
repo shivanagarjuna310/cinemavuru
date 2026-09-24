@@ -32,7 +32,12 @@ export default function FilmPlayer({
   nextFilm?: NextFilm
 }) {
   const { user, loading } = useAuth()
-  const [gated, setGated] = useState(false)
+  // null = not decided yet. It used to start `false`, which mounted the player
+  // first and let the effect revoke it a tick later. On the third film watched
+  // anonymously that unmount raced the YouTube API and crashed the page — see
+  // the mount-point comment in YouTubePlayer for why. Deciding before we render
+  // anything removes the race entirely.
+  const [gated, setGated] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (loading) return          // wait for the shared auth to resolve
@@ -55,6 +60,13 @@ export default function FilmPlayer({
     }
     setGated(true)
   }, [filmId, user, loading])
+
+  // Gate not resolved yet (auth still loading, or the meter not yet read).
+  // Deliberately inert: mounting the player here and pulling it back out is
+  // what broke.
+  if (gated === null) {
+    return <div className="w-full h-full bg-black" aria-busy="true" />
+  }
 
   // No video uploaded yet
   if (!videoUrl) {
@@ -154,7 +166,17 @@ function YouTubePlayer({
       if (cancelled || !hostRef.current) return
       const YT = (window as any).YT
 
-      playerRef.current = new YT.Player(hostRef.current, {
+      // YT.Player REPLACES the element it is handed with an iframe. Handing it
+      // the ref'd div meant React later tried to remove a node that no longer
+      // existed — NotFoundError on removeChild, caught by the root error
+      // boundary as "Something went wrong". This mount point is created here
+      // rather than rendered, so React never tracks it and cannot trip over
+      // YouTube swapping it out. destroy() below takes the iframe with it.
+      const mount = document.createElement('div')
+      mount.className = 'w-full h-full'
+      hostRef.current.appendChild(mount)
+
+      playerRef.current = new YT.Player(mount, {
         videoId: vid,
         playerVars: {
           rel: 0,
@@ -187,6 +209,7 @@ function YouTubePlayer({
       if (saveTimer.current) clearInterval(saveTimer.current)
       persist()
       try { playerRef.current?.destroy?.() } catch {}
+      playerRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vid, filmId, userId])
