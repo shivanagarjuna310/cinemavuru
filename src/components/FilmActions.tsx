@@ -165,6 +165,21 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filmId])
 
+  // films.like_count is kept in step by a DB trigger, but the homepage serves
+  // its film rows from the Data Cache — so without this the new count did not
+  // appear until the 60s window lapsed. Fire-and-forget: the like itself has
+  // already succeeded and must not be undone by a cache call failing.
+  async function bustFilmCache() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      await fetch('/api/cache/films', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${session.access_token}` },
+      })
+    } catch { /* stale counts are not worth surfacing an error for */ }
+  }
+
   async function handleLike() {
     if (!userId) { window.location.href = '/auth'; return }
     if (loading) return
@@ -181,6 +196,7 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
         })
         setLiked(false)
         setLikeCount(c => c - 1)
+        void bustFilmCache()
       }
     } else {
       const { error } = await supabase
@@ -191,6 +207,7 @@ export default function FilmActions({ filmId, initialLikes, stateSlug, districtS
         })
         setLiked(true)
         setLikeCount(c => c + 1)
+        void bustFilmCache()
       }
     }
     setLoading(false)
