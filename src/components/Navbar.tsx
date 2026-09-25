@@ -189,10 +189,11 @@ export default function Navbar() {
              ?? user?.email?.[0]?.toUpperCase() ?? '?'
 
   const mainLinks = [
-  { href: '/',       label: 'Home'   },
-  { href: '/reels',  label: 'Reels'  },
-  { href: '/upload', label: 'Upload' },
-  { href: '/about',  label: 'About'  },
+  { href: '/',            label: 'Home'        },
+  { href: '/reels',       label: 'Reels'       },
+  { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/upload',      label: 'Upload'      },
+  { href: '/about',       label: 'About'       },
 ]
 
   const contestLinks = [

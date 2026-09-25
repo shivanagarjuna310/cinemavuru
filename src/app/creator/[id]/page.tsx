@@ -5,6 +5,8 @@ import { notFound }     from 'next/navigation'
 import Link             from 'next/link'
 import Navbar           from '@/components/Navbar'
 import FollowButton     from '@/components/FollowButton'
+import TierBadge        from '@/components/TierBadge'
+import { tierFor, nextTier } from '@/lib/tiers'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,6 +46,16 @@ async function getCreator(id: string) {
   }
 }
 
+// Counted from `follows` rather than read from profiles.follower_count, which
+// was never maintained and reads 0 for every profile. One head-count query.
+async function getSupporters(creatorId: string) {
+  const { count } = await supabase
+    .from('follows')
+    .select('*', { count: 'exact', head: true })
+    .eq('creator_id', creatorId)
+  return count ?? 0
+}
+
 async function getCreatorFilms(creatorId: string) {
   const { data } = await supabase
     .from('films')
@@ -75,9 +87,10 @@ export default async function CreatorPage({
 }) {
   const { id } = await params
 
-  const [creator, films] = await Promise.all([
+  const [creator, films, supporters] = await Promise.all([
     getCreator(id),
     getCreatorFilms(id),
+    getSupporters(id),
   ])
 
   if (!creator) notFound()
@@ -85,6 +98,10 @@ export default async function CreatorPage({
   const totalViews = films.reduce((s, f) => s + (f.view_count ?? 0), 0)
   const totalLikes = films.reduce((s, f) => s + (f.like_count ?? 0), 0)
   const initial    = (creator.name ?? 'C')[0].toUpperCase()
+
+  const stats    = { views: totalViews, supporters }
+  const tier     = tierFor(stats)
+  const progress = nextTier(stats)
 
   return (
     <>
@@ -110,9 +127,12 @@ export default async function CreatorPage({
               {initial}
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-[color:var(--text)] mb-1">
-                {creator.name ?? 'Independent Filmmaker'}
-              </h1>
+              <div className="flex items-center gap-2.5 flex-wrap mb-1">
+                <h1 className="text-2xl font-bold text-[color:var(--text)]">
+                  {creator.name ?? 'Independent Filmmaker'}
+                </h1>
+                <TierBadge tier={tier} size="sm" />
+              </div>
               {creator.districtName && (
                 <p className="text-sm text-[color:var(--accent-hot)] mb-2">
                   📍 {creator.districtName}, Telangana
@@ -127,7 +147,7 @@ export default async function CreatorPage({
                 <FollowButton creatorId={creator.id} />
               </div>
             </div>
-            <div className="hidden md:flex gap-6 flex-shrink-0">
+            <div className="hidden md:flex gap-5 flex-shrink-0">
               <div className="text-center">
                 <div className="text-xl font-bold text-[color:var(--accent)]">{films.length}</div>
                 <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Films</div>
@@ -140,8 +160,36 @@ export default async function CreatorPage({
                 <div className="text-xl font-bold text-[color:var(--accent)]">{totalLikes}</div>
                 <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Likes</div>
               </div>
+              <div className="text-center">
+                <div className="text-xl font-bold text-[color:var(--accent-hot)]">{supporters}</div>
+                <div className="text-xs text-[color:var(--muted)] uppercase tracking-wide">Supporters</div>
+              </div>
             </div>
           </div>
+
+          {/* Progress to the next tier. Only ever the NEXT rung — telling a
+              filmmaker on 9 views that Featured needs 500 reads as a wall,
+              telling them Notable needs 91 more reads as a target. */}
+          {progress && (
+            <div className="-mt-6 mb-10 rounded-xl bg-[color:var(--surface)] border border-[color:var(--border)] p-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <p className="text-xs text-[color:var(--muted)]">
+                  Next: <span className="font-bold text-[color:var(--text)]">{progress.next.emoji} {progress.next.label}</span>
+                </p>
+                <p className="text-xs font-semibold text-[color:var(--accent)] tabular-nums">
+                  {progress.viewsToGo > 0
+                    ? `${progress.viewsToGo} more views`
+                    : `${progress.supportersToGo} more supporters`}
+                </p>
+              </div>
+              <div className="h-1.5 rounded-full bg-[color:var(--border)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#FF6B1A] to-[#D4A017]"
+                  style={{ width: `${Math.round(progress.fraction * 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Filmography */}
           <h2 className="text-base font-bold text-[color:var(--muted)] uppercase tracking-widest mb-5">

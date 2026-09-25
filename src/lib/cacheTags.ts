@@ -9,4 +9,5 @@ export const TAG = {
   contestEntries: 'contest-entries',
   districts: 'districts',
   winners: 'winners',
+  leaderboard: 'leaderboard',
 } as const

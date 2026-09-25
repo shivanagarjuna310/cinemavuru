@@ -11,7 +11,7 @@ const supabase = createClient(
 const BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.cinemavuru.com'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticPaths = ['', '/about', '/contest', '/contest/films', '/contest/winners', '/upload', '/terms', '/privacy']
+  const staticPaths = ['', '/about', '/contest', '/contest/films', '/contest/winners', '/leaderboard', '/upload', '/terms', '/privacy']
   const staticRoutes: MetadataRoute.Sitemap = staticPaths.map(p => ({
     url: `${BASE}${p}`,
     lastModified: new Date(),

@@ -13,6 +13,7 @@ import ContestIntroModal from '@/components/ContestIntroModal'
 import WatchlistButton  from '@/components/WatchlistButton'
 import FollowButton     from '@/components/FollowButton'
 import ViewTracker      from '@/components/ViewTracker'
+import PosterButton     from '@/components/PosterButton'
 import type { Metadata } from 'next'
 
 const supabase = createClient(
@@ -364,6 +365,16 @@ export default async function FilmPage({
             stateSlug={stateSlug}
             districtSlug={districtSlug}
           />
+
+          {/* A poster travels where a pasted link does not — an Instagram
+              story needs an image. Offered to everyone, not just the owner:
+              a viewer sharing a film they liked is the same loop. */}
+          <div className="flex items-center gap-3 flex-wrap -mt-2 mb-6">
+            <PosterButton filmId={film.id} title={film.title_en} />
+            <p className="text-xs text-[color:var(--muted)]">
+              Make a poster for Instagram or WhatsApp
+            </p>
+          </div>
 
           {/* Description */}
           {film.description && (
