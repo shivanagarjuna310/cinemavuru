@@ -3,7 +3,7 @@
 // Shows contest film entries with rank, score and vote button
 // Voting: 1 vote per user per contest — locked once cast, cannot be changed
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useRouter }           from 'next/navigation'
 import { supabase }            from '@/lib/supabase'
 import { useAuth }             from './AuthProvider'
@@ -67,7 +67,20 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
   const [votedFilmId,   setVotedFilmId]   = useState<string | null>(null)
   const [hasVoted,      setHasVoted]      = useState(false) // ← locked once true
   const [voting,        setVoting]        = useState(false)
-  const [localEntries,  setLocalEntries]  = useState(entries)
+  // Scores the server returned for votes cast in this session, keyed by film.
+  // Held separately from the list rather than baked into it: the list itself
+  // must stay driven by the prop, because the parent can hand down a filtered
+  // set (the search on /contest/films). It used to be useState(entries), which
+  // captured the first list and then ignored every later one — so searching
+  // narrowed the count while the grid below kept showing the old films.
+  const [scoreOverrides, setScoreOverrides] = useState<Record<string, number>>({})
+
+  const localEntries = useMemo(() => {
+    if (!Object.keys(scoreOverrides).length) return entries
+    return entries
+      .map(e => (e.film_id in scoreOverrides ? { ...e, contest_score: scoreOverrides[e.film_id] } : e))
+      .sort((a, b) => b.contest_score - a.contest_score)
+  }, [entries, scoreOverrides])
 
   // Load this user's existing vote (reactive to the shared auth user)
   useEffect(() => {
@@ -107,9 +120,7 @@ export default function ContestFilmGrid({ entries, contestId, isVotingOpen }: Pr
       setHasVoted(Boolean(j.votedFilmId))
 
       const scores: Record<string, number> = j.scores ?? {}
-      setLocalEntries(prev => prev
-        .map(e => (e.film_id in scores ? { ...e, contest_score: scores[e.film_id] } : e))
-        .sort((a, b) => b.contest_score - a.contest_score))
+      setScoreOverrides(prev => ({ ...prev, ...scores }))
     } catch {
       setVoteError('Network problem — please try again.')
     } finally {
